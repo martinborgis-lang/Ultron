@@ -1,0 +1,423 @@
+'use client';
+
+import { useEffect, useState, useMemo } from 'react';
+import Link from 'next/link';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Skeleton } from '@/components/ui/skeleton';
+import {
+  Search,
+  Mail,
+  Calendar,
+  AlertCircle,
+  Settings,
+  RefreshCw,
+  Filter,
+  X,
+} from 'lucide-react';
+import type { Prospect as GoogleProspect } from '@/lib/google';
+
+type QualificationFilter = 'tous' | 'CHAUD' | 'TIEDE' | 'FROID';
+
+interface ProspectDisplay {
+  id: string;
+  nom: string;
+  prenom: string;
+  email: string;
+  telephone: string;
+  qualification: string;
+  score: number;
+  statut: string;
+  dateRdv: string;
+  dateLead: string;
+}
+
+const qualificationColors: Record<string, string> = {
+  CHAUD: 'bg-red-100 text-red-700 hover:bg-red-100',
+  TIEDE: 'bg-amber-100 text-amber-700 hover:bg-amber-100',
+  FROID: 'bg-blue-100 text-blue-700 hover:bg-blue-100',
+};
+
+function transformProspects(googleProspects: GoogleProspect[]): ProspectDisplay[] {
+  return googleProspects.map((p) => ({
+    id: p.id || Math.random().toString(),
+    nom: p.nom,
+    prenom: p.prenom,
+    email: p.email,
+    telephone: p.telephone,
+    qualification: p.qualificationIA?.toUpperCase() || 'FROID',
+    score: parseInt(p.scoreIA) || 0,
+    statut: p.statutAppel || 'Nouveau',
+    dateRdv: p.dateRdv,
+    dateLead: p.dateLead,
+  }));
+}
+
+function LoadingSkeleton() {
+  return (
+    <div className="space-y-6">
+      <div className="flex gap-4">
+        <Skeleton className="h-10 flex-1" />
+        <Skeleton className="h-10 w-24" />
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {[1, 2, 3].map((i) => (
+          <Skeleton key={i} className="h-20" />
+        ))}
+      </div>
+      <Skeleton className="h-[400px]" />
+    </div>
+  );
+}
+
+function NotConnectedMessage() {
+  return (
+    <Card className="shadow-sm">
+      <CardContent className="flex flex-col items-center justify-center py-16 text-center">
+        <div className="p-4 rounded-full bg-amber-50 mb-4">
+          <AlertCircle className="h-8 w-8 text-amber-500" />
+        </div>
+        <h3 className="text-lg font-semibold mb-2">Google Sheet non connectee</h3>
+        <p className="text-muted-foreground mb-6 max-w-md">
+          Connectez votre compte Google et configurez votre Google Sheet pour voir vos prospects.
+        </p>
+        <Link href="/settings">
+          <Button className="bg-indigo-600 hover:bg-indigo-700">
+            <Settings className="mr-2 h-4 w-4" />
+            Configurer dans les parametres
+          </Button>
+        </Link>
+      </CardContent>
+    </Card>
+  );
+}
+
+export function ProspectsContent() {
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [notConnected, setNotConnected] = useState(false);
+  const [prospects, setProspects] = useState<ProspectDisplay[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [qualificationFilter, setQualificationFilter] = useState<QualificationFilter>('tous');
+
+  const fetchData = async () => {
+    setLoading(true);
+    setError(null);
+    setNotConnected(false);
+
+    try {
+      const response = await fetch('/api/sheets/prospects');
+      const data = await response.json();
+
+      if (!response.ok) {
+        if (data.connected === false || data.configured === false) {
+          setNotConnected(true);
+          return;
+        }
+        throw new Error(data.error || 'Erreur');
+      }
+
+      setProspects(transformProspects(data.prospects));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erreur lors du chargement');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const filteredProspects = useMemo(() => {
+    return prospects.filter((p) => {
+      // Filtre par recherche
+      if (searchQuery) {
+        const query = searchQuery.toLowerCase();
+        const matchesSearch =
+          p.nom.toLowerCase().includes(query) ||
+          p.prenom.toLowerCase().includes(query) ||
+          p.email.toLowerCase().includes(query);
+        if (!matchesSearch) return false;
+      }
+
+      // Filtre par qualification
+      if (qualificationFilter !== 'tous') {
+        if (p.qualification !== qualificationFilter) return false;
+      }
+
+      return true;
+    });
+  }, [prospects, searchQuery, qualificationFilter]);
+
+  const stats = useMemo(() => {
+    const chauds = prospects.filter((p) => p.qualification === 'CHAUD').length;
+    const tiedes = prospects.filter((p) => p.qualification === 'TIEDE').length;
+    const froids = prospects.filter((p) => p.qualification === 'FROID').length;
+    return { chauds, tiedes, froids };
+  }, [prospects]);
+
+  if (loading) {
+    return <LoadingSkeleton />;
+  }
+
+  if (notConnected) {
+    return <NotConnectedMessage />;
+  }
+
+  if (error) {
+    return (
+      <Card className="shadow-sm">
+        <CardContent className="flex flex-col items-center justify-center py-16 text-center">
+          <div className="p-4 rounded-full bg-red-50 mb-4">
+            <AlertCircle className="h-8 w-8 text-red-500" />
+          </div>
+          <h3 className="text-lg font-semibold mb-2">Erreur de chargement</h3>
+          <p className="text-muted-foreground mb-6 max-w-md">{error}</p>
+          <Button onClick={fetchData} variant="outline">
+            <RefreshCw className="mr-2 h-4 w-4" />
+            Reessayer
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Search and filters */}
+      <div className="flex flex-col sm:flex-row gap-4">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Rechercher par nom, prenom ou email..."
+            className="pl-10"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+        <div className="flex gap-2">
+          <Button
+            variant={qualificationFilter === 'tous' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setQualificationFilter('tous')}
+            className={qualificationFilter === 'tous' ? 'bg-indigo-600 hover:bg-indigo-700' : ''}
+          >
+            Tous
+          </Button>
+          <Button
+            variant={qualificationFilter === 'CHAUD' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setQualificationFilter('CHAUD')}
+            className={qualificationFilter === 'CHAUD' ? 'bg-red-600 hover:bg-red-700' : ''}
+          >
+            Chauds
+          </Button>
+          <Button
+            variant={qualificationFilter === 'TIEDE' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setQualificationFilter('TIEDE')}
+            className={qualificationFilter === 'TIEDE' ? 'bg-amber-600 hover:bg-amber-700' : ''}
+          >
+            Tiedes
+          </Button>
+          <Button
+            variant={qualificationFilter === 'FROID' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setQualificationFilter('FROID')}
+            className={qualificationFilter === 'FROID' ? 'bg-blue-600 hover:bg-blue-700' : ''}
+          >
+            Froids
+          </Button>
+        </div>
+        <Button onClick={fetchData} variant="outline" size="sm">
+          <RefreshCw className="h-4 w-4" />
+        </Button>
+      </div>
+
+      {/* Stats summary */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card
+          className={`border-red-100 cursor-pointer transition-all ${
+            qualificationFilter === 'CHAUD' ? 'ring-2 ring-red-500' : ''
+          }`}
+          onClick={() => setQualificationFilter(qualificationFilter === 'CHAUD' ? 'tous' : 'CHAUD')}
+        >
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Chauds</p>
+                <p className="text-2xl font-bold text-red-600">{stats.chauds}</p>
+              </div>
+              <div className="h-10 w-10 rounded-full bg-red-50 flex items-center justify-center">
+                <span className="text-lg">🔥</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card
+          className={`border-amber-100 cursor-pointer transition-all ${
+            qualificationFilter === 'TIEDE' ? 'ring-2 ring-amber-500' : ''
+          }`}
+          onClick={() => setQualificationFilter(qualificationFilter === 'TIEDE' ? 'tous' : 'TIEDE')}
+        >
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Tiedes</p>
+                <p className="text-2xl font-bold text-amber-600">{stats.tiedes}</p>
+              </div>
+              <div className="h-10 w-10 rounded-full bg-amber-50 flex items-center justify-center">
+                <span className="text-lg">🌤</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card
+          className={`border-blue-100 cursor-pointer transition-all ${
+            qualificationFilter === 'FROID' ? 'ring-2 ring-blue-500' : ''
+          }`}
+          onClick={() => setQualificationFilter(qualificationFilter === 'FROID' ? 'tous' : 'FROID')}
+        >
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Froids</p>
+                <p className="text-2xl font-bold text-blue-600">{stats.froids}</p>
+              </div>
+              <div className="h-10 w-10 rounded-full bg-blue-50 flex items-center justify-center">
+                <span className="text-lg">❄️</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Results count */}
+      {(searchQuery || qualificationFilter !== 'tous') && (
+        <p className="text-sm text-muted-foreground">
+          {filteredProspects.length} prospect{filteredProspects.length !== 1 ? 's' : ''} trouve{filteredProspects.length !== 1 ? 's' : ''}
+          {searchQuery && ` pour "${searchQuery}"`}
+          {qualificationFilter !== 'tous' && ` (${qualificationFilter})`}
+        </p>
+      )}
+
+      {/* Prospects table */}
+      <Card className="shadow-sm">
+        <CardHeader>
+          <CardTitle className="text-lg font-semibold">
+            Tous les prospects ({prospects.length})
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {filteredProspects.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              {searchQuery || qualificationFilter !== 'tous'
+                ? 'Aucun prospect ne correspond aux filtres'
+                : 'Aucun prospect dans votre Google Sheet'}
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Nom</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Telephone</TableHead>
+                    <TableHead>Qualification</TableHead>
+                    <TableHead>Score</TableHead>
+                    <TableHead>Statut</TableHead>
+                    <TableHead>Date RDV</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredProspects.map((prospect) => (
+                    <TableRow key={prospect.id}>
+                      <TableCell className="font-medium">
+                        {prospect.prenom} {prospect.nom}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {prospect.email || '-'}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {prospect.telephone || '-'}
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          variant="secondary"
+                          className={qualificationColors[prospect.qualification] || qualificationColors.FROID}
+                        >
+                          {prospect.qualification}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <div className="w-12 h-2 bg-zinc-100 rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-indigo-500 rounded-full"
+                              style={{ width: `${Math.min(prospect.score, 100)}%` }}
+                            />
+                          </div>
+                          <span className="text-sm text-muted-foreground">
+                            {prospect.score}%
+                          </span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {prospect.statut || '-'}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {prospect.dateRdv || '-'}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          {prospect.email && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              title="Envoyer un email"
+                            >
+                              <Mail className="h-4 w-4" />
+                            </Button>
+                          )}
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            title="Planifier un RDV"
+                          >
+                            <Calendar className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}

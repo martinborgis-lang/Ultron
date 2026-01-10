@@ -22,6 +22,44 @@ interface Stats {
   rdvPris: number;
 }
 
+function parseDate(dateStr: string): Date | null {
+  if (!dateStr) return null;
+
+  // Try DD/MM/YYYY format
+  const parts = dateStr.split('/');
+  if (parts.length === 3) {
+    const day = parseInt(parts[0]);
+    const month = parseInt(parts[1]) - 1;
+    const year = parseInt(parts[2]);
+    if (!isNaN(day) && !isNaN(month) && !isNaN(year)) {
+      return new Date(year, month, day);
+    }
+  }
+
+  // Try ISO format or other formats
+  const parsed = new Date(dateStr);
+  if (!isNaN(parsed.getTime())) {
+    return parsed;
+  }
+
+  return null;
+}
+
+function formatRelativeTime(date: Date): string {
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / (1000 * 60));
+  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+  if (diffMins < 60) return `Il y a ${diffMins} min`;
+  if (diffHours < 24) return `Il y a ${diffHours}h`;
+  if (diffDays === 1) return 'Hier';
+  if (diffDays < 7) return `Il y a ${diffDays} jours`;
+  if (diffDays < 30) return `Il y a ${Math.floor(diffDays / 7)} sem.`;
+  return date.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
+}
+
 function transformProspects(googleProspects: GoogleProspect[]): ProspectType[] {
   return googleProspects
     .map((p, index) => ({
@@ -30,54 +68,133 @@ function transformProspects(googleProspects: GoogleProspect[]): ProspectType[] {
       prenom: p.prenom,
       qualification: (p.qualificationIA?.toUpperCase() || 'FROID') as 'CHAUD' | 'TIEDE' | 'FROID',
       score: parseInt(p.scoreIA) || 0,
-      statut: p.statutAppel || p.dateRdv ? `RDV: ${p.dateRdv}` : 'Nouveau',
+      statut: p.statutAppel || (p.dateRdv ? `RDV: ${p.dateRdv}` : 'Nouveau'),
     }))
     .sort((a, b) => b.score - a.score)
     .slice(0, 5);
 }
 
-function generateMockActivity(prospects: GoogleProspect[]): Activity[] {
-  const activities: Activity[] = [];
-  let id = 1;
+function generateRealActivities(prospects: GoogleProspect[]): Activity[] {
+  const activities: { date: Date; action: string; target: string }[] = [];
 
-  prospects.slice(0, 8).forEach((p, i) => {
-    const times = ['Il y a 5 min', 'Il y a 15 min', 'Il y a 1h', 'Il y a 2h', 'Il y a 3h', 'Il y a 4h', 'Il y a 5h', 'Il y a 6h'];
-    const actions = [
-      p.mailSynthese === 'oui' ? 'Mail de synthese envoye' : null,
-      p.mailPlaquette === 'oui' ? 'Plaquette envoyee' : null,
-      p.mailRappel === 'oui' ? 'Mail de rappel envoye' : null,
-      p.qualificationIA ? `Qualifie ${p.qualificationIA}` : 'Nouveau prospect ajoute',
-      p.dateRdv ? 'RDV planifie' : null,
-    ].filter(Boolean);
+  prospects.forEach((p) => {
+    const name = `${p.prenom} ${p.nom}`.trim() || 'Prospect';
+    const leadDate = parseDate(p.dateLead);
 
-    if (actions.length > 0) {
+    // Nouveau prospect (basé sur Date Lead)
+    if (leadDate) {
       activities.push({
-        id: id++,
-        action: actions[0]!,
-        target: `${p.prenom} ${p.nom}`,
-        time: times[i] || 'Recemment',
+        date: leadDate,
+        action: 'Nouveau prospect',
+        target: name,
+      });
+    }
+
+    // Mails envoyés
+    if (p.mailSynthese?.toLowerCase() === 'oui') {
+      activities.push({
+        date: leadDate || new Date(),
+        action: 'Mail de synthese envoye',
+        target: name,
+      });
+    }
+    if (p.mailPlaquette?.toLowerCase() === 'oui') {
+      activities.push({
+        date: leadDate || new Date(),
+        action: 'Plaquette envoyee',
+        target: name,
+      });
+    }
+    if (p.mailRappel?.toLowerCase() === 'oui') {
+      activities.push({
+        date: leadDate || new Date(),
+        action: 'Mail de rappel envoye',
+        target: name,
+      });
+    }
+
+    // RDV planifié
+    const rdvDate = parseDate(p.dateRdv);
+    if (rdvDate) {
+      activities.push({
+        date: rdvDate,
+        action: 'RDV planifie',
+        target: name,
+      });
+    }
+
+    // Qualification
+    if (p.qualificationIA) {
+      activities.push({
+        date: leadDate || new Date(),
+        action: `Qualifie ${p.qualificationIA.toUpperCase()}`,
+        target: name,
       });
     }
   });
 
-  return activities.slice(0, 8);
+  // Trier par date décroissante et limiter à 10
+  return activities
+    .sort((a, b) => b.date.getTime() - a.date.getTime())
+    .slice(0, 10)
+    .map((a, index) => ({
+      id: index + 1,
+      action: a.action,
+      target: a.target,
+      time: formatRelativeTime(a.date),
+    }));
 }
 
-function generateChartData(): ChartDataPoint[] {
-  const data: ChartDataPoint[] = [];
+function generateRealChartData(prospects: GoogleProspect[]): ChartDataPoint[] {
   const today = new Date();
+  const thirtyDaysAgo = new Date(today);
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 29);
 
-  for (let i = 29; i >= 0; i--) {
-    const date = new Date(today);
-    date.setDate(date.getDate() - i);
+  // Créer un map pour compter les prospects par jour
+  const countByDate: Record<string, number> = {};
 
+  // Initialiser les 30 derniers jours à 0
+  for (let i = 0; i < 30; i++) {
+    const date = new Date(thirtyDaysAgo);
+    date.setDate(date.getDate() + i);
+    const key = date.toISOString().split('T')[0];
+    countByDate[key] = 0;
+  }
+
+  // Compter les prospects par Date Lead
+  prospects.forEach((p) => {
+    const leadDate = parseDate(p.dateLead);
+    if (leadDate && leadDate >= thirtyDaysAgo && leadDate <= today) {
+      const key = leadDate.toISOString().split('T')[0];
+      if (key in countByDate) {
+        countByDate[key]++;
+      }
+    }
+  });
+
+  // Convertir en format chart avec cumul
+  const data: ChartDataPoint[] = [];
+  let cumulative = 0;
+
+  // Compter les prospects avant la période
+  prospects.forEach((p) => {
+    const leadDate = parseDate(p.dateLead);
+    if (leadDate && leadDate < thirtyDaysAgo) {
+      cumulative++;
+    }
+  });
+
+  const sortedDates = Object.keys(countByDate).sort();
+  sortedDates.forEach((dateKey) => {
+    cumulative += countByDate[dateKey];
+    const date = new Date(dateKey);
     data.push({
       date: date.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' }),
-      chauds: Math.floor(Math.random() * 8) + 5,
-      tiedes: Math.floor(Math.random() * 15) + 10,
-      froids: Math.floor(Math.random() * 20) + 20,
+      chauds: cumulative,
+      tiedes: countByDate[dateKey],
+      froids: 0,
     });
-  }
+  });
 
   return data;
 }
@@ -135,7 +252,7 @@ export function DashboardContent() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [prospects, setProspects] = useState<ProspectType[]>([]);
   const [activities, setActivities] = useState<Activity[]>([]);
-  const [chartData] = useState<ChartDataPoint[]>(generateChartData());
+  const [chartData, setChartData] = useState<ChartDataPoint[]>([]);
 
   const fetchData = async () => {
     setLoading(true);
@@ -161,9 +278,10 @@ export function DashboardContent() {
       }
 
       setStats(statsData.stats);
-      const transformedProspects = transformProspects(prospectsData.prospects);
-      setProspects(transformedProspects);
-      setActivities(generateMockActivity(prospectsData.prospects));
+      const googleProspects = prospectsData.prospects as GoogleProspect[];
+      setProspects(transformProspects(googleProspects));
+      setActivities(generateRealActivities(googleProspects));
+      setChartData(generateRealChartData(googleProspects));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur lors du chargement');
     } finally {
