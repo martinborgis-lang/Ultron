@@ -20,10 +20,12 @@ export function RegisterForm() {
   const [loading, setLoading] = useState(false);
 
   const generateSlug = (name: string) => {
-    return name
+    const baseSlug = name
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/(^-|-$)/g, '');
+    const uniqueSuffix = Math.random().toString(36).substring(2, 8);
+    return `${baseSlug}-${uniqueSuffix}`;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {

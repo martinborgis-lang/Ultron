@@ -6,7 +6,9 @@
       "Bash(git remote add:*)",
       "Bash(git branch:*)",
       "Bash(git add:*)",
-      "Bash(git commit -m \"$\\(cat <<''EOF''\nfeat: initial commit - Ultron SaaS dashboard\n\n- Landing page with hero, features and CTA\n- Auth pages \\(login/register\\) with Supabase\n- Dashboard with stats cards, charts \\(Recharts\\), prospects table\n- Prospects page with filtering\n- Settings page with tabs \\(Google Sheets, Team, AI Prompts\\)\n- Responsive sidebar + mobile navigation\n- Middleware for protected routes\n- TypeScript types and custom hooks\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")"
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nfeat: initial commit - Ultron SaaS dashboard\n\n- Landing page with hero, features and CTA\n- Auth pages \\(login/register\\) with Supabase\n- Dashboard with stats cards, charts \\(Recharts\\), prospects table\n- Prospects page with filtering\n- Settings page with tabs \\(Google Sheets, Team, AI Prompts\\)\n- Responsive sidebar + mobile navigation\n- Middleware for protected routes\n- TypeScript types and custom hooks\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git push:*)",
+      "Bash(git commit:*)"
     ]
   }
 }
