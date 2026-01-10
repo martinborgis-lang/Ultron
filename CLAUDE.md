@@ -1,424 +1,322 @@
-\# CLAUDE.md - Instructions pour Claude Code
+# CLAUDE.md - Instructions pour Claude Code
 
+## 🎯 PROJET ULTRON
 
+**Ultron** est une application SaaS multi-tenant pour automatiser la gestion de prospects pour des cabinets de gestion de patrimoine.
 
-\## 🎯 PROJET ULTRON
-
-
-
-\*\*Ultron\*\* est une application SaaS pour automatiser la gestion de prospects pour des cabinets de gestion de patrimoine.
-
-
-
-\### Fonctionnalités principales
-
-\- Dashboard avec statistiques en temps réel
-
-\- Connexion à Google Sheets pour récupérer les prospects
-
-\- Envoi automatique d'emails personnalisés via IA (Claude API)
-
-\- Gestion multi-entreprises (multi-tenant)
-
-\- Gestion des conseillers par entreprise
-
-\- Personnalisation des prompts IA
-
-
+### Fonctionnalités principales
+- Dashboard avec statistiques en temps réel depuis Google Sheets
+- Connexion OAuth Google par entreprise
+- Workflows automatisés (qualification, emails, rappels)
+- Personnalisation des prompts IA par entreprise
+- Gestion multi-conseillers par entreprise
 
 ---
 
-
-
-\## 🛠️ STACK TECHNIQUE
-
-
+## 🛠️ STACK TECHNIQUE
 
 | Composant | Technologie |
-
 |-----------|-------------|
-
 | Framework | Next.js 14 (App Router) |
-
 | Langage | TypeScript |
-
 | Styling | Tailwind CSS + shadcn/ui |
-
 | Database | Supabase (PostgreSQL) |
-
 | Auth | Supabase Auth |
-
+| AI | Anthropic Claude API |
+| Email | Gmail API |
+| Sheets | Google Sheets API |
 | Icons | Lucide React |
-
 | Charts | Recharts |
-
 | Hosting | Vercel |
 
-
-
 ---
 
-
-
-\## 📁 STRUCTURE DU PROJET
-
+## 📁 STRUCTURE DU PROJET
 ```
-
 src/
-
-├── app/                    # Pages (App Router)
-
-│   ├── (auth)/            # Pages auth (login, register)
-
-│   ├── (dashboard)/       # Pages protégées (dashboard, settings)
-
-│   ├── api/               # API Routes
-
-│   ├── layout.tsx         # Layout racine
-
-│   └── page.tsx           # Landing page
-
-├── components/            # Composants React
-
-│   ├── ui/               # Composants shadcn/ui
-
-│   ├── layout/           # Sidebar, Header, etc.
-
-│   ├── dashboard/        # Composants du dashboard
-
-│   ├── auth/             # Formulaires auth
-
-│   └── settings/         # Composants settings
-
-├── lib/                   # Utilitaires
-
-│   ├── supabase/         # Client Supabase
-
-│   └── utils.ts          # Fonctions utilitaires
-
-├── hooks/                 # Custom hooks React
-
-├── types/                 # Types TypeScript
-
-└── middleware.ts          # Middleware Next.js (auth)
-
+├── app/
+│   ├── (auth)/
+│   │   ├── login/page.tsx
+│   │   └── register/page.tsx
+│   ├── (dashboard)/
+│   │   ├── dashboard/page.tsx
+│   │   ├── prospects/page.tsx
+│   │   └── settings/
+│   │       ├── page.tsx
+│   │       ├── prompts/page.tsx
+│   │       └── team/page.tsx
+│   ├── api/
+│   │   ├── google/
+│   │   │   ├── auth/route.ts          # Initie OAuth Google
+│   │   │   └── callback/route.ts      # Callback OAuth
+│   │   ├── sheets/
+│   │   │   ├── prospects/route.ts     # Lit les prospects
+│   │   │   ├── stats/route.ts         # Calcule les stats
+│   │   │   └── test/route.ts          # Teste la connexion
+│   │   ├── webhooks/
+│   │   │   ├── qualification/route.ts # Qualifie un prospect
+│   │   │   ├── rdv-valide/route.ts    # Mail synthèse + rappel 24h
+│   │   │   └── plaquette/route.ts     # Mail + PDF plaquette
+│   │   ├── cron/
+│   │   │   └── rappel-24h/route.ts    # Envoie les rappels programmés
+│   │   ├── organization/
+│   │   │   └── sheet/route.ts         # Update sheet_id
+│   │   └── prompts/route.ts           # CRUD prompts
+│   ├── layout.tsx
+│   └── page.tsx
+├── components/
+│   ├── ui/                            # shadcn components
+│   ├── layout/
+│   │   ├── Sidebar.tsx
+│   │   ├── Header.tsx
+│   │   └── MobileNav.tsx
+│   ├── dashboard/
+│   │   ├── DashboardContent.tsx
+│   │   ├── StatsCards.tsx
+│   │   ├── ProspectsChart.tsx
+│   │   ├── RecentProspects.tsx
+│   │   └── ActivityFeed.tsx
+│   ├── auth/
+│   │   ├── LoginForm.tsx
+│   │   └── RegisterForm.tsx
+│   ├── settings/
+│   │   ├── GoogleSheetsConfig.tsx
+│   │   ├── PromptEditor.tsx
+│   │   └── TeamManager.tsx
+│   └── prospects/
+│       └── ProspectsContent.tsx
+├── lib/
+│   ├── supabase/
+│   │   ├── client.ts
+│   │   └── server.ts
+│   ├── google.ts                      # OAuth + Sheets API
+│   ├── gmail.ts                       # Envoi d'emails
+│   ├── anthropic.ts                   # Claude API
+│   └── utils.ts
+├── hooks/
+│   ├── useUser.ts
+│   └── useOrganization.ts
+├── types/
+│   └── index.ts
+└── middleware.ts
 ```
 
+---
 
+## 🗄️ STRUCTURE BASE DE DONNÉES SUPABASE
+
+### Tables
+
+**organizations** - Entreprises clientes
+- id, name, slug, google_sheet_id, google_credentials (JSONB)
+- prompt_qualification, prompt_synthese, prompt_rappel, prompt_plaquette (JSONB)
+- plaquette_url, plan, created_at
+
+**users** - Utilisateurs (conseillers)
+- id, auth_id, organization_id, email, full_name, role, gmail_credentials, is_active
+
+**prompts** - Prompts IA personnalisables (legacy, utiliser colonnes organizations)
+- id, organization_id, type, name, system_prompt, user_prompt
+
+**scheduled_emails** - Emails programmés (rappels 24h)
+- id, organization_id, prospect_data (JSONB), email_type, scheduled_for, status, sent_at, error_message
+
+**email_logs** - Historique des emails envoyés
+- id, organization_id, prospect_email, prospect_name, email_type, subject, body, gmail_message_id, has_attachment, sent_at
+
+**daily_stats** - Stats quotidiennes
+- id, organization_id, date, total_prospects, prospects_chaud/tiede/froid, mails_envoyes, rdv_pris
 
 ---
 
+## 🔐 VARIABLES D'ENVIRONNEMENT
+```
+# Supabase
+NEXT_PUBLIC_SUPABASE_URL=https://xxx.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=xxx
+SUPABASE_SERVICE_ROLE_KEY=xxx
 
+# Google OAuth
+GOOGLE_CLIENT_ID=xxx
+GOOGLE_CLIENT_SECRET=xxx
 
-\## 🔐 VARIABLES D'ENVIRONNEMENT
+# App URL
+NEXT_PUBLIC_APP_URL=http://localhost:3000  # ou https://ultron-murex.vercel.app en prod
 
+# Anthropic (Claude AI)
+ANTHROPIC_API_KEY=sk-ant-xxx
 
-
-Fichier `.env.local` (NE JAMAIS COMMIT) :
-
+# CRON Secret (optionnel)
+CRON_SECRET=xxx
 ```
 
-NEXT\_PUBLIC\_SUPABASE\_URL=https://xxx.supabase.co
+---
 
-NEXT\_PUBLIC\_SUPABASE\_ANON\_KEY=eyJxxx
+## 🔄 WORKFLOWS AUTOMATISÉS
 
-SUPABASE\_SERVICE\_ROLE\_KEY=eyJxxx
+### 1. Qualification (/api/webhooks/qualification)
+- Déclenché par Apps Script quand statut change
+- Analyse le prospect avec Claude
+- Retourne : qualification (CHAUD/TIEDE/FROID), score (0-100), priorité, justification
+- Update colonnes Q, R, S, T de la Sheet
 
-```
+### 2. RDV Validé (/api/webhooks/rdv-valide)
+- Déclenché quand statut = "RDV Validé"
+- Génère et envoie un mail de synthèse personnalisé
+- Programme un rappel 24h avant le RDV (table scheduled_emails)
+- Update colonne X (Mail Synthèse = Oui)
 
+### 3. Plaquette (/api/webhooks/plaquette)
+- Déclenché quand statut = "À rappeler - Plaquette"
+- Génère un mail sobre
+- Envoie avec la plaquette PDF en pièce jointe
+- Update colonne W (Mail Plaquette = Oui)
 
+### 4. Rappel 24h (/api/cron/rappel-24h)
+- CRON quotidien (9h)
+- Vérifie les rappels programmés à envoyer
+- Génère et envoie le mail de rappel
+- Update colonne Y (Mail Rappel = Oui)
 
 ---
 
+## 📊 STRUCTURE GOOGLE SHEET ATTENDUE
 
-
-\## 🗄️ STRUCTURE BASE DE DONNÉES
-
-
-
-\### Tables Supabase
-
-
-
-\*\*organizations\*\* - Entreprises clientes
-
-\- id, name, slug, google\_sheet\_id, google\_credentials, plan, created\_at
-
-
-
-\*\*users\*\* - Utilisateurs (conseillers)
-
-\- id, auth\_id, organization\_id, email, full\_name, role, gmail\_credentials
-
-
-
-\*\*prompts\*\* - Prompts IA personnalisables
-
-\- id, organization\_id, type, name, system\_prompt, user\_prompt
-
-
-
-\*\*daily\_stats\*\* - Statistiques quotidiennes
-
-\- id, organization\_id, date, total\_prospects, prospects\_chaud, tiede, froid, mails\_envoyes, rdv\_pris
-
-
-
-\*\*activity\_logs\*\* - Logs d'activité
-
-\- id, organization\_id, user\_id, action, details, created\_at
-
-
+| Col | Lettre | Nom | Section |
+|-----|--------|-----|---------|
+| 1 | A | ID | Leads |
+| 2 | B | Date Lead | Leads |
+| 3 | C | Nom | Leads |
+| 4 | D | Prénom | Leads |
+| 5 | E | Email | Leads |
+| 6 | F | Téléphone | Leads |
+| 7 | G | Source | Leads |
+| 8 | H | Âge | Leads |
+| 9 | I | Situation Pro | Leads |
+| 10 | J | Revenus Mensuels | Leads |
+| 11 | K | Patrimoine | Leads |
+| 12 | L | Besoins | Conseiller |
+| 13 | M | Notes Appel | Conseiller |
+| 14 | N | Statut Appel | Conseiller |
+| 15 | O | Date RDV | Conseiller |
+| 16 | P | Rappel Souhaité | Conseiller |
+| 17 | Q | Qualification IA | IA |
+| 18 | R | Score IA | IA |
+| 19 | S | Priorité IA | IA |
+| 20 | T | Justification IA | IA |
+| 21 | U | RDV Prévu | IA |
+| 22 | V | Lien Rappel Calendar | IA |
+| 23 | W | Mail Plaquette Envoyé | IA |
+| 24 | X | Mail Synthèse Envoyé | IA |
+| 25 | Y | Mail Rappel 24h Envoyé | IA |
 
 ---
 
+## 🎨 CONVENTIONS DE CODE
 
+### Style
+- Composants shadcn/ui au maximum
+- Tailwind CSS (pas de CSS custom)
+- Couleur primaire : Indigo (#6366f1)
+- Cards : rounded-xl + shadow-sm
 
-\## 🎨 CONVENTIONS DE CODE
+### TypeScript
+- Toujours typer les props
+- Types dans src/types/index.ts
+- Éviter `any`
 
+### Fichiers
+- Composants : PascalCase (StatsCards.tsx)
+- Hooks : camelCase avec `use` (useUser.ts)
+- Utilitaires : camelCase (utils.ts)
 
-
-\### Style
-
-\- Utiliser les composants shadcn/ui au maximum
-
-\- Tailwind CSS pour le styling (pas de CSS custom)
-
-\- Couleur primaire : Indigo (#6366f1)
-
-\- Coins arrondis : rounded-xl sur les cards
-
-\- Ombres : shadow-sm
-
-
-
-\### TypeScript
-
-\- Toujours typer les props des composants
-
-\- Utiliser les types dans `src/types/index.ts`
-
-\- Éviter `any`, préférer `unknown` si nécessaire
-
-
-
-\### Fichiers
-
-\- Composants : PascalCase (ex: `StatsCards.tsx`)
-
-\- Hooks : camelCase avec prefix `use` (ex: `useUser.ts`)
-
-\- Utilitaires : camelCase (ex: `utils.ts`)
-
-
-
-\### Imports
-
-\- Utiliser l'alias `@/` pour les imports absolus
-
-\- Exemple : `import { Button } from "@/components/ui/button"`
-
-
+### Imports
+- Alias `@/` pour imports absolus
+- Exemple : `import { Button } from "@/components/ui/button"`
 
 ---
 
-
-
-\## 🚀 COMMANDES
-
-
-
-\### Développement
-
+## 🚀 COMMANDES
 ```bash
-
-npm run dev          # Lancer le serveur de dev (localhost:3000)
-
-npm run build        # Build de production
-
+npm run dev          # Dev server (localhost:3000)
+npm run build        # Build production
 npm run lint         # Vérifier le code
-
 ```
 
-
-
-\### Git
-
+### Git
 ```bash
-
 git add .
-
-git commit -m "description"
-
+git commit -m "type: description"
 git push origin main
-
 ```
 
-
-
-\### Déploiement
-
-Le déploiement sur Vercel est automatique à chaque push sur `main`.
-
-
+Convention commits : feat, fix, style, refactor, docs, chore
 
 ---
 
+## 🔗 LIENS
 
-
-\## 📋 GIT WORKFLOW
-
-
-
-\### Convention de commits
-
-```
-
-feat: nouvelle fonctionnalité
-
-fix: correction de bug
-
-style: changement de style (CSS, UI)
-
-refactor: refactoring de code
-
-docs: documentation
-
-chore: maintenance, dépendances
-
-```
-
-
-
-\### Exemples
-
-```
-
-feat: add prospects table with filtering
-
-fix: resolve auth redirect issue
-
-style: improve dashboard cards design
-
-refactor: extract stats logic into custom hook
-
-```
-
-
-
-\### Processus de commit
-
-1\. `git add .` - Ajouter les fichiers modifiés
-
-2\. `git commit -m "type: description"` - Commit avec message descriptif
-
-3\. `git push origin main` - Pusher vers GitHub (déclenche le déploiement Vercel)
-
-
+- **Prod** : https://ultron-murex.vercel.app
+- **GitHub** : https://github.com/martinborgis-lang/Ultron
+- **Supabase** : https://supabase.com/dashboard
+- **Vercel** : https://vercel.com
+- **Anthropic** : https://console.anthropic.com
 
 ---
 
+## 📝 APPS SCRIPT TEMPLATE (pour les clients)
+```javascript
+const WEBHOOK_BASE = "https://ultron-murex.vercel.app/api/webhooks";
 
+function installedOnEdit(e) {
+  const sheet = e.source.getActiveSheet();
+  if (sheet.getName() !== "prospect") return;
 
-\## 🔗 LIENS UTILES
+  const range = e.range;
+  if (range.getColumn() !== 14) return; // Colonne N (Statut)
 
+  const row = range.getRow();
+  if (row === 1) return;
 
+  const sheetId = SpreadsheetApp.getActiveSpreadsheet().getId();
+  const data = sheet.getRange(row, 1, 1, 25).getValues()[0];
+  const statut = String(data[13]).trim();
 
-\- \*\*Repo GitHub\*\* : https://github.com/\[USERNAME]/ultron
+  const payload = {
+    sheet_id: sheetId,
+    row_number: row,
+    data: {
+      id: data[0], nom: data[2], prenom: data[3], email: data[4],
+      telephone: data[5], age: data[7], situation_pro: data[8],
+      revenus: data[9], patrimoine: data[10], besoins: data[11],
+      notes_appel: data[12], statut: data[13], date_rdv: data[14],
+      qualification: data[16], score: data[17], priorite: data[18]
+    }
+  };
 
-\- \*\*Vercel\*\* : https://ultron-xxx.vercel.app (après déploiement)
+  let endpoint = "";
+  if (statut === "RDV Validé") endpoint = "/rdv-valide";
+  else if (statut === "À rappeler - Plaquette") endpoint = "/plaquette";
+  else if (["RDV Validé", "À rappeler - Plaquette", "À rappeler - RDV"].includes(statut)) {
+    endpoint = "/qualification";
+  }
 
-\- \*\*Supabase\*\* : https://supabase.com/dashboard/project/lfieylacuznqqhaobobt
-
-\- \*\*shadcn/ui docs\*\* : https://ui.shadcn.com
-
-\- \*\*Tailwind docs\*\* : https://tailwindcss.com/docs
-
-
-
----
-
-
-
-\## 📝 TODO / ROADMAP
-
-
-
-\### Phase 1 ✅
-
-\- \[x] Setup Next.js + Tailwind + shadcn
-
-\- \[x] Auth Supabase (login/register)
-
-\- \[x] Dashboard avec données mock
-
-\- \[x] Layout avec sidebar
-
-
-
-\### Phase 2 (En cours)
-
-\- \[ ] Déploiement Vercel
-
-\- \[ ] Connexion Google Sheets API
-
-\- \[ ] Affichage des vrais prospects
-
-\- \[ ] Stats en temps réel
-
-
-
-\### Phase 3
-
-\- \[ ] Éditeur de prompts IA
-
-\- \[ ] Gestion des conseillers
-
-\- \[ ] Envoi d'emails via Gmail API
-
-\- \[ ] Webhooks pour les workflows
-
-
-
-\### Phase 4
-
-\- \[ ] Réactiver RLS avec bonnes policies
-
-\- \[ ] Multi-tenant complet
-
-\- \[ ] Billing / Plans
-
-\- \[ ] Documentation utilisateur
-
-
-
----
-
-
-
-\## ⚠️ NOTES IMPORTANTES
-
-
-
-1\. \*\*RLS désactivé\*\* : Les Row Level Security policies sont actuellement désactivées pour le développement. À réactiver avant la mise en production.
-
-
-
-2\. \*\*Données mock\*\* : Le dashboard utilise actuellement des données mock. La connexion à la vraie Google Sheet est à implémenter.
-
-
-
-3\. \*\*Secrets\*\* : Ne jamais commit les fichiers `.env.local` ou les clés API.
-
-
-
-4\. \*\*Supabase\*\* : Le projet Supabase s'appelle "ultron" et est sur la région West EU.
-
+  if (endpoint) {
+    UrlFetchApp.fetch(WEBHOOK_BASE + endpoint, {
+      method: "post",
+      contentType: "application/json",
+      payload: JSON.stringify(payload),
+      muteHttpExceptions: true
+    });
+  }
+}
 ```
 
+---
 
+## ⚠️ NOTES IMPORTANTES
 
-
-
-Repository : https://github.com/martinborgis-lang/Ultron
-
+1. **Multi-tenant** : Chaque org a ses propres credentials Google et prompts
+2. **RLS désactivé** sur certaines tables pour le dev - à sécuriser en prod
+3. **CRON Vercel** : Configuré dans vercel.json, tourne à 9h chaque jour
+4. **Google OAuth** : App en mode test, ajouter utilisateurs de confiance dans Google Cloud Console ensuite commit et push
