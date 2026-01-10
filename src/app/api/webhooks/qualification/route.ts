@@ -1,23 +1,64 @@
 import { createClient } from '@/lib/supabase/server';
-import { getValidCredentials, GoogleCredentials, Prospect } from '@/lib/google';
+import { getValidCredentials, GoogleCredentials } from '@/lib/google';
 import { generateEmail, buildUserPrompt, DEFAULT_PROMPTS } from '@/lib/anthropic';
 import { sendEmail } from '@/lib/gmail';
 import { NextRequest, NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 
+interface WebhookData {
+  id?: string;
+  nom?: string;
+  prenom?: string;
+  email?: string;
+  telephone?: string;
+  age?: string;
+  situation_pro?: string;
+  revenus?: string;
+  patrimoine?: string;
+  besoins?: string;
+  notes_appel?: string;
+  statut?: string;
+  date_rdv?: string;
+  qualification?: string;
+  score?: string;
+  priorite?: string;
+}
+
 interface WebhookPayload {
   sheet_id: string;
-  prospect: Prospect;
+  row_number?: number;
+  data: WebhookData;
+}
+
+function mapToProspect(data: WebhookData) {
+  return {
+    id: data.id || '',
+    nom: data.nom || '',
+    prenom: data.prenom || '',
+    email: data.email || '',
+    telephone: data.telephone || '',
+    age: data.age || '',
+    situationPro: data.situation_pro || '',
+    revenus: data.revenus || '',
+    patrimoine: data.patrimoine || '',
+    besoins: data.besoins || '',
+    notesAppel: data.notes_appel || '',
+    statutAppel: data.statut || '',
+    dateRdv: data.date_rdv || '',
+    qualificationIA: data.qualification || '',
+    scoreIA: data.score || '',
+    prioriteIA: data.priorite || '',
+  };
 }
 
 export async function POST(request: NextRequest) {
   try {
     const payload: WebhookPayload = await request.json();
 
-    if (!payload.sheet_id || !payload.prospect) {
+    if (!payload.sheet_id || !payload.data) {
       return NextResponse.json(
-        { error: 'Missing sheet_id or prospect data' },
+        { error: 'Missing sheet_id or data' },
         { status: 400 }
       );
     }
@@ -45,7 +86,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const prospect = payload.prospect;
+    const prospect = mapToProspect(payload.data);
 
     if (!prospect.email) {
       return NextResponse.json(
