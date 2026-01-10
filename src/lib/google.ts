@@ -2,7 +2,7 @@ import { google } from 'googleapis';
 import { OAuth2Client } from 'google-auth-library';
 
 const SCOPES = [
-  'https://www.googleapis.com/auth/spreadsheets.readonly',
+  'https://www.googleapis.com/auth/spreadsheets',
   'https://www.googleapis.com/auth/gmail.send',
   'https://www.googleapis.com/auth/userinfo.email',
 ];
@@ -130,6 +130,27 @@ export async function readGoogleSheet(
   });
 
   return response.data.values || [];
+}
+
+export async function updateGoogleSheetCells(
+  credentials: GoogleCredentials,
+  sheetId: string,
+  updates: { range: string; value: string }[]
+): Promise<void> {
+  const sheets = createSheetsClient(credentials);
+
+  const data = updates.map((u) => ({
+    range: u.range,
+    values: [[u.value]],
+  }));
+
+  await sheets.spreadsheets.values.batchUpdate({
+    spreadsheetId: sheetId,
+    requestBody: {
+      valueInputOption: 'USER_ENTERED',
+      data,
+    },
+  });
 }
 
 export function parseProspectsFromSheet(rows: string[][]): Prospect[] {

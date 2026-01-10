@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server';
-import { getValidCredentials, GoogleCredentials } from '@/lib/google';
-import { generateEmail, buildUserPrompt, DEFAULT_PROMPTS } from '@/lib/anthropic';
+import { getValidCredentials, GoogleCredentials, updateGoogleSheetCells } from '@/lib/google';
+import { generateEmail, buildUserPrompt, DEFAULT_PROMPTS, qualifyProspect } from '@/lib/anthropic';
 import { sendEmail } from '@/lib/gmail';
 import { NextRequest, NextResponse } from 'next/server';
 
@@ -68,7 +68,7 @@ export async function POST(request: NextRequest) {
     // Find organization by sheet_id
     const { data: org, error: orgError } = await supabase
       .from('organizations')
-      .select('id, google_credentials, prompt_synthese')
+      .select('id, google_credentials, google_sheet_id, prompt_synthese')
       .eq('google_sheet_id', payload.sheet_id)
       .single();
 
@@ -86,7 +86,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const prospect = mapToProspect(payload.data);
+    let prospect = mapToProspect(payload.data);
 
     if (!prospect.email) {
       return NextResponse.json(
@@ -96,7 +96,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get valid credentials (refresh if needed)
-    const credentials = await getValidCredentials(org.google_credentials as GoogleCredentials);
+    let credentials = await getValidCredentials(org.google_credentials as GoogleCredentials);
 
     // Update credentials if refreshed
     if (credentials !== org.google_credentials) {
@@ -106,21 +106,75 @@ export async function POST(request: NextRequest) {
         .eq('id', org.id);
     }
 
-    // Get prompt (custom or default)
-    const systemPrompt = org.prompt_synthese || DEFAULT_PROMPTS.synthese;
-    const userPrompt = buildUserPrompt(prospect);
+    // Step 1: Qualify prospect if not already qualified
+    let qualificationResult = null;
+    if (!prospect.qualificationIA || prospect.qualificationIA.trim() === '') {
+      console.log('Qualifying prospect before sending email...');
 
-    // Generate email with Claude
+      qualificationResult = await qualifyProspect({
+        prenom: prospect.prenom,
+        nom: prospect.nom,
+        email: prospect.email,
+        telephone: prospect.telephone,
+        age: prospect.age,
+        situationPro: prospect.situationPro,
+        revenus: prospect.revenus,
+        patrimoine: prospect.patrimoine,
+        besoins: prospect.besoins,
+        notesAppel: prospect.notesAppel,
+      });
+
+      // Update prospect object with new qualification
+      prospect = {
+        ...prospect,
+        qualificationIA: qualificationResult.qualification,
+        scoreIA: qualificationResult.score.toString(),
+        prioriteIA: qualificationResult.priorite,
+      };
+
+      // Step 2: Update Google Sheet columns Q, R, S, T (row_number is 1-indexed)
+      if (payload.row_number) {
+        const rowNum = payload.row_number;
+        await updateGoogleSheetCells(credentials, org.google_sheet_id, [
+          { range: `Q${rowNum}`, value: qualificationResult.qualification },
+          { range: `R${rowNum}`, value: qualificationResult.score.toString() },
+          { range: `S${rowNum}`, value: qualificationResult.priorite },
+          { range: `T${rowNum}`, value: qualificationResult.justification },
+        ]);
+        console.log(`Updated Sheet row ${rowNum} with qualification: ${qualificationResult.qualification}`);
+      }
+    }
+
+    // Step 3: Generate synthesis email with Claude (using qualification for tone)
+    const systemPrompt = org.prompt_synthese || DEFAULT_PROMPTS.synthese;
+    const userPrompt = buildUserPrompt({
+      prenom: prospect.prenom,
+      nom: prospect.nom,
+      email: prospect.email,
+      telephone: prospect.telephone,
+      qualificationIA: prospect.qualificationIA,
+      scoreIA: prospect.scoreIA,
+      noteConseiller: prospect.notesAppel,
+      dateRdv: prospect.dateRdv,
+    });
+
     const email = await generateEmail(systemPrompt, userPrompt);
 
-    // Send email via Gmail
+    // Step 4: Send email via Gmail
     const result = await sendEmail(credentials, {
       to: prospect.email,
       subject: email.objet,
       body: email.corps,
     });
 
-    // Log email sent
+    // Step 5: Update column X (Mail Synthèse = Oui)
+    if (payload.row_number) {
+      await updateGoogleSheetCells(credentials, org.google_sheet_id, [
+        { range: `X${payload.row_number}`, value: 'Oui' },
+      ]);
+    }
+
+    // Step 6: Log email sent
     await supabase.from('email_logs').insert({
       organization_id: org.id,
       prospect_email: prospect.email,
@@ -132,20 +186,17 @@ export async function POST(request: NextRequest) {
       sent_at: new Date().toISOString(),
     });
 
-    // Schedule 24h reminder email
+    // Step 7: Schedule 24h reminder email
     if (prospect.dateRdv) {
-      // Parse date (format: DD/MM/YYYY)
       const parts = prospect.dateRdv.split('/');
       if (parts.length === 3) {
         const [day, month, year] = parts.map(Number);
         const rdvDate = new Date(year, month - 1, day);
 
-        // Schedule for 24h before
         const reminderDate = new Date(rdvDate);
         reminderDate.setDate(reminderDate.getDate() - 1);
-        reminderDate.setHours(9, 0, 0, 0); // Send at 9 AM
+        reminderDate.setHours(9, 0, 0, 0);
 
-        // Only schedule if reminder date is in the future
         if (reminderDate > new Date()) {
           await supabase.from('scheduled_emails').insert({
             organization_id: org.id,
@@ -161,6 +212,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       messageId: result.messageId,
+      qualified: qualificationResult !== null,
+      qualification: prospect.qualificationIA,
       email: {
         to: prospect.email,
         subject: email.objet,
