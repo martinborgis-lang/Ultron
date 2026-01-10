@@ -1,6 +1,8 @@
 import { createClient } from '@/lib/supabase/server';
-import { getValidCredentials, readGoogleSheet, GoogleCredentials } from '@/lib/google';
+import { getValidCredentials, readGoogleSheet, parseProspectsFromSheet, GoogleCredentials } from '@/lib/google';
 import { NextResponse } from 'next/server';
+
+export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
@@ -52,10 +54,11 @@ export async function GET() {
     }
 
     const rows = await readGoogleSheet(credentials, org.google_sheet_id);
+    const prospects = parseProspectsFromSheet(rows);
 
     return NextResponse.json({
       success: true,
-      rows: rows.length > 0 ? rows.length - 1 : 0,
+      rows: prospects.length,
     });
   } catch (error) {
     console.error('Sheet test error:', error);
