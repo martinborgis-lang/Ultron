@@ -25,6 +25,7 @@ L'email doit:
 - Mentionner les informations pertinentes du prospect
 - Proposer un échange pour comprendre ses besoins patrimoniaux
 - Être concis (max 200 mots)
+- NE PAS inclure de signature à la fin (pas de nom, prénom, ou placeholder comme [Signature]). Terminer simplement par une formule de politesse comme "Cordialement" ou "À très bientôt".
 
 Retourne UNIQUEMENT un JSON avec le format:
 {"objet": "Objet de l'email", "corps": "Corps de l'email"}`,
@@ -42,6 +43,7 @@ L'email doit:
 - Résumer les points clés abordés
 - Proposer les prochaines étapes (adaptées au niveau de qualification)
 - Être professionnel et personnalisé
+- NE PAS inclure de signature à la fin (pas de nom, prénom, ou placeholder comme [Signature]). Terminer simplement par une formule de politesse comme "Cordialement" ou "À très bientôt".
 
 Retourne UNIQUEMENT un JSON avec le format:
 {"objet": "Objet de l'email", "corps": "Corps de l'email"}`,
@@ -53,6 +55,7 @@ L'email doit:
 - Rappeler la date et l'heure du rendez-vous
 - Être bref et professionnel
 - Inclure les informations pratiques si nécessaire
+- NE PAS inclure de signature à la fin (pas de nom, prénom, ou placeholder comme [Signature]). Terminer simplement par une formule de politesse comme "Cordialement" ou "À très bientôt".
 
 Retourne UNIQUEMENT un JSON avec le format:
 {"objet": "Objet de l'email", "corps": "Corps de l'email"}`,
@@ -65,6 +68,7 @@ L'email doit:
 - Mettre en avant les points forts
 - Inviter à prendre contact pour plus d'informations
 - Être professionnel et engageant
+- NE PAS inclure de signature à la fin (pas de nom, prénom, ou placeholder comme [Signature]). Terminer simplement par une formule de politesse comme "Cordialement" ou "À très bientôt".
 
 Retourne UNIQUEMENT un JSON avec le format:
 {"objet": "Objet de l'email", "corps": "Corps de l'email"}`,
