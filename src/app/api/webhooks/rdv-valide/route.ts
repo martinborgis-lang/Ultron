@@ -188,34 +188,71 @@ export async function POST(request: NextRequest) {
     });
 
     // Step 7: Schedule 24h reminder email
-    if (prospect.dateRdv) {
-      const parts = prospect.dateRdv.split('/');
-      if (parts.length === 3) {
-        const [day, month, year] = parts.map(Number);
-        const rdvDate = new Date(year, month - 1, day);
+    const dateRdvStr = prospect.dateRdv;
+    console.log('Date RDV brute:', dateRdvStr);
 
-        // Schedule reminder exactly 24h before RDV (at 9h the day before)
-        const reminderDate = new Date(rdvDate);
-        reminderDate.setDate(reminderDate.getDate() - 1);
-        reminderDate.setHours(9, 0, 0, 0);
+    if (dateRdvStr && dateRdvStr.trim() !== '') {
+      let rdvDate: Date | null = null;
 
-        if (reminderDate > new Date()) {
-          // Include row_number in prospect_data for Sheet update
+      // Parse date - format français "DD/MM/YYYY HH:mm" or "DD/MM/YYYY"
+      if (dateRdvStr.includes('/')) {
+        const [datePart, timePart] = dateRdvStr.split(' ');
+        const dateParts = datePart.split('/');
+
+        if (dateParts.length === 3) {
+          const [day, month, year] = dateParts.map(Number);
+          const [hours, minutes] = (timePart || '09:00').split(':').map(Number);
+          rdvDate = new Date(year, month - 1, day, hours || 9, minutes || 0);
+        }
+      } else {
+        // Try ISO format
+        rdvDate = new Date(dateRdvStr);
+      }
+
+      if (rdvDate && !isNaN(rdvDate.getTime())) {
+        console.log('Date RDV parsee:', rdvDate.toISOString());
+
+        // Schedule reminder exactly 24h before RDV
+        const scheduledFor = new Date(rdvDate.getTime() - 24 * 60 * 60 * 1000);
+        console.log('Rappel programme pour:', scheduledFor.toISOString());
+
+        // Only schedule if reminder is in the future
+        if (scheduledFor > new Date()) {
+          // Include row_number and formatted date in prospect_data
           const prospectWithRow = {
             ...prospect,
             row_number: payload.row_number,
+            dateRdvFormatted: rdvDate.toLocaleString('fr-FR', {
+              weekday: 'long',
+              day: 'numeric',
+              month: 'long',
+              year: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit',
+            }),
           };
 
-          await supabase.from('scheduled_emails').insert({
+          const { error: scheduleError } = await supabase.from('scheduled_emails').insert({
             organization_id: org.id,
             prospect_data: prospectWithRow,
             email_type: 'rappel',
-            scheduled_for: reminderDate.toISOString(),
+            scheduled_for: scheduledFor.toISOString(),
             status: 'pending',
           });
-          console.log(`Rappel programme pour ${prospect.email} le ${reminderDate.toISOString()}`);
+
+          if (scheduleError) {
+            console.error('Erreur creation scheduled_email:', scheduleError);
+          } else {
+            console.log(`Rappel 24h programme pour ${prospect.email}`);
+          }
+        } else {
+          console.log('Rappel non programme: date deja passee');
         }
+      } else {
+        console.log('Impossible de parser la date RDV:', dateRdvStr);
       }
+    } else {
+      console.log('Pas de date RDV, rappel non programme');
     }
 
     return NextResponse.json({
