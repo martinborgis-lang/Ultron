@@ -2,6 +2,7 @@ import { Suspense } from 'react';
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import { GoogleSheetsConfig } from '@/components/settings/GoogleSheetsConfig';
+import { PlaquetteConfig } from '@/components/settings/PlaquetteConfig';
 import { TeamManager } from '@/components/settings/TeamManager';
 import { PromptEditor } from '@/components/settings/PromptEditor';
 import { ThemeSelector } from '@/components/settings/ThemeSelector';
@@ -30,7 +31,7 @@ async function getOrganizationData() {
 
   const { data: org } = await supabase
     .from('organizations')
-    .select('google_credentials, google_sheet_id')
+    .select('google_credentials, google_sheet_id, plaquette_url')
     .eq('id', user.organization_id)
     .single();
 
@@ -52,6 +53,7 @@ export default async function SettingsPage() {
 
   const isGoogleConnected = !!org?.google_credentials;
   const sheetId = org?.google_sheet_id || null;
+  const plaquetteId = org?.plaquette_url || null;
 
   return (
     <div className="space-y-6">
@@ -76,12 +78,15 @@ export default async function SettingsPage() {
         </TabsList>
         <div className="mt-6">
           <TabsContent value="sheets">
-            <Suspense fallback={<GoogleSheetsConfigSkeleton />}>
-              <GoogleSheetsConfig
-                isGoogleConnected={isGoogleConnected}
-                initialSheetId={sheetId}
-              />
-            </Suspense>
+            <div className="space-y-6">
+              <Suspense fallback={<GoogleSheetsConfigSkeleton />}>
+                <GoogleSheetsConfig
+                  isGoogleConnected={isGoogleConnected}
+                  initialSheetId={sheetId}
+                />
+              </Suspense>
+              <PlaquetteConfig initialPlaquetteId={plaquetteId} />
+            </div>
           </TabsContent>
           <TabsContent value="team">
             <TeamManager />

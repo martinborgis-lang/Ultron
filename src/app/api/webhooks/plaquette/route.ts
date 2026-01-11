@@ -88,7 +88,7 @@ export async function POST(request: NextRequest) {
     }
 
     const prospect = mapToProspect(payload.data);
-    const plaquetteUrl = payload.plaquette_url || org.plaquette_url;
+    const plaquetteId = payload.plaquette_url || org.plaquette_url;
 
     if (!prospect.email) {
       return NextResponse.json(
@@ -97,12 +97,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!plaquetteUrl) {
+    if (!plaquetteId) {
       return NextResponse.json(
-        { error: 'No plaquette URL configured' },
+        { error: 'No plaquette configured. Please configure it in Settings.' },
         { status: 400 }
       );
     }
+
+    // Construct Google Drive download URL from file ID
+    const plaquetteUrl = `https://drive.google.com/uc?export=download&id=${plaquetteId}`;
 
     // Get valid credentials (refresh if needed)
     const credentials = await getValidCredentials(org.google_credentials as GoogleCredentials);
