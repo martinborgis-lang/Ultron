@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
-import { getValidCredentials, GoogleCredentials } from '@/lib/google';
+import { getValidCredentials, GoogleCredentials, downloadFileFromDrive } from '@/lib/google';
 import { generateEmail, buildUserPrompt, DEFAULT_PROMPTS } from '@/lib/anthropic';
-import { sendEmailWithAttachment } from '@/lib/gmail';
+import { sendEmailWithBufferAttachment } from '@/lib/gmail';
 import { NextRequest, NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
@@ -104,11 +104,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Construct Google Drive download URL from file ID
-    const plaquetteUrl = `https://drive.google.com/uc?export=download&id=${plaquetteId}`;
-
     // Get valid credentials (refresh if needed)
-    const credentials = await getValidCredentials(org.google_credentials as GoogleCredentials);
+    let credentials = await getValidCredentials(org.google_credentials as GoogleCredentials);
 
     // Update credentials if refreshed
     if (credentials !== org.google_credentials) {
@@ -118,6 +115,11 @@ export async function POST(request: NextRequest) {
         .eq('id', org.id);
     }
 
+    // Download plaquette from Google Drive
+    console.log('Downloading plaquette from Drive, fileId:', plaquetteId);
+    const plaquetteFile = await downloadFileFromDrive(credentials, plaquetteId);
+    console.log('Plaquette downloaded:', plaquetteFile.fileName, plaquetteFile.mimeType);
+
     // Get prompt (custom or default)
     const systemPrompt = org.prompt_plaquette || DEFAULT_PROMPTS.plaquette;
     const userPrompt = buildUserPrompt(prospect);
@@ -126,12 +128,13 @@ export async function POST(request: NextRequest) {
     const email = await generateEmail(systemPrompt, userPrompt);
 
     // Send email with attachment via Gmail
-    const result = await sendEmailWithAttachment(credentials, {
+    const result = await sendEmailWithBufferAttachment(credentials, {
       to: prospect.email,
       subject: email.objet,
       body: email.corps,
-      attachmentUrl: plaquetteUrl,
-      attachmentName: 'Plaquette.pdf',
+      attachmentBuffer: plaquetteFile.data,
+      attachmentName: plaquetteFile.fileName,
+      attachmentMimeType: plaquetteFile.mimeType,
     });
 
     // Log email sent

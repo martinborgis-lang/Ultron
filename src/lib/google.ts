@@ -5,6 +5,7 @@ const SCOPES = [
   'https://www.googleapis.com/auth/spreadsheets',
   'https://www.googleapis.com/auth/gmail.send',
   'https://www.googleapis.com/auth/userinfo.email',
+  'https://www.googleapis.com/auth/drive.readonly',
 ];
 
 export interface GoogleCredentials {
@@ -220,5 +221,44 @@ export function calculateStats(prospects: Prospect[]) {
     froids,
     mailsEnvoyes,
     rdvPris,
+  };
+}
+
+export interface DriveFile {
+  data: Buffer;
+  mimeType: string;
+  fileName: string;
+}
+
+export async function downloadFileFromDrive(
+  credentials: GoogleCredentials,
+  fileId: string
+): Promise<DriveFile> {
+  const oauth2Client = getOAuth2Client();
+
+  oauth2Client.setCredentials({
+    access_token: credentials.access_token,
+    refresh_token: credentials.refresh_token,
+    expiry_date: credentials.expiry_date,
+  });
+
+  const drive = google.drive({ version: 'v3', auth: oauth2Client });
+
+  // Get file metadata
+  const fileMetadata = await drive.files.get({
+    fileId: fileId,
+    fields: 'name, mimeType',
+  });
+
+  // Download file content
+  const response = await drive.files.get(
+    { fileId: fileId, alt: 'media' },
+    { responseType: 'arraybuffer' }
+  );
+
+  return {
+    data: Buffer.from(response.data as ArrayBuffer),
+    mimeType: fileMetadata.data.mimeType || 'application/pdf',
+    fileName: fileMetadata.data.name || 'plaquette.pdf',
   };
 }
