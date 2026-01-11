@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { getValidCredentials, GoogleCredentials, updateGoogleSheetCells } from '@/lib/google';
 import { generateEmail, buildUserPrompt, DEFAULT_PROMPTS, qualifyProspect } from '@/lib/anthropic';
 import { sendEmail } from '@/lib/gmail';
@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const supabase = await createClient();
+    const supabase = createAdminClient();
 
     // Find organization by sheet_id
     const { data: org, error: orgError } = await supabase
@@ -188,8 +188,16 @@ export async function POST(request: NextRequest) {
     });
 
     // Step 7: Schedule 24h reminder email
+    console.log('=== CREATION RAPPEL 24H ===');
     const dateRdvStr = prospect.dateRdv;
     console.log('Date RDV brute:', dateRdvStr);
+    console.log('Organization ID:', org.id);
+
+    let rappelResult: { scheduled: boolean; scheduledFor: string | null; error: string | null } = {
+      scheduled: false,
+      scheduledFor: null,
+      error: null,
+    };
 
     if (dateRdvStr && dateRdvStr.trim() !== '') {
       let rdvDate: Date | null = null;
@@ -232,27 +240,38 @@ export async function POST(request: NextRequest) {
             }),
           };
 
-          const { error: scheduleError } = await supabase.from('scheduled_emails').insert({
-            organization_id: org.id,
-            prospect_data: prospectWithRow,
-            email_type: 'rappel',
-            scheduled_for: scheduledFor.toISOString(),
-            status: 'pending',
-          });
+          console.log('Inserting scheduled_email...');
+          const { data: insertData, error: scheduleError } = await supabase
+            .from('scheduled_emails')
+            .insert({
+              organization_id: org.id,
+              prospect_data: prospectWithRow,
+              email_type: 'rappel',
+              scheduled_for: scheduledFor.toISOString(),
+              status: 'pending',
+            })
+            .select()
+            .single();
 
           if (scheduleError) {
-            console.error('Erreur creation scheduled_email:', scheduleError);
+            console.error('Erreur creation scheduled_email:', JSON.stringify(scheduleError));
+            rappelResult.error = scheduleError.message;
           } else {
-            console.log(`Rappel 24h programme pour ${prospect.email}`);
+            console.log('Rappel 24h programme avec succes, ID:', insertData?.id);
+            rappelResult.scheduled = true;
+            rappelResult.scheduledFor = scheduledFor.toISOString();
           }
         } else {
           console.log('Rappel non programme: date deja passee');
+          rappelResult.error = 'Date already passed';
         }
       } else {
         console.log('Impossible de parser la date RDV:', dateRdvStr);
+        rappelResult.error = 'Cannot parse date';
       }
     } else {
       console.log('Pas de date RDV, rappel non programme');
+      rappelResult.error = 'No date_rdv provided';
     }
 
     return NextResponse.json({
@@ -264,6 +283,7 @@ export async function POST(request: NextRequest) {
         to: prospect.email,
         subject: email.objet,
       },
+      rappel: rappelResult,
     });
   } catch (error) {
     console.error('RDV validation webhook error:', error);
