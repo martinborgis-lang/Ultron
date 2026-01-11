@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useState, useCallback, useSyncExternalStore } from 'react';
 
 type Theme = 'light' | 'dark' | 'system';
 
@@ -12,19 +12,41 @@ interface ThemeContextType {
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
+// SSR-safe mounted check using useSyncExternalStore
+function useHasMounted() {
+  return useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false
+  );
+}
+
+// SSR-safe localStorage theme getter
+function getStoredTheme(): Theme {
+  if (typeof window === 'undefined') return 'system';
+  const stored = localStorage.getItem('theme') as Theme | null;
+  return stored || 'system';
+}
+
+// Subscribe to localStorage changes
+function subscribeToStorage(callback: () => void) {
+  window.addEventListener('storage', callback);
+  return () => window.removeEventListener('storage', callback);
+}
+
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setTheme] = useState<Theme>('system');
+  const mounted = useHasMounted();
+
+  // Use useSyncExternalStore for localStorage to avoid setState in useEffect
+  const theme = useSyncExternalStore(
+    subscribeToStorage,
+    getStoredTheme,
+    () => 'system' as Theme
+  );
+
   const [resolvedTheme, setResolvedTheme] = useState<'light' | 'dark'>('light');
-  const [mounted, setMounted] = useState(false);
 
-  useEffect(() => {
-    setMounted(true);
-    const stored = localStorage.getItem('theme') as Theme | null;
-    if (stored) {
-      setTheme(stored);
-    }
-  }, []);
-
+  // Apply theme to document
   useEffect(() => {
     if (!mounted) return;
 
@@ -54,10 +76,11 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     }
   }, [theme, mounted]);
 
-  const handleSetTheme = (newTheme: Theme) => {
-    setTheme(newTheme);
+  const handleSetTheme = useCallback((newTheme: Theme) => {
     localStorage.setItem('theme', newTheme);
-  };
+    // Dispatch storage event to trigger useSyncExternalStore update
+    window.dispatchEvent(new StorageEvent('storage', { key: 'theme', newValue: newTheme }));
+  }, []);
 
   if (!mounted) {
     return <>{children}</>;

@@ -53,7 +53,7 @@ export function PlaquetteConfig({ initialPlaquetteId }: PlaquetteConfigProps) {
           <div>
             <CardTitle className="text-lg">Plaquette PDF</CardTitle>
             <CardDescription>
-              Configurez votre plaquette commerciale pour l'envoi automatique
+              Configurez votre plaquette commerciale pour l&apos;envoi automatique
             </CardDescription>
           </div>
         </div>

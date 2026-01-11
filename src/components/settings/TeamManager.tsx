@@ -79,7 +79,7 @@ export function TeamManager() {
                 </div>
                 <Button className="w-full bg-indigo-600 hover:bg-indigo-700">
                   <Mail className="mr-2 h-4 w-4" />
-                  Envoyer l'invitation
+                  Envoyer l&apos;invitation
                 </Button>
               </div>
             </SheetContent>

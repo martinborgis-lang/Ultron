@@ -134,7 +134,7 @@ export function RegisterForm() {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="companyName">Nom de l'entreprise</Label>
+            <Label htmlFor="companyName">Nom de l&apos;entreprise</Label>
             <Input
               id="companyName"
               type="text"

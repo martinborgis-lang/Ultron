@@ -96,7 +96,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get valid credentials (refresh if needed)
-    let credentials = await getValidCredentials(org.google_credentials as GoogleCredentials);
+    const credentials = await getValidCredentials(org.google_credentials as GoogleCredentials);
 
     // Update credentials if refreshed
     if (credentials !== org.google_credentials) {
@@ -193,7 +193,7 @@ export async function POST(request: NextRequest) {
     console.log('Date RDV brute:', dateRdvStr);
     console.log('Organization ID:', org.id);
 
-    let rappelResult: { scheduled: boolean; scheduledFor: string | null; error: string | null } = {
+    const rappelResult: { scheduled: boolean; scheduledFor: string | null; error: string | null } = {
       scheduled: false,
       scheduledFor: null,
       error: null,

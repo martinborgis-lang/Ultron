@@ -215,7 +215,7 @@ export function PromptEditor() {
                           className="font-mono text-sm"
                         />
                         <p className="text-xs text-muted-foreground">
-                          Le prompt definit comment Claude genere les emails. Il doit retourner un JSON avec "objet" et "corps".
+                          Le prompt definit comment Claude genere les emails. Il doit retourner un JSON avec &quot;objet&quot; et &quot;corps&quot;.
                         </p>
                       </div>
                       <div className="flex gap-2">

@@ -115,7 +115,7 @@ export async function GET(request: NextRequest) {
         }
 
         // Get valid credentials
-        let credentials = await getValidCredentials(org.google_credentials as GoogleCredentials);
+        const credentials = await getValidCredentials(org.google_credentials as GoogleCredentials);
 
         // Update credentials if refreshed
         if (credentials !== org.google_credentials) {

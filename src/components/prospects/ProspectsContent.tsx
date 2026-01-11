@@ -22,7 +22,6 @@ import {
   AlertCircle,
   Settings,
   RefreshCw,
-  Filter,
   X,
 } from 'lucide-react';
 import type { Prospect as GoogleProspect } from '@/lib/google';

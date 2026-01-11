@@ -36,7 +36,7 @@ export default function HomePage() {
           <h1 className="text-5xl md:text-6xl font-bold text-zinc-900 mb-6 leading-tight">
             Automatisez votre
             <span className="text-indigo-600"> prospection </span>
-            avec l'IA
+            avec l&apos;IA
           </h1>
 
           <p className="text-xl text-zinc-600 mb-10 max-w-2xl mx-auto">
@@ -68,7 +68,7 @@ export default function HomePage() {
               Qualification intelligente
             </h3>
             <p className="text-zinc-600">
-              L'IA analyse vos prospects et les classe automatiquement en chaud, tiede ou froid
+              L&apos;IA analyse vos prospects et les classe automatiquement en chaud, tiede ou froid
               selon leur potentiel.
             </p>
           </div>
@@ -81,7 +81,7 @@ export default function HomePage() {
               Emails personnalises
             </h3>
             <p className="text-zinc-600">
-              Generez des emails de suivi, de rappel ou d'envoi de plaquette parfaitement
+              Generez des emails de suivi, de rappel ou d&apos;envoi de plaquette parfaitement
               personnalises pour chaque prospect.
             </p>
           </div>
@@ -95,7 +95,7 @@ export default function HomePage() {
             </h3>
             <p className="text-zinc-600">
               Suivez vos performances avec des statistiques detaillees et des graphiques
-              d'evolution de votre pipeline.
+              d&apos;evolution de votre pipeline.
             </p>
           </div>
         </div>
