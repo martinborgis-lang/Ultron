@@ -1,10 +1,33 @@
 import { createClient } from '@/lib/supabase/server';
-import { getValidCredentials, GoogleCredentials, Prospect } from '@/lib/google';
+import { getValidCredentials, GoogleCredentials, updateGoogleSheetCells } from '@/lib/google';
 import { generateEmail, buildUserPrompt, DEFAULT_PROMPTS } from '@/lib/anthropic';
 import { sendEmail } from '@/lib/gmail';
 import { NextRequest, NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
+
+interface ProspectData {
+  id?: string;
+  nom: string;
+  prenom: string;
+  email: string;
+  telephone?: string;
+  dateRdv?: string;
+  qualificationIA?: string;
+  scoreIA?: string;
+  besoins?: string;
+  notesAppel?: string;
+  row_number?: number;
+}
+
+interface ScheduledEmail {
+  id: string;
+  organization_id: string;
+  prospect_data: ProspectData;
+  email_type: string;
+  scheduled_for: string;
+  status: string;
+}
 
 // Vercel Cron secret verification
 function verifyCronAuth(request: NextRequest): boolean {
@@ -26,19 +49,21 @@ export async function GET(request: NextRequest) {
     }
 
     const supabase = await createClient();
+    const now = new Date();
 
     // Get all pending scheduled emails that are due
-    const now = new Date();
     const { data: pendingEmails, error: fetchError } = await supabase
       .from('scheduled_emails')
       .select('*')
       .eq('status', 'pending')
       .lte('scheduled_for', now.toISOString())
-      .limit(50); // Process in batches
+      .limit(50);
 
     if (fetchError) {
       throw new Error(`Failed to fetch scheduled emails: ${fetchError.message}`);
     }
+
+    console.log(`CRON rappel-24h: ${pendingEmails?.length || 0} rappels en attente`);
 
     if (!pendingEmails || pendingEmails.length === 0) {
       return NextResponse.json({
@@ -51,15 +76,37 @@ export async function GET(request: NextRequest) {
     const results = {
       success: 0,
       failed: 0,
+      skipped: 0,
       errors: [] as string[],
     };
 
-    for (const scheduledEmail of pendingEmails) {
+    for (const scheduledEmail of pendingEmails as ScheduledEmail[]) {
+      // Mark as "processing" immediately (anti-duplicate protection)
+      const { error: updateError, count } = await supabase
+        .from('scheduled_emails')
+        .update({ status: 'processing' })
+        .eq('id', scheduledEmail.id)
+        .eq('status', 'pending'); // Double check - only update if still pending
+
+      // If already taken by another process, skip
+      if (updateError || count === 0) {
+        console.log(`Rappel ${scheduledEmail.id} deja en cours de traitement`);
+        results.skipped++;
+        continue;
+      }
+
       try {
+        const prospect = scheduledEmail.prospect_data;
+        console.log(`Traitement rappel pour ${prospect.email}`);
+
+        if (!prospect.email) {
+          throw new Error('Prospect has no email');
+        }
+
         // Get organization credentials
         const { data: org, error: orgError } = await supabase
           .from('organizations')
-          .select('id, google_credentials, prompt_rappel')
+          .select('id, google_credentials, google_sheet_id, prompt_rappel')
           .eq('id', scheduledEmail.organization_id)
           .single();
 
@@ -67,14 +114,8 @@ export async function GET(request: NextRequest) {
           throw new Error('Organization not found or no credentials');
         }
 
-        const prospect = scheduledEmail.prospect_data as Prospect;
-
-        if (!prospect.email) {
-          throw new Error('Prospect has no email');
-        }
-
         // Get valid credentials
-        const credentials = await getValidCredentials(org.google_credentials as GoogleCredentials);
+        let credentials = await getValidCredentials(org.google_credentials as GoogleCredentials);
 
         // Update credentials if refreshed
         if (credentials !== org.google_credentials) {
@@ -86,7 +127,15 @@ export async function GET(request: NextRequest) {
 
         // Get prompt
         const systemPrompt = org.prompt_rappel || DEFAULT_PROMPTS.rappel;
-        const userPrompt = buildUserPrompt(prospect);
+        const userPrompt = buildUserPrompt({
+          prenom: prospect.prenom,
+          nom: prospect.nom,
+          email: prospect.email,
+          telephone: prospect.telephone,
+          qualificationIA: prospect.qualificationIA,
+          scoreIA: prospect.scoreIA,
+          dateRdv: prospect.dateRdv,
+        });
 
         // Generate email
         const email = await generateEmail(systemPrompt, userPrompt);
@@ -97,6 +146,14 @@ export async function GET(request: NextRequest) {
           subject: email.objet,
           body: email.corps,
         });
+
+        // Update column Y (Mail Rappel = Oui) if row_number is available
+        if (prospect.row_number && org.google_sheet_id) {
+          await updateGoogleSheetCells(credentials, org.google_sheet_id, [
+            { range: `Y${prospect.row_number}`, value: 'Oui' },
+          ]);
+          console.log(`Updated Sheet row ${prospect.row_number} column Y = Oui`);
+        }
 
         // Log email sent
         await supabase.from('email_logs').insert({
@@ -119,16 +176,19 @@ export async function GET(request: NextRequest) {
           })
           .eq('id', scheduledEmail.id);
 
+        console.log(`Rappel envoye a ${prospect.email}`);
         results.success++;
+
       } catch (emailError) {
         const errorMsg = emailError instanceof Error ? emailError.message : 'Unknown error';
+        console.error(`Erreur rappel ${scheduledEmail.id}:`, errorMsg);
         results.errors.push(`Email ${scheduledEmail.id}: ${errorMsg}`);
 
-        // Mark as failed
+        // Mark as error
         await supabase
           .from('scheduled_emails')
           .update({
-            status: 'failed',
+            status: 'error',
             error_message: errorMsg,
           })
           .eq('id', scheduledEmail.id);

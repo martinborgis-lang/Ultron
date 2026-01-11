@@ -2,7 +2,7 @@
   "crons": [
     {
       "path": "/api/cron/rappel-24h",
-      "schedule": "0 9 * * *"
+      "schedule": "0 * * * *"
     }
   ]
 }

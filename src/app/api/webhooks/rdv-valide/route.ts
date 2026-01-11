@@ -194,18 +194,26 @@ export async function POST(request: NextRequest) {
         const [day, month, year] = parts.map(Number);
         const rdvDate = new Date(year, month - 1, day);
 
+        // Schedule reminder exactly 24h before RDV (at 9h the day before)
         const reminderDate = new Date(rdvDate);
         reminderDate.setDate(reminderDate.getDate() - 1);
         reminderDate.setHours(9, 0, 0, 0);
 
         if (reminderDate > new Date()) {
+          // Include row_number in prospect_data for Sheet update
+          const prospectWithRow = {
+            ...prospect,
+            row_number: payload.row_number,
+          };
+
           await supabase.from('scheduled_emails').insert({
             organization_id: org.id,
-            prospect_data: prospect,
+            prospect_data: prospectWithRow,
             email_type: 'rappel',
             scheduled_for: reminderDate.toISOString(),
             status: 'pending',
           });
+          console.log(`Rappel programme pour ${prospect.email} le ${reminderDate.toISOString()}`);
         }
       }
     }
