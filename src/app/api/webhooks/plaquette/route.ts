@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server';
-import { getValidCredentials, GoogleCredentials, downloadFileFromDrive } from '@/lib/google';
+import { getValidCredentials, GoogleCredentials, downloadFileFromDrive, updateGoogleSheetCells } from '@/lib/google';
 import { generateEmail, buildUserPrompt, DEFAULT_PROMPTS } from '@/lib/anthropic';
 import { sendEmailWithBufferAttachment } from '@/lib/gmail';
 import { NextRequest, NextResponse } from 'next/server';
@@ -69,7 +69,7 @@ export async function POST(request: NextRequest) {
     // Find organization by sheet_id
     const { data: org, error: orgError } = await supabase
       .from('organizations')
-      .select('id, google_credentials, prompt_plaquette, plaquette_url')
+      .select('id, google_credentials, google_sheet_id, prompt_plaquette, plaquette_url')
       .eq('google_sheet_id', payload.sheet_id)
       .single();
 
@@ -136,6 +136,13 @@ export async function POST(request: NextRequest) {
       attachmentName: plaquetteFile.fileName,
       attachmentMimeType: plaquetteFile.mimeType,
     });
+
+    // Update column W (Mail Plaquette Envoyé = Oui)
+    if (payload.row_number) {
+      await updateGoogleSheetCells(credentials, org.google_sheet_id, [
+        { range: `W${payload.row_number}`, value: 'Oui' },
+      ]);
+    }
 
     // Log email sent
     await supabase.from('email_logs').insert({
