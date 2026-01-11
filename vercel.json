@@ -1,8 +1,2 @@
 {
-  "crons": [
-    {
-      "path": "/api/cron/rappel-24h",
-      "schedule": "0 * * * *"
-    }
-  ]
 }

@@ -2,6 +2,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { getValidCredentials, GoogleCredentials, updateGoogleSheetCells } from '@/lib/google';
 import { generateEmail, buildUserPrompt, DEFAULT_PROMPTS, qualifyProspect } from '@/lib/anthropic';
 import { sendEmail } from '@/lib/gmail';
+import { scheduleRappelEmail } from '@/lib/qstash';
 import { NextRequest, NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
@@ -187,13 +188,13 @@ export async function POST(request: NextRequest) {
       sent_at: new Date().toISOString(),
     });
 
-    // Step 7: Schedule 24h reminder email
-    console.log('=== CREATION RAPPEL 24H ===');
+    // Step 7: Schedule 24h reminder email via QStash
+    console.log('=== PROGRAMMATION RAPPEL 24H via QStash ===');
     const dateRdvStr = prospect.dateRdv;
     console.log('Date RDV brute:', dateRdvStr);
     console.log('Organization ID:', org.id);
 
-    const rappelResult: { scheduled: boolean; scheduledFor: string | null; error: string | null } = {
+    const rappelResult: { scheduled: boolean; scheduledFor: string | null; error: string | null; messageId?: string } = {
       scheduled: false,
       scheduledFor: null,
       error: null,
@@ -226,40 +227,36 @@ export async function POST(request: NextRequest) {
 
         // Only schedule if reminder is in the future
         if (scheduledFor > new Date()) {
-          // Include row_number and formatted date in prospect_data
-          const prospectWithRow = {
-            ...prospect,
-            row_number: payload.row_number,
-            dateRdvFormatted: rdvDate.toLocaleString('fr-FR', {
-              weekday: 'long',
-              day: 'numeric',
-              month: 'long',
-              year: 'numeric',
-              hour: '2-digit',
-              minute: '2-digit',
-            }),
-          };
+          try {
+            // Schedule via QStash
+            const qstashResult = await scheduleRappelEmail(scheduledFor, {
+              organizationId: org.id,
+              prospectData: {
+                email: prospect.email,
+                nom: prospect.nom,
+                prenom: prospect.prenom,
+                date_rdv: rdvDate.toISOString(),
+                dateRdvFormatted: rdvDate.toLocaleString('fr-FR', {
+                  weekday: 'long',
+                  day: 'numeric',
+                  month: 'long',
+                  year: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                }),
+                qualification: prospect.qualificationIA,
+                besoins: prospect.besoins,
+              },
+              rowNumber: payload.row_number,
+            });
 
-          console.log('Inserting scheduled_email...');
-          const { data: insertData, error: scheduleError } = await supabase
-            .from('scheduled_emails')
-            .insert({
-              organization_id: org.id,
-              prospect_data: prospectWithRow,
-              email_type: 'rappel',
-              scheduled_for: scheduledFor.toISOString(),
-              status: 'pending',
-            })
-            .select()
-            .single();
-
-          if (scheduleError) {
-            console.error('Erreur creation scheduled_email:', JSON.stringify(scheduleError));
-            rappelResult.error = scheduleError.message;
-          } else {
-            console.log('Rappel 24h programme avec succes, ID:', insertData?.id);
+            console.log('Rappel programme via QStash, messageId:', qstashResult.messageId);
             rappelResult.scheduled = true;
             rappelResult.scheduledFor = scheduledFor.toISOString();
+            rappelResult.messageId = qstashResult.messageId;
+          } catch (qstashError) {
+            console.error('Erreur programmation QStash:', qstashError);
+            rappelResult.error = qstashError instanceof Error ? qstashError.message : 'QStash error';
           }
         } else {
           console.log('Rappel non programme: date deja passee');
