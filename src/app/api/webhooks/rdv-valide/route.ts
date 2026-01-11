@@ -1,7 +1,7 @@
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getValidCredentials, GoogleCredentials, updateGoogleSheetCells } from '@/lib/google';
 import { generateEmail, buildUserPrompt, DEFAULT_PROMPTS, qualifyProspect } from '@/lib/anthropic';
-import { sendEmail } from '@/lib/gmail';
+import { sendEmail, getEmailCredentials } from '@/lib/gmail';
 import { scheduleRappelEmail } from '@/lib/qstash';
 import { NextRequest, NextResponse } from 'next/server';
 
@@ -29,6 +29,7 @@ interface WebhookData {
 interface WebhookPayload {
   sheet_id: string;
   row_number?: number;
+  conseiller_id?: string; // Optional: advisor's user ID for per-user Gmail
   data: WebhookData;
 }
 
@@ -96,16 +97,27 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get valid credentials (refresh if needed)
-    const credentials = await getValidCredentials(org.google_credentials as GoogleCredentials);
+    // Get valid credentials for Sheet operations (always org-level)
+    const sheetCredentials = await getValidCredentials(org.google_credentials as GoogleCredentials);
 
-    // Update credentials if refreshed
-    if (credentials !== org.google_credentials) {
+    // Update org credentials if refreshed
+    if (sheetCredentials !== org.google_credentials) {
       await supabase
         .from('organizations')
-        .update({ google_credentials: credentials })
+        .update({ google_credentials: sheetCredentials })
         .eq('id', org.id);
     }
+
+    // Get email credentials (advisor's Gmail or fallback to org)
+    const emailCredentialsResult = await getEmailCredentials(org.id, payload.conseiller_id);
+    if (!emailCredentialsResult) {
+      return NextResponse.json(
+        { error: 'No email credentials available' },
+        { status: 400 }
+      );
+    }
+    const emailCredentials = emailCredentialsResult.credentials;
+    console.log('Using email credentials from:', emailCredentialsResult.source, emailCredentialsResult.userId || 'org');
 
     // Step 1: Qualify prospect if not already qualified
     let qualificationResult = null;
@@ -136,7 +148,7 @@ export async function POST(request: NextRequest) {
       // Step 2: Update Google Sheet columns Q, R, S, T (row_number is 1-indexed)
       if (payload.row_number) {
         const rowNum = payload.row_number;
-        await updateGoogleSheetCells(credentials, org.google_sheet_id, [
+        await updateGoogleSheetCells(sheetCredentials, org.google_sheet_id, [
           { range: `Q${rowNum}`, value: qualificationResult.qualification },
           { range: `R${rowNum}`, value: qualificationResult.score.toString() },
           { range: `S${rowNum}`, value: qualificationResult.priorite },
@@ -162,8 +174,8 @@ export async function POST(request: NextRequest) {
     const email = await generateEmail(systemPrompt, userPrompt);
     console.log('Email generated:', JSON.stringify(email));
 
-    // Step 4: Send email via Gmail
-    const result = await sendEmail(credentials, {
+    // Step 4: Send email via Gmail (using advisor's Gmail or org fallback)
+    const result = await sendEmail(emailCredentials, {
       to: prospect.email,
       subject: email.objet,
       body: email.corps,
@@ -171,7 +183,7 @@ export async function POST(request: NextRequest) {
 
     // Step 5: Update column X (Mail Synthèse = Oui)
     if (payload.row_number) {
-      await updateGoogleSheetCells(credentials, org.google_sheet_id, [
+      await updateGoogleSheetCells(sheetCredentials, org.google_sheet_id, [
         { range: `X${payload.row_number}`, value: 'Oui' },
       ]);
     }
@@ -228,9 +240,10 @@ export async function POST(request: NextRequest) {
         // Only schedule if reminder is in the future
         if (scheduledFor > new Date()) {
           try {
-            // Schedule via QStash
+            // Schedule via QStash (include conseiller_id for per-advisor Gmail)
             const qstashResult = await scheduleRappelEmail(scheduledFor, {
               organizationId: org.id,
+              conseillerId: payload.conseiller_id,
               prospectData: {
                 email: prospect.email,
                 nom: prospect.nom,

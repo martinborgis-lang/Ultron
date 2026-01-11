@@ -1,12 +1,21 @@
 import { google } from 'googleapis';
 import { OAuth2Client } from 'google-auth-library';
 
-const SCOPES = [
+// Scopes for organization-level OAuth (Sheets + Drive + Gmail)
+const ORGANIZATION_SCOPES = [
   'https://www.googleapis.com/auth/spreadsheets',
   'https://www.googleapis.com/auth/gmail.send',
   'https://www.googleapis.com/auth/userinfo.email',
   'https://www.googleapis.com/auth/drive.readonly',
 ];
+
+// Scopes for user-level Gmail OAuth
+const GMAIL_SCOPES = [
+  'https://www.googleapis.com/auth/gmail.send',
+  'https://www.googleapis.com/auth/userinfo.email',
+];
+
+export type OAuthType = 'organization' | 'gmail';
 
 export interface GoogleCredentials {
   access_token: string;
@@ -52,12 +61,13 @@ function getOAuth2Client(): OAuth2Client {
   );
 }
 
-export function generateAuthUrl(state: string): string {
+export function generateAuthUrl(state: string, type: OAuthType = 'organization'): string {
   const oauth2Client = getOAuth2Client();
+  const scopes = type === 'gmail' ? GMAIL_SCOPES : ORGANIZATION_SCOPES;
 
   return oauth2Client.generateAuthUrl({
     access_type: 'offline',
-    scope: SCOPES,
+    scope: scopes,
     state,
     prompt: 'consent',
   });

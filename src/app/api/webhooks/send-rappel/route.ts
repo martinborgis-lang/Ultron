@@ -1,7 +1,7 @@
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getValidCredentials, GoogleCredentials, updateGoogleSheetCells } from '@/lib/google';
 import { generateEmail, buildUserPrompt, DEFAULT_PROMPTS } from '@/lib/anthropic';
-import { sendEmail } from '@/lib/gmail';
+import { sendEmail, getEmailCredentials } from '@/lib/gmail';
 import { NextRequest, NextResponse } from 'next/server';
 import type { RappelPayload } from '@/lib/qstash';
 
@@ -10,11 +10,12 @@ export const dynamic = 'force-dynamic';
 async function handleRappel(request: NextRequest) {
   try {
     const payload: RappelPayload = await request.json();
-    const { organizationId, prospectData, rowNumber } = payload;
+    const { organizationId, conseillerId, prospectData, rowNumber } = payload;
 
     console.log('=== ENVOI RAPPEL 24H via QStash ===');
     console.log('Prospect:', prospectData.email);
     console.log('Organization:', organizationId);
+    console.log('Conseiller:', conseillerId || 'non specifie');
 
     const supabase = createAdminClient();
 
@@ -35,16 +36,25 @@ async function handleRappel(request: NextRequest) {
       return NextResponse.json({ error: 'No Google credentials' }, { status: 400 });
     }
 
-    // Get valid credentials (refresh if needed)
-    const credentials = await getValidCredentials(org.google_credentials as GoogleCredentials);
+    // Get valid credentials for Sheet operations (always org-level)
+    const sheetCredentials = await getValidCredentials(org.google_credentials as GoogleCredentials);
 
-    // Update credentials if refreshed
-    if (credentials !== org.google_credentials) {
+    // Update org credentials if refreshed
+    if (sheetCredentials !== org.google_credentials) {
       await supabase
         .from('organizations')
-        .update({ google_credentials: credentials })
+        .update({ google_credentials: sheetCredentials })
         .eq('id', org.id);
     }
+
+    // Get email credentials (advisor's Gmail or fallback to org)
+    const emailCredentialsResult = await getEmailCredentials(organizationId, conseillerId);
+    if (!emailCredentialsResult) {
+      console.error('No email credentials available');
+      return NextResponse.json({ error: 'No email credentials available' }, { status: 400 });
+    }
+    const emailCredentials = emailCredentialsResult.credentials;
+    console.log('Using email credentials from:', emailCredentialsResult.source, emailCredentialsResult.userId || 'org');
 
     // Get prompt
     const systemPrompt = org.prompt_rappel || DEFAULT_PROMPTS.rappel;
@@ -60,8 +70,8 @@ async function handleRappel(request: NextRequest) {
     const email = await generateEmail(systemPrompt, userPrompt);
     console.log('Email generated:', email.objet);
 
-    // Send email via Gmail
-    const result = await sendEmail(credentials, {
+    // Send email via Gmail (using advisor's Gmail or org fallback)
+    const result = await sendEmail(emailCredentials, {
       to: prospectData.email,
       subject: email.objet,
       body: email.corps,
@@ -71,7 +81,7 @@ async function handleRappel(request: NextRequest) {
 
     // Update column Y (Mail Rappel = Oui) if row_number is available
     if (rowNumber && org.google_sheet_id) {
-      await updateGoogleSheetCells(credentials, org.google_sheet_id, [
+      await updateGoogleSheetCells(sheetCredentials, org.google_sheet_id, [
         { range: `Y${rowNumber}`, value: 'Oui' },
       ]);
       console.log(`Updated Sheet row ${rowNumber} column Y = Oui`);

@@ -11,6 +11,7 @@ function getQStashClient() {
 
 export interface RappelPayload {
   organizationId: string;
+  conseillerId?: string; // Optional: advisor's user ID for per-user Gmail
   prospectData: {
     email: string;
     nom: string;

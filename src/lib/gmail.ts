@@ -1,5 +1,77 @@
 import { google } from 'googleapis';
 import { GoogleCredentials, getValidCredentials } from './google';
+import { createAdminClient } from './supabase/admin';
+
+export interface EmailCredentialsResult {
+  credentials: GoogleCredentials;
+  source: 'user' | 'organization';
+  userId?: string;
+}
+
+/**
+ * Get the appropriate Gmail credentials for sending emails.
+ * Priority: 1. User's gmail_credentials 2. Organization's google_credentials
+ */
+export async function getEmailCredentials(
+  organizationId: string,
+  userId?: string
+): Promise<EmailCredentialsResult | null> {
+  const supabase = createAdminClient();
+
+  // If userId is provided, try to get user's Gmail credentials first
+  if (userId) {
+    const { data: user } = await supabase
+      .from('users')
+      .select('id, gmail_credentials')
+      .eq('id', userId)
+      .eq('organization_id', organizationId)
+      .single();
+
+    if (user?.gmail_credentials) {
+      const validCredentials = await getValidCredentials(user.gmail_credentials as GoogleCredentials);
+
+      // Update credentials if refreshed
+      if (validCredentials !== user.gmail_credentials) {
+        await supabase
+          .from('users')
+          .update({ gmail_credentials: validCredentials })
+          .eq('id', userId);
+      }
+
+      return {
+        credentials: validCredentials,
+        source: 'user',
+        userId: user.id,
+      };
+    }
+  }
+
+  // Fallback to organization credentials
+  const { data: org } = await supabase
+    .from('organizations')
+    .select('id, google_credentials')
+    .eq('id', organizationId)
+    .single();
+
+  if (org?.google_credentials) {
+    const validCredentials = await getValidCredentials(org.google_credentials as GoogleCredentials);
+
+    // Update credentials if refreshed
+    if (validCredentials !== org.google_credentials) {
+      await supabase
+        .from('organizations')
+        .update({ google_credentials: validCredentials })
+        .eq('id', organizationId);
+    }
+
+    return {
+      credentials: validCredentials,
+      source: 'organization',
+    };
+  }
+
+  return null;
+}
 
 export interface EmailOptions {
   to: string;

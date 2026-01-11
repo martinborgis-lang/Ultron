@@ -1,7 +1,6 @@
 import { createAdminClient } from '@/lib/supabase/admin';
-import { getValidCredentials, GoogleCredentials } from '@/lib/google';
 import { generateEmail, buildUserPrompt, DEFAULT_PROMPTS } from '@/lib/anthropic';
-import { sendEmail } from '@/lib/gmail';
+import { sendEmail, getEmailCredentials } from '@/lib/gmail';
 import { NextRequest, NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
@@ -28,6 +27,7 @@ interface WebhookData {
 interface WebhookPayload {
   sheet_id: string;
   row_number?: number;
+  conseiller_id?: string; // Optional: advisor's user ID for per-user Gmail
   data: WebhookData;
 }
 
@@ -95,16 +95,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get valid credentials (refresh if needed)
-    const credentials = await getValidCredentials(org.google_credentials as GoogleCredentials);
-
-    // Update credentials if refreshed
-    if (credentials !== org.google_credentials) {
-      await supabase
-        .from('organizations')
-        .update({ google_credentials: credentials })
-        .eq('id', org.id);
+    // Get email credentials (advisor's Gmail or fallback to org)
+    const emailCredentialsResult = await getEmailCredentials(org.id, payload.conseiller_id);
+    if (!emailCredentialsResult) {
+      return NextResponse.json(
+        { error: 'No email credentials available' },
+        { status: 400 }
+      );
     }
+    const emailCredentials = emailCredentialsResult.credentials;
+    console.log('Using email credentials from:', emailCredentialsResult.source, emailCredentialsResult.userId || 'org');
 
     // Get prompt (custom or default)
     const systemPrompt = org.prompt_qualification || DEFAULT_PROMPTS.qualification;
@@ -113,8 +113,8 @@ export async function POST(request: NextRequest) {
     // Generate email with Claude
     const email = await generateEmail(systemPrompt, userPrompt);
 
-    // Send email via Gmail
-    const result = await sendEmail(credentials, {
+    // Send email via Gmail (using advisor's Gmail or org fallback)
+    const result = await sendEmail(emailCredentials, {
       to: prospect.email,
       subject: email.objet,
       body: email.corps,

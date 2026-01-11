@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server';
-import { exchangeCodeForTokens } from '@/lib/google';
+import { createAdminClient } from '@/lib/supabase/admin';
+import { exchangeCodeForTokens, OAuthType } from '@/lib/google';
 import { NextResponse } from 'next/server';
 
 export async function GET(request: Request) {
@@ -22,7 +23,7 @@ export async function GET(request: Request) {
       );
     }
 
-    let stateData: { organization_id: string };
+    let stateData: { organization_id: string; user_id?: string; type?: OAuthType };
     try {
       stateData = JSON.parse(Buffer.from(state, 'base64').toString());
     } catch {
@@ -41,7 +42,7 @@ export async function GET(request: Request) {
 
     const { data: user } = await supabase
       .from('users')
-      .select('organization_id')
+      .select('id, organization_id')
       .eq('auth_id', authUser.id)
       .single();
 
@@ -52,22 +53,45 @@ export async function GET(request: Request) {
     }
 
     const tokens = await exchangeCodeForTokens(code);
+    const type = stateData.type || 'organization';
 
-    const { error: updateError } = await supabase
-      .from('organizations')
-      .update({ google_credentials: tokens })
-      .eq('id', stateData.organization_id);
+    const adminClient = createAdminClient();
 
-    if (updateError) {
-      console.error('Failed to save credentials:', updateError);
+    if (type === 'gmail') {
+      // Store Gmail credentials in users table for the current user
+      const { error: updateError } = await adminClient
+        .from('users')
+        .update({ gmail_credentials: tokens })
+        .eq('id', user.id);
+
+      if (updateError) {
+        console.error('Failed to save Gmail credentials:', updateError);
+        return NextResponse.redirect(
+          new URL('/settings/team?gmail=error&message=save_failed', process.env.NEXT_PUBLIC_APP_URL)
+        );
+      }
+
       return NextResponse.redirect(
-        new URL('/settings?google=error&message=save_failed', process.env.NEXT_PUBLIC_APP_URL)
+        new URL('/settings/team?gmail=success', process.env.NEXT_PUBLIC_APP_URL)
+      );
+    } else {
+      // Store organization credentials (Sheets + Drive)
+      const { error: updateError } = await supabase
+        .from('organizations')
+        .update({ google_credentials: tokens })
+        .eq('id', stateData.organization_id);
+
+      if (updateError) {
+        console.error('Failed to save credentials:', updateError);
+        return NextResponse.redirect(
+          new URL('/settings?google=error&message=save_failed', process.env.NEXT_PUBLIC_APP_URL)
+        );
+      }
+
+      return NextResponse.redirect(
+        new URL('/settings?google=success', process.env.NEXT_PUBLIC_APP_URL)
       );
     }
-
-    return NextResponse.redirect(
-      new URL('/settings?google=success', process.env.NEXT_PUBLIC_APP_URL)
-    );
   } catch (error) {
     console.error('Google callback error:', error);
     return NextResponse.redirect(

@@ -10,7 +10,10 @@
       "Bash(git push:*)",
       "Bash(git commit:*)",
       "Bash(npm install:*)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npm run lint)",
+      "Bash(git rm:*)"
     ]
   }
 }
