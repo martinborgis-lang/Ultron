@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { cn } from '@/lib/utils';
-import { Bot, LayoutDashboard, Users, Settings, LogOut } from 'lucide-react';
+import { Bot, LayoutDashboard, Users, Settings, LogOut, Calculator } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 
@@ -12,6 +12,10 @@ const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Prospects', href: '/prospects', icon: Users },
   { name: 'Configuration', href: '/settings', icon: Settings },
+];
+
+const features = [
+  { name: 'Calculateur', href: '/features/calculateur', icon: Calculator },
 ];
 
 interface SidebarProps {
@@ -59,6 +63,31 @@ export function Sidebar({ userName }: SidebarProps) {
             </Link>
           );
         })}
+
+        {/* Features section */}
+        <div className="pt-4">
+          <p className="px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+            Outils
+          </p>
+          {features.map((item) => {
+            const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
+            return (
+              <Link
+                key={item.name}
+                href={item.href}
+                className={cn(
+                  'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
+                  isActive
+                    ? 'bg-indigo-50 text-indigo-600 dark:bg-indigo-950 dark:text-indigo-400'
+                    : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                )}
+              >
+                <item.icon className="h-5 w-5" />
+                {item.name}
+              </Link>
+            );
+          })}
+        </div>
       </nav>
 
       {/* User section */}
