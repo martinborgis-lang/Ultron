@@ -30,11 +30,11 @@ export function Sidebar({ userName }: SidebarProps) {
   };
 
   return (
-    <div className="hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 bg-white border-r border-zinc-200">
+    <div className="hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 bg-background border-r border-border">
       {/* Logo */}
       <div className="flex items-center gap-2 px-6 py-5">
-        <Bot className="h-8 w-8 text-indigo-600" />
-        <span className="text-xl font-bold text-zinc-900">ULTRON</span>
+        <Bot className="h-8 w-8 text-indigo-600 dark:text-indigo-400" />
+        <span className="text-xl font-bold text-foreground">ULTRON</span>
       </div>
 
       <Separator />
@@ -50,8 +50,8 @@ export function Sidebar({ userName }: SidebarProps) {
               className={cn(
                 'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
                 isActive
-                  ? 'bg-indigo-50 text-indigo-600'
-                  : 'text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900'
+                  ? 'bg-indigo-50 text-indigo-600 dark:bg-indigo-950 dark:text-indigo-400'
+                  : 'text-muted-foreground hover:bg-muted hover:text-foreground'
               )}
             >
               <item.icon className="h-5 w-5" />
@@ -62,22 +62,22 @@ export function Sidebar({ userName }: SidebarProps) {
       </nav>
 
       {/* User section */}
-      <div className="p-4 border-t border-zinc-200">
+      <div className="p-4 border-t border-border">
         <div className="flex items-center gap-3 px-3 py-2">
-          <div className="h-8 w-8 rounded-full bg-indigo-100 flex items-center justify-center">
-            <span className="text-sm font-medium text-indigo-600">
+          <div className="h-8 w-8 rounded-full bg-indigo-100 dark:bg-indigo-900 flex items-center justify-center">
+            <span className="text-sm font-medium text-indigo-600 dark:text-indigo-400">
               {userName?.charAt(0)?.toUpperCase() || 'U'}
             </span>
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-zinc-900 truncate">
+            <p className="text-sm font-medium text-foreground truncate">
               {userName || 'Utilisateur'}
             </p>
           </div>
         </div>
         <Button
           variant="ghost"
-          className="w-full justify-start gap-3 mt-2 text-zinc-600 hover:text-zinc-900 hover:bg-zinc-50"
+          className="w-full justify-start gap-3 mt-2 text-muted-foreground hover:text-foreground hover:bg-muted"
           onClick={handleLogout}
         >
           <LogOut className="h-5 w-5" />

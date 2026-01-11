@@ -41,15 +41,15 @@ export function Header({ userName, userEmail }: HeaderProps) {
   };
 
   return (
-    <header className="sticky top-0 z-40 bg-white border-b border-zinc-200">
+    <header className="sticky top-0 z-40 bg-background border-b border-border">
       <div className="flex items-center justify-between h-16 px-6">
-        <h1 className="text-xl font-semibold text-zinc-900">{pageTitle}</h1>
+        <h1 className="text-xl font-semibold text-foreground">{pageTitle}</h1>
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button className="flex items-center gap-3 hover:opacity-80 transition-opacity">
               <Avatar className="h-9 w-9">
-                <AvatarFallback className="bg-indigo-100 text-indigo-600 font-medium">
+                <AvatarFallback className="bg-indigo-100 dark:bg-indigo-900 text-indigo-600 dark:text-indigo-400 font-medium">
                   {userName?.charAt(0)?.toUpperCase() || 'U'}
                 </AvatarFallback>
               </Avatar>
@@ -76,7 +76,7 @@ export function Header({ userName, userEmail }: HeaderProps) {
               </Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={handleLogout} className="text-red-600 cursor-pointer">
+            <DropdownMenuItem onClick={handleLogout} className="text-red-600 dark:text-red-400 cursor-pointer">
               <LogOut className="mr-2 h-4 w-4" />
               Deconnexion
             </DropdownMenuItem>

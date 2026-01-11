@@ -150,8 +150,8 @@ export function PromptEditor() {
     <Card className="shadow-sm">
       <CardHeader>
         <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-purple-50">
-            <Sparkles className="h-5 w-5 text-purple-600" />
+          <div className="p-2 rounded-lg bg-purple-50 dark:bg-purple-950">
+            <Sparkles className="h-5 w-5 text-purple-600 dark:text-purple-400" />
           </div>
           <div>
             <CardTitle className="text-lg">Prompts IA</CardTitle>
@@ -171,14 +171,14 @@ export function PromptEditor() {
             {promptConfigs.map((config) => (
               <div
                 key={config.id}
-                className="flex items-center justify-between p-4 rounded-lg border bg-white hover:bg-zinc-50 transition-colors"
+                className="flex items-center justify-between p-4 rounded-lg border bg-card hover:bg-muted transition-colors"
               >
                 <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-zinc-100">
-                    <config.icon className="h-4 w-4 text-zinc-600" />
+                  <div className="p-2 rounded-lg bg-muted">
+                    <config.icon className="h-4 w-4 text-muted-foreground" />
                   </div>
                   <div>
-                    <p className="font-medium text-zinc-900">{config.name}</p>
+                    <p className="font-medium text-foreground">{config.name}</p>
                     <p className="text-sm text-muted-foreground">{config.description}</p>
                   </div>
                 </div>

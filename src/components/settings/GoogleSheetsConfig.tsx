@@ -124,8 +124,8 @@ export function GoogleSheetsConfig({ isGoogleConnected, initialSheetId }: Google
     <Card className="shadow-sm">
       <CardHeader>
         <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-green-50">
-            <FileSpreadsheet className="h-5 w-5 text-green-600" />
+          <div className="p-2 rounded-lg bg-green-50 dark:bg-green-950">
+            <FileSpreadsheet className="h-5 w-5 text-green-600 dark:text-green-400" />
           </div>
           <div>
             <CardTitle className="text-lg">Google Sheets</CardTitle>
@@ -138,13 +138,13 @@ export function GoogleSheetsConfig({ isGoogleConnected, initialSheetId }: Google
       <CardContent className="space-y-6">
         {/* Google OAuth Status Messages */}
         {googleStatus === 'success' && (
-          <div className="flex items-center gap-2 p-3 rounded-lg bg-green-50 text-green-700">
+          <div className="flex items-center gap-2 p-3 rounded-lg bg-green-50 dark:bg-green-950 text-green-700 dark:text-green-300">
             <Check className="h-4 w-4" />
             <span className="text-sm">Compte Google connecte avec succes !</span>
           </div>
         )}
         {googleStatus === 'error' && (
-          <div className="flex items-center gap-2 p-3 rounded-lg bg-red-50 text-red-700">
+          <div className="flex items-center gap-2 p-3 rounded-lg bg-red-50 dark:bg-red-950 text-red-700 dark:text-red-300">
             <AlertCircle className="h-4 w-4" />
             <span className="text-sm">Erreur lors de la connexion Google. Veuillez reessayer.</span>
           </div>
@@ -155,13 +155,13 @@ export function GoogleSheetsConfig({ isGoogleConnected, initialSheetId }: Google
           <h3 className="text-sm font-medium">Connexion Google</h3>
 
           {isGoogleConnected ? (
-            <div className="flex items-center justify-between p-4 rounded-lg border bg-green-50 border-green-200">
+            <div className="flex items-center justify-between p-4 rounded-lg border bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-800">
               <div className="flex items-center gap-3">
-                <Badge variant="secondary" className="bg-green-100 text-green-700">
+                <Badge variant="secondary" className="bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300">
                   <Check className="mr-1 h-3 w-3" />
                   Connecte
                 </Badge>
-                <span className="text-sm text-green-700">
+                <span className="text-sm text-green-700 dark:text-green-300">
                   Votre compte Google est connecte
                 </span>
               </div>
@@ -170,7 +170,7 @@ export function GoogleSheetsConfig({ isGoogleConnected, initialSheetId }: Google
                 size="sm"
                 onClick={handleDisconnectGoogle}
                 disabled={disconnecting}
-                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:text-red-300 dark:hover:bg-red-950"
               >
                 {disconnecting ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -181,9 +181,9 @@ export function GoogleSheetsConfig({ isGoogleConnected, initialSheetId }: Google
               </Button>
             </div>
           ) : (
-            <div className="flex items-center justify-between p-4 rounded-lg border bg-zinc-50">
+            <div className="flex items-center justify-between p-4 rounded-lg border bg-muted">
               <div className="flex items-center gap-3">
-                <Badge variant="secondary" className="bg-zinc-200 text-zinc-600">
+                <Badge variant="secondary">
                   Non connecte
                 </Badge>
                 <span className="text-sm text-muted-foreground">
@@ -224,14 +224,14 @@ export function GoogleSheetsConfig({ isGoogleConnected, initialSheetId }: Google
                     {saving ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
                     ) : saveSuccess ? (
-                      <Check className="h-4 w-4 text-green-600" />
+                      <Check className="h-4 w-4 text-green-600 dark:text-green-400" />
                     ) : (
                       'Enregistrer'
                     )}
                   </Button>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  L'ID se trouve dans l'URL : docs.google.com/spreadsheets/d/<strong>[ID]</strong>/edit
+                  L&apos;ID se trouve dans l&apos;URL : docs.google.com/spreadsheets/d/<strong>[ID]</strong>/edit
                 </p>
               </div>
 
@@ -253,7 +253,7 @@ export function GoogleSheetsConfig({ isGoogleConnected, initialSheetId }: Google
                 </Button>
 
                 {testStatus === 'success' && testResult && (
-                  <div className="flex items-center gap-2 p-3 rounded-lg bg-green-50 text-green-700">
+                  <div className="flex items-center gap-2 p-3 rounded-lg bg-green-50 dark:bg-green-950 text-green-700 dark:text-green-300">
                     <Check className="h-4 w-4" />
                     <span className="text-sm">
                       Connexion reussie ! {testResult.rows} prospect{testResult.rows !== 1 ? 's' : ''} trouve{testResult.rows !== 1 ? 's' : ''}.
@@ -262,7 +262,7 @@ export function GoogleSheetsConfig({ isGoogleConnected, initialSheetId }: Google
                 )}
 
                 {testStatus === 'error' && testResult && (
-                  <div className="flex items-start gap-2 p-3 rounded-lg bg-red-50 text-red-700">
+                  <div className="flex items-start gap-2 p-3 rounded-lg bg-red-50 dark:bg-red-950 text-red-700 dark:text-red-300">
                     <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
                     <span className="text-sm">{testResult.error}</span>
                   </div>
@@ -278,7 +278,7 @@ export function GoogleSheetsConfig({ isGoogleConnected, initialSheetId }: Google
             href="https://docs.google.com/spreadsheets"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-sm text-indigo-600 hover:underline inline-flex items-center gap-1"
+            className="text-sm text-indigo-600 dark:text-indigo-400 hover:underline inline-flex items-center gap-1"
           >
             Ouvrir Google Sheets
             <ExternalLink className="h-3 w-3" />

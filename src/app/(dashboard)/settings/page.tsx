@@ -4,9 +4,10 @@ import { redirect } from 'next/navigation';
 import { GoogleSheetsConfig } from '@/components/settings/GoogleSheetsConfig';
 import { TeamManager } from '@/components/settings/TeamManager';
 import { PromptEditor } from '@/components/settings/PromptEditor';
+import { ThemeSelector } from '@/components/settings/ThemeSelector';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
-import { FileSpreadsheet, Users, Sparkles } from 'lucide-react';
+import { FileSpreadsheet, Users, Sparkles, Palette } from 'lucide-react';
 
 async function getOrganizationData() {
   const supabase = await createClient();
@@ -55,10 +56,10 @@ export default async function SettingsPage() {
   return (
     <div className="space-y-6">
       <Tabs defaultValue="sheets" className="w-full">
-        <TabsList className="grid w-full grid-cols-3 lg:w-[400px]">
+        <TabsList className="grid w-full grid-cols-4 lg:w-[500px]">
           <TabsTrigger value="sheets" className="gap-2">
             <FileSpreadsheet className="h-4 w-4" />
-            <span className="hidden sm:inline">Google Sheets</span>
+            <span className="hidden sm:inline">Sheets</span>
           </TabsTrigger>
           <TabsTrigger value="team" className="gap-2">
             <Users className="h-4 w-4" />
@@ -66,7 +67,11 @@ export default async function SettingsPage() {
           </TabsTrigger>
           <TabsTrigger value="prompts" className="gap-2">
             <Sparkles className="h-4 w-4" />
-            <span className="hidden sm:inline">Prompts IA</span>
+            <span className="hidden sm:inline">Prompts</span>
+          </TabsTrigger>
+          <TabsTrigger value="appearance" className="gap-2">
+            <Palette className="h-4 w-4" />
+            <span className="hidden sm:inline">Theme</span>
           </TabsTrigger>
         </TabsList>
         <div className="mt-6">
@@ -83,6 +88,9 @@ export default async function SettingsPage() {
           </TabsContent>
           <TabsContent value="prompts">
             <PromptEditor />
+          </TabsContent>
+          <TabsContent value="appearance">
+            <ThemeSelector />
           </TabsContent>
         </div>
       </Tabs>

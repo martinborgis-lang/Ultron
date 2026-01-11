@@ -43,9 +43,9 @@ interface ProspectDisplay {
 }
 
 const qualificationColors: Record<string, string> = {
-  CHAUD: 'bg-red-100 text-red-700 hover:bg-red-100',
-  TIEDE: 'bg-amber-100 text-amber-700 hover:bg-amber-100',
-  FROID: 'bg-blue-100 text-blue-700 hover:bg-blue-100',
+  CHAUD: 'bg-red-100 text-red-700 hover:bg-red-100 dark:bg-red-900 dark:text-red-300',
+  TIEDE: 'bg-amber-100 text-amber-700 hover:bg-amber-100 dark:bg-amber-900 dark:text-amber-300',
+  FROID: 'bg-blue-100 text-blue-700 hover:bg-blue-100 dark:bg-blue-900 dark:text-blue-300',
 };
 
 function transformProspects(googleProspects: GoogleProspect[]): ProspectDisplay[] {
@@ -84,8 +84,8 @@ function NotConnectedMessage() {
   return (
     <Card className="shadow-sm">
       <CardContent className="flex flex-col items-center justify-center py-16 text-center">
-        <div className="p-4 rounded-full bg-amber-50 mb-4">
-          <AlertCircle className="h-8 w-8 text-amber-500" />
+        <div className="p-4 rounded-full bg-amber-50 dark:bg-amber-950 mb-4">
+          <AlertCircle className="h-8 w-8 text-amber-500 dark:text-amber-400" />
         </div>
         <h3 className="text-lg font-semibold mb-2">Google Sheet non connectee</h3>
         <p className="text-muted-foreground mb-6 max-w-md">
@@ -179,8 +179,8 @@ export function ProspectsContent() {
     return (
       <Card className="shadow-sm">
         <CardContent className="flex flex-col items-center justify-center py-16 text-center">
-          <div className="p-4 rounded-full bg-red-50 mb-4">
-            <AlertCircle className="h-8 w-8 text-red-500" />
+          <div className="p-4 rounded-full bg-red-50 dark:bg-red-950 mb-4">
+            <AlertCircle className="h-8 w-8 text-red-500 dark:text-red-400" />
           </div>
           <h3 className="text-lg font-semibold mb-2">Erreur de chargement</h3>
           <p className="text-muted-foreground mb-6 max-w-md">{error}</p>
@@ -256,7 +256,7 @@ export function ProspectsContent() {
       {/* Stats summary */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card
-          className={`border-red-100 cursor-pointer transition-all ${
+          className={`border-red-100 dark:border-red-900 cursor-pointer transition-all ${
             qualificationFilter === 'CHAUD' ? 'ring-2 ring-red-500' : ''
           }`}
           onClick={() => setQualificationFilter(qualificationFilter === 'CHAUD' ? 'tous' : 'CHAUD')}
@@ -265,16 +265,16 @@ export function ProspectsContent() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Chauds</p>
-                <p className="text-2xl font-bold text-red-600">{stats.chauds}</p>
+                <p className="text-2xl font-bold text-red-600 dark:text-red-400">{stats.chauds}</p>
               </div>
-              <div className="h-10 w-10 rounded-full bg-red-50 flex items-center justify-center">
+              <div className="h-10 w-10 rounded-full bg-red-50 dark:bg-red-950 flex items-center justify-center">
                 <span className="text-lg">🔥</span>
               </div>
             </div>
           </CardContent>
         </Card>
         <Card
-          className={`border-amber-100 cursor-pointer transition-all ${
+          className={`border-amber-100 dark:border-amber-900 cursor-pointer transition-all ${
             qualificationFilter === 'TIEDE' ? 'ring-2 ring-amber-500' : ''
           }`}
           onClick={() => setQualificationFilter(qualificationFilter === 'TIEDE' ? 'tous' : 'TIEDE')}
@@ -283,16 +283,16 @@ export function ProspectsContent() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Tiedes</p>
-                <p className="text-2xl font-bold text-amber-600">{stats.tiedes}</p>
+                <p className="text-2xl font-bold text-amber-600 dark:text-amber-400">{stats.tiedes}</p>
               </div>
-              <div className="h-10 w-10 rounded-full bg-amber-50 flex items-center justify-center">
+              <div className="h-10 w-10 rounded-full bg-amber-50 dark:bg-amber-950 flex items-center justify-center">
                 <span className="text-lg">🌤</span>
               </div>
             </div>
           </CardContent>
         </Card>
         <Card
-          className={`border-blue-100 cursor-pointer transition-all ${
+          className={`border-blue-100 dark:border-blue-900 cursor-pointer transition-all ${
             qualificationFilter === 'FROID' ? 'ring-2 ring-blue-500' : ''
           }`}
           onClick={() => setQualificationFilter(qualificationFilter === 'FROID' ? 'tous' : 'FROID')}
@@ -301,9 +301,9 @@ export function ProspectsContent() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Froids</p>
-                <p className="text-2xl font-bold text-blue-600">{stats.froids}</p>
+                <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{stats.froids}</p>
               </div>
-              <div className="h-10 w-10 rounded-full bg-blue-50 flex items-center justify-center">
+              <div className="h-10 w-10 rounded-full bg-blue-50 dark:bg-blue-950 flex items-center justify-center">
                 <span className="text-lg">❄️</span>
               </div>
             </div>
@@ -371,9 +371,9 @@ export function ProspectsContent() {
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
-                          <div className="w-12 h-2 bg-zinc-100 rounded-full overflow-hidden">
+                          <div className="w-12 h-2 bg-muted rounded-full overflow-hidden">
                             <div
-                              className="h-full bg-indigo-500 rounded-full"
+                              className="h-full bg-indigo-500 dark:bg-indigo-400 rounded-full"
                               style={{ width: `${Math.min(prospect.score, 100)}%` }}
                             />
                           </div>
