@@ -34,7 +34,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { Users, Plus, Mail, Shield, UserCog, Trash2, CheckCircle, XCircle, Loader2 } from 'lucide-react';
+import { Users, Plus, Mail, Shield, UserCog, Trash2, CheckCircle, XCircle, Loader2, Unlink } from 'lucide-react';
 
 interface TeamMember {
   id: string;
@@ -128,6 +128,26 @@ export function TeamManager({ currentUserId }: TeamManagerProps) {
 
   const handleConnectGmail = () => {
     window.location.href = '/api/google/auth?type=gmail';
+  };
+
+  const handleDisconnectGmail = async (memberId: string) => {
+    try {
+      const response = await fetch(`/api/team/${memberId}/gmail`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Erreur lors de la deconnexion');
+      }
+
+      // Update local state
+      setMembers(members.map(m =>
+        m.id === memberId ? { ...m, gmail_connected: false } : m
+      ));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erreur inconnue');
+    }
   };
 
   // Check if current user has Gmail connected
@@ -291,23 +311,69 @@ export function TeamManager({ currentUserId }: TeamManagerProps) {
                       <p className="text-sm text-muted-foreground">{member.email}</p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-3">
-                    {/* Gmail Status */}
-                    <Badge
-                      variant="secondary"
-                      className={
-                        member.gmail_connected
-                          ? 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300'
-                          : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400'
-                      }
-                    >
-                      {member.gmail_connected ? (
-                        <CheckCircle className="mr-1 h-3 w-3" />
+                  <div className="flex items-center gap-2">
+                    {/* Gmail Connect/Disconnect - only current user can manage their own */}
+                    {member.id === currentUserId ? (
+                      member.gmail_connected ? (
+                        <div className="flex items-center gap-2">
+                          <Badge className="bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300">
+                            <CheckCircle className="mr-1 h-3 w-3" />
+                            Gmail connecte
+                          </Badge>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="ghost" size="sm" className="h-7 px-2 text-muted-foreground hover:text-red-600">
+                                <Unlink className="h-3.5 w-3.5" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Deconnecter Gmail ?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Vous ne pourrez plus envoyer d&apos;emails depuis votre adresse Gmail.
+                                  Les emails seront envoyes depuis l&apos;adresse de l&apos;organisation.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Annuler</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() => handleDisconnectGmail(member.id)}
+                                  className="bg-red-600 hover:bg-red-700"
+                                >
+                                  Deconnecter
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
                       ) : (
-                        <XCircle className="mr-1 h-3 w-3" />
-                      )}
-                      Gmail
-                    </Badge>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-7 text-xs"
+                          onClick={handleConnectGmail}
+                        >
+                          <Mail className="mr-1.5 h-3.5 w-3.5" />
+                          Connecter Gmail
+                        </Button>
+                      )
+                    ) : (
+                      <Badge
+                        variant="secondary"
+                        className={
+                          member.gmail_connected
+                            ? 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300'
+                            : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400'
+                        }
+                      >
+                        {member.gmail_connected ? (
+                          <CheckCircle className="mr-1 h-3 w-3" />
+                        ) : (
+                          <XCircle className="mr-1 h-3 w-3" />
+                        )}
+                        Gmail
+                      </Badge>
+                    )}
 
                     {/* Role Badge */}
                     <Badge
