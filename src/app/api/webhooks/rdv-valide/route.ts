@@ -159,6 +159,7 @@ export async function POST(request: NextRequest) {
     });
 
     const email = await generateEmail(systemPrompt, userPrompt);
+    console.log('Email generated:', JSON.stringify(email));
 
     // Step 4: Send email via Gmail
     const result = await sendEmail(credentials, {

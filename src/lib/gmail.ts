@@ -16,17 +16,17 @@ export interface EmailWithAttachmentOptions extends EmailOptions {
 function createEmailMessage(options: EmailOptions): string {
   const { to, subject, body, from } = options;
 
-  const emailLines = [
+  // Build headers (filter out empty optional headers like From)
+  const headers = [
     `To: ${to}`,
-    from ? `From: ${from}` : '',
+    from ? `From: ${from}` : null,
     'Content-Type: text/html; charset=utf-8',
     'MIME-Version: 1.0',
     `Subject: =?UTF-8?B?${Buffer.from(subject).toString('base64')}?=`,
-    '',
-    body.replace(/\n/g, '<br>'),
   ].filter(Boolean);
 
-  const email = emailLines.join('\r\n');
+  // MIME format requires blank line between headers and body
+  const email = headers.join('\r\n') + '\r\n\r\n' + body.replace(/\n/g, '<br>');
   return Buffer.from(email).toString('base64url');
 }
 
@@ -47,17 +47,22 @@ async function createEmailWithAttachment(
 
   const boundary = `boundary_${Date.now()}`;
 
-  const emailParts = [
+  // Build headers (filter out empty optional headers like From)
+  const headers = [
     `To: ${to}`,
-    from ? `From: ${from}` : '',
+    from ? `From: ${from}` : null,
     'MIME-Version: 1.0',
     `Subject: =?UTF-8?B?${Buffer.from(subject).toString('base64')}?=`,
     `Content-Type: multipart/mixed; boundary="${boundary}"`,
-    '',
+  ].filter(Boolean);
+
+  // Build multipart body with proper MIME structure
+  const bodyContent = body.replace(/\n/g, '<br>');
+  const multipartBody = [
     `--${boundary}`,
     'Content-Type: text/html; charset=utf-8',
     '',
-    body.replace(/\n/g, '<br>'),
+    bodyContent,
     '',
     `--${boundary}`,
     `Content-Type: ${mimeType}; name="${attachmentName}"`,
@@ -67,9 +72,10 @@ async function createEmailWithAttachment(
     attachmentBase64,
     '',
     `--${boundary}--`,
-  ].filter(Boolean);
+  ].join('\r\n');
 
-  const email = emailParts.join('\r\n');
+  // MIME format requires blank line between headers and body
+  const email = headers.join('\r\n') + '\r\n\r\n' + multipartBody;
   return Buffer.from(email).toString('base64url');
 }
 
