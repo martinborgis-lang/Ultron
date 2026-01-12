@@ -74,6 +74,7 @@ export function generateAuthUrl(state: string, type: OAuthType = 'organization')
     scope: scopes,
     state,
     prompt: 'consent',
+    include_granted_scopes: true,
   });
 }
 
