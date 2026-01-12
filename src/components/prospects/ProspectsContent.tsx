@@ -109,6 +109,72 @@ export function ProspectsContent() {
   const [searchQuery, setSearchQuery] = useState('');
   const [qualificationFilter, setQualificationFilter] = useState<QualificationFilter>('tous');
 
+  // Handler: Open default mail client with pre-filled email
+  const handleSendEmail = (prospect: ProspectDisplay) => {
+    const email = prospect.email;
+    const subject = encodeURIComponent(`Suite a notre echange - ${prospect.prenom} ${prospect.nom}`);
+    const body = encodeURIComponent(`Bonjour ${prospect.prenom},\n\n`);
+
+    window.open(`mailto:${email}?subject=${subject}&body=${body}`, '_blank');
+  };
+
+  // Handler: Open Google Calendar with pre-filled event
+  const handleAddToCalendar = (prospect: ProspectDisplay) => {
+    const title = encodeURIComponent(`RDV - ${prospect.prenom} ${prospect.nom}`);
+    const description = encodeURIComponent(
+      `Prospect : ${prospect.prenom} ${prospect.nom}\n` +
+      `Email : ${prospect.email}\n` +
+      `Telephone : ${prospect.telephone || 'Non renseigne'}\n` +
+      `Qualification : ${prospect.qualification || 'Non qualifie'}`
+    );
+
+    let dateStart = '';
+    let dateEnd = '';
+
+    // If prospect has a RDV date, use it
+    if (prospect.dateRdv && prospect.dateRdv.trim() !== '' && prospect.dateRdv !== '-') {
+      // Try to parse French date format DD/MM/YYYY HH:mm or DD/MM/YYYY
+      const dateStr = prospect.dateRdv;
+      let rdvDate: Date | null = null;
+
+      if (dateStr.includes('/')) {
+        const [datePart, timePart] = dateStr.split(' ');
+        const dateParts = datePart.split('/');
+
+        if (dateParts.length === 3) {
+          const [day, month, year] = dateParts.map(Number);
+          const [hours, minutes] = (timePart || '10:00').split(':').map(Number);
+          rdvDate = new Date(year, month - 1, day, hours || 10, minutes || 0);
+        }
+      } else {
+        rdvDate = new Date(dateStr);
+      }
+
+      if (rdvDate && !isNaN(rdvDate.getTime())) {
+        dateStart = rdvDate.toISOString().replace(/-|:|\.\d{3}/g, '').slice(0, 15) + 'Z';
+        const endDate = new Date(rdvDate.getTime() + 60 * 60 * 1000); // +1h
+        dateEnd = endDate.toISOString().replace(/-|:|\.\d{3}/g, '').slice(0, 15) + 'Z';
+      }
+    }
+
+    // If no valid date, propose tomorrow at 10h
+    if (!dateStart) {
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      tomorrow.setHours(10, 0, 0, 0);
+      dateStart = tomorrow.toISOString().replace(/-|:|\.\d{3}/g, '').slice(0, 15) + 'Z';
+      const endDate = new Date(tomorrow.getTime() + 60 * 60 * 1000);
+      dateEnd = endDate.toISOString().replace(/-|:|\.\d{3}/g, '').slice(0, 15) + 'Z';
+    }
+
+    const calendarUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE` +
+      `&text=${title}` +
+      `&dates=${dateStart}/${dateEnd}` +
+      `&details=${description}`;
+
+    window.open(calendarUrl, '_blank');
+  };
+
   const fetchData = async () => {
     setLoading(true);
     setError(null);
@@ -395,8 +461,10 @@ export function ProspectsContent() {
                               size="icon"
                               className="h-8 w-8"
                               title="Envoyer un email"
+                              onClick={() => handleSendEmail(prospect)}
                             >
                               <Mail className="h-4 w-4" />
+                              <span className="sr-only">Envoyer un email</span>
                             </Button>
                           )}
                           <Button
@@ -404,8 +472,10 @@ export function ProspectsContent() {
                             size="icon"
                             className="h-8 w-8"
                             title="Planifier un RDV"
+                            onClick={() => handleAddToCalendar(prospect)}
                           >
                             <Calendar className="h-4 w-4" />
+                            <span className="sr-only">Ajouter a l agenda</span>
                           </Button>
                         </div>
                       </TableCell>
