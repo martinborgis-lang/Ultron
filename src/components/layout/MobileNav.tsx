@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { cn } from '@/lib/utils';
-import { Bot, LayoutDashboard, Users, Settings, LogOut, Menu } from 'lucide-react';
+import { Bot, LayoutDashboard, Users, Settings, LogOut, Menu, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Separator } from '@/components/ui/separator';
@@ -13,6 +13,7 @@ import { Separator } from '@/components/ui/separator';
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Prospects', href: '/prospects', icon: Users },
+  { name: 'Agenda', href: '/agenda', icon: Calendar },
   { name: 'Configuration', href: '/settings', icon: Settings },
 ];
 
