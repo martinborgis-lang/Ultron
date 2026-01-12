@@ -171,6 +171,7 @@ export async function POST(request: NextRequest) {
       qualificationIA: prospect.qualificationIA,
       scoreIA: prospect.scoreIA,
       noteConseiller: prospect.notesAppel,
+      besoins: prospect.besoins,
       dateRdv: prospect.dateRdv,
     });
 
