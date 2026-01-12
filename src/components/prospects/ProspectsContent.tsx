@@ -115,7 +115,8 @@ export function ProspectsContent() {
     const subject = encodeURIComponent(`Suite a notre echange - ${prospect.prenom} ${prospect.nom}`);
     const body = encodeURIComponent(`Bonjour ${prospect.prenom},\n\n`);
 
-    window.open(`mailto:${email}?subject=${subject}&body=${body}`, '_blank');
+    // Use location.href instead of window.open for mailto links
+    window.location.href = `mailto:${email}?subject=${subject}&body=${body}`;
   };
 
   // Handler: Open Google Calendar with pre-filled event
