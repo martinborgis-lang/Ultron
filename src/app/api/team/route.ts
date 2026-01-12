@@ -129,17 +129,24 @@ export async function POST(request: NextRequest) {
       }
     );
 
-    // Generate a random password - user will reset it via email
-    const tempPassword = crypto.randomUUID();
-
-    const { data: newAuthUser, error: authError } = await adminAuth.auth.admin.createUser({
-      email,
-      password: tempPassword,
-      email_confirm: false,
+    // Invite user by email - this sends an invitation email automatically
+    const { data: inviteData, error: inviteError } = await adminAuth.auth.admin.inviteUserByEmail(email, {
+      redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/login`,
+      data: {
+        full_name,
+        role,
+      },
     });
 
-    if (authError) {
-      console.error('Auth user creation error:', authError);
+    if (inviteError) {
+      console.error('Invite user error:', inviteError);
+      return NextResponse.json(
+        { error: 'Erreur lors de l\'envoi de l\'invitation: ' + inviteError.message },
+        { status: 500 }
+      );
+    }
+
+    if (!inviteData.user) {
       return NextResponse.json(
         { error: 'Erreur lors de la creation du compte' },
         { status: 500 }
@@ -151,7 +158,7 @@ export async function POST(request: NextRequest) {
     const { data: newUser, error: userError } = await adminClient
       .from('users')
       .insert({
-        auth_id: newAuthUser.user.id,
+        auth_id: inviteData.user.id,
         organization_id: currentUser.organization_id,
         email,
         full_name,
@@ -163,15 +170,9 @@ export async function POST(request: NextRequest) {
 
     if (userError) {
       // Cleanup: delete auth user if DB insert fails
-      await adminAuth.auth.admin.deleteUser(newAuthUser.user.id);
+      await adminAuth.auth.admin.deleteUser(inviteData.user.id);
       throw userError;
     }
-
-    // Send password reset email so user can set their password
-    await adminAuth.auth.admin.generateLink({
-      type: 'recovery',
-      email,
-    });
 
     return NextResponse.json({
       success: true,
@@ -179,6 +180,7 @@ export async function POST(request: NextRequest) {
         ...newUser,
         gmail_connected: false,
       },
+      message: `Invitation envoyee a ${email}`,
     });
   } catch (error) {
     console.error('Team member creation error:', error);

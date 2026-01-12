@@ -60,6 +60,7 @@ export function TeamManager({ currentUserId: initialUserId }: TeamManagerProps) 
   const [role, setRole] = useState<'admin' | 'conseiller'>('conseiller');
   const [sheetOpen, setSheetOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   // Fetch current user ID if not provided
   useEffect(() => {
@@ -101,6 +102,7 @@ export function TeamManager({ currentUserId: initialUserId }: TeamManagerProps) 
 
     setSaving(true);
     setError(null);
+    setSuccessMessage(null);
 
     try {
       const response = await fetch('/api/team', {
@@ -120,6 +122,12 @@ export function TeamManager({ currentUserId: initialUserId }: TeamManagerProps) 
       setName('');
       setRole('conseiller');
       setSheetOpen(false);
+
+      // Show success message
+      setSuccessMessage(`Invitation envoyee a ${data.member.email}. Le conseiller recevra un email pour creer son mot de passe.`);
+
+      // Clear message after 10 seconds
+      setTimeout(() => setSuccessMessage(null), 10000);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur inconnue');
     } finally {
@@ -187,6 +195,18 @@ export function TeamManager({ currentUserId: initialUserId }: TeamManagerProps) 
 
   return (
     <div className="space-y-4">
+      {/* Success Message */}
+      {successMessage && (
+        <Card className="border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950">
+          <CardContent className="py-4">
+            <div className="flex items-center gap-3">
+              <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
+              <p className="text-green-800 dark:text-green-200">{successMessage}</p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Gmail Connection Banner */}
       {showGmailBanner && (
         <Card className="border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950">
