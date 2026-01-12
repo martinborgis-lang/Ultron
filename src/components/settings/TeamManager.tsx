@@ -62,9 +62,11 @@ export function TeamManager({ currentUserId }: TeamManagerProps) {
 
   const fetchTeam = useCallback(async () => {
     try {
+      console.log('[TeamManager] currentUserId:', currentUserId);
       const response = await fetch('/api/team');
       if (!response.ok) throw new Error('Erreur lors du chargement');
       const data = await response.json();
+      console.log('[TeamManager] members:', data.members?.map((m: TeamMember) => ({ id: m.id, email: m.email, gmail_connected: m.gmail_connected })));
       setMembers(data.members || []);
     } catch (err) {
       console.error('Failed to fetch team:', err);
@@ -295,7 +297,10 @@ export function TeamManager({ currentUserId }: TeamManagerProps) {
                 Aucun membre dans l&apos;equipe
               </p>
             ) : (
-              members.map((member) => (
+              members.map((member) => {
+                const isCurrentUser = member.id === currentUserId;
+                console.log('[TeamManager] Comparing:', { memberId: member.id, currentUserId, isCurrentUser, gmail_connected: member.gmail_connected });
+                return (
                 <div
                   key={member.id}
                   className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
@@ -313,7 +318,7 @@ export function TeamManager({ currentUserId }: TeamManagerProps) {
                   </div>
                   <div className="flex items-center gap-2">
                     {/* Gmail Connect/Disconnect - only current user can manage their own */}
-                    {member.id === currentUserId ? (
+                    {isCurrentUser ? (
                       member.gmail_connected ? (
                         <div className="flex items-center gap-2">
                           <Badge className="bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300">
@@ -422,7 +427,7 @@ export function TeamManager({ currentUserId }: TeamManagerProps) {
                     )}
                   </div>
                 </div>
-              ))
+              )})
             )}
           </div>
         </CardContent>
