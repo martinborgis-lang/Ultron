@@ -23,6 +23,7 @@ import {
   Trash2,
   Loader2,
   AlertTriangle,
+  Video,
 } from 'lucide-react';
 import { useOrganization } from '@/hooks/useOrganization';
 
@@ -34,6 +35,10 @@ interface CalendarEvent {
   end: { dateTime?: string; date?: string };
   location?: string;
   attendees?: { email: string }[];
+  hangoutLink?: string;
+  conferenceData?: {
+    entryPoints?: { uri: string; entryPointType: string }[];
+  };
 }
 
 type ViewType = 'day' | 'week' | 'month';
@@ -58,6 +63,7 @@ export function AgendaContent() {
     endTime: '10:00',
     location: '',
     attendeeEmail: '',
+    addGoogleMeet: true,
   });
   const [creating, setCreating] = useState(false);
 
@@ -171,13 +177,29 @@ export function AgendaContent() {
     }
   };
 
+  const openCreateModal = (date: Date) => {
+    const dateStr = date.toISOString().split('T')[0];
+    setNewEvent({
+      summary: '',
+      description: '',
+      startDate: dateStr,
+      startTime: '09:00',
+      endDate: dateStr,
+      endTime: '10:00',
+      location: '',
+      attendeeEmail: '',
+      addGoogleMeet: true,
+    });
+    setShowCreateModal(true);
+  };
+
   const handleCreateEvent = async () => {
     if (!newEvent.summary || !newEvent.startDate || !newEvent.endDate) return;
 
     setCreating(true);
     try {
-      const startDateTime = `${newEvent.startDate}T${newEvent.startTime}:00`;
-      const endDateTime = `${newEvent.endDate}T${newEvent.endTime}:00`;
+      const startDateTime = new Date(`${newEvent.startDate}T${newEvent.startTime}:00`).toISOString();
+      const endDateTime = new Date(`${newEvent.endDate}T${newEvent.endTime}:00`).toISOString();
 
       const response = await fetch('/api/calendar/events', {
         method: 'POST',
@@ -189,10 +211,17 @@ export function AgendaContent() {
           endDateTime,
           location: newEvent.location,
           attendees: newEvent.attendeeEmail ? [newEvent.attendeeEmail] : undefined,
+          addGoogleMeet: newEvent.addGoogleMeet,
         }),
       });
 
+      const data = await response.json();
+
       if (response.ok) {
+        if (data.event?.hangoutLink) {
+          console.log('Lien Google Meet:', data.event.hangoutLink);
+        }
+
         setShowCreateModal(false);
         setNewEvent({
           summary: '',
@@ -203,8 +232,11 @@ export function AgendaContent() {
           endTime: '10:00',
           location: '',
           attendeeEmail: '',
+          addGoogleMeet: true,
         });
         fetchEvents();
+      } else {
+        alert('Erreur: ' + data.error);
       }
     } catch (error) {
       console.error('Erreur création événement:', error);
@@ -248,6 +280,15 @@ export function AgendaContent() {
       days.push(day);
     }
 
+    const handleDayClick = (day: Date) => {
+      openCreateModal(day);
+    };
+
+    const handleDayHeaderClick = (day: Date) => {
+      setCurrentDate(day);
+      setView('day');
+    };
+
     return (
       <div className="grid grid-cols-7 gap-2">
         {days.map((day, index) => {
@@ -256,22 +297,38 @@ export function AgendaContent() {
 
           return (
             <div key={index} className="min-h-[200px]">
-              <div className={`text-center p-2 rounded-t-lg ${isToday ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
-                <div className="text-xs text-muted-foreground">
+              <div
+                className={`text-center p-2 rounded-t-lg cursor-pointer hover:opacity-80 transition-opacity ${isToday ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}
+                onClick={() => handleDayHeaderClick(day)}
+                title="Cliquer pour voir le détail du jour"
+              >
+                <div className="text-xs">
                   {day.toLocaleDateString('fr-FR', { weekday: 'short' })}
                 </div>
                 <div className="text-lg font-semibold">{day.getDate()}</div>
               </div>
-              <div className="border border-t-0 rounded-b-lg p-1 space-y-1 min-h-[150px] bg-card">
+              <div
+                className="border border-t-0 rounded-b-lg p-1 space-y-1 min-h-[150px] bg-card cursor-pointer hover:bg-accent/50 transition-colors"
+                onClick={() => handleDayClick(day)}
+                title="Cliquer pour créer un RDV"
+              >
                 {dayEvents.map(event => (
                   <div
                     key={event.id}
-                    onClick={() => setSelectedEvent(event)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedEvent(event);
+                    }}
                     className="text-xs p-1 bg-primary/10 text-primary rounded cursor-pointer hover:bg-primary/20 truncate"
                   >
                     <span className="font-medium">{formatEventTime(event)}</span> {event.summary}
                   </div>
                 ))}
+                {dayEvents.length === 0 && (
+                  <div className="text-xs text-muted-foreground text-center py-4 opacity-0 hover:opacity-100 transition-opacity">
+                    + Créer un RDV
+                  </div>
+                )}
               </div>
             </div>
           );
@@ -284,6 +341,24 @@ export function AgendaContent() {
     const dayEvents = getEventsForDay(currentDate);
     const hours = Array.from({ length: 12 }, (_, i) => i + 8); // 8h à 19h
 
+    const handleHourClick = (hour: number) => {
+      const dateStr = currentDate.toISOString().split('T')[0];
+      const startTime = `${hour.toString().padStart(2, '0')}:00`;
+      const endTime = `${(hour + 1).toString().padStart(2, '0')}:00`;
+      setNewEvent({
+        summary: '',
+        description: '',
+        startDate: dateStr,
+        startTime,
+        endDate: dateStr,
+        endTime,
+        location: '',
+        attendeeEmail: '',
+        addGoogleMeet: true,
+      });
+      setShowCreateModal(true);
+    };
+
     return (
       <div className="space-y-1">
         {hours.map(hour => {
@@ -293,7 +368,11 @@ export function AgendaContent() {
           });
 
           return (
-            <div key={hour} className="flex border-b border-border">
+            <div
+              key={hour}
+              className="flex border-b border-border cursor-pointer hover:bg-accent/30 transition-colors"
+              onClick={() => handleHourClick(hour)}
+            >
               <div className="w-16 py-2 text-sm text-muted-foreground text-right pr-2">
                 {hour}:00
               </div>
@@ -301,12 +380,15 @@ export function AgendaContent() {
                 {hourEvents.map(event => (
                   <div
                     key={event.id}
-                    onClick={() => setSelectedEvent(event)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedEvent(event);
+                    }}
                     className="p-2 bg-primary/10 text-primary rounded cursor-pointer hover:bg-primary/20 mb-1"
                   >
                     <div className="font-medium">{event.summary}</div>
                     <div className="text-xs">
-                      {formatEventTime(event)} - {event.location}
+                      {formatEventTime(event)} {event.location && `- ${event.location}`}
                     </div>
                   </div>
                 ))}
@@ -323,7 +405,7 @@ export function AgendaContent() {
     const firstDayOfWeek = start.getDay() || 7;
     const daysInMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate();
 
-    const days = [];
+    const days: (Date | null)[] = [];
 
     // Jours vides avant le 1er du mois
     for (let i = 1; i < firstDayOfWeek; i++) {
@@ -334,6 +416,11 @@ export function AgendaContent() {
     for (let i = 1; i <= daysInMonth; i++) {
       days.push(new Date(currentDate.getFullYear(), currentDate.getMonth(), i));
     }
+
+    const handleDayClick = (day: Date, e: React.MouseEvent) => {
+      e.stopPropagation();
+      openCreateModal(day);
+    };
 
     return (
       <div>
@@ -356,7 +443,11 @@ export function AgendaContent() {
             return (
               <div
                 key={index}
-                className={`min-h-[80px] border rounded p-1 ${isToday ? 'border-primary bg-primary/5' : 'border-border bg-card'}`}
+                onClick={(e) => handleDayClick(day, e)}
+                className={`min-h-[80px] border rounded p-1 cursor-pointer hover:bg-accent/50 transition-colors ${
+                  isToday ? 'border-primary bg-primary/5' : 'border-border bg-card'
+                }`}
+                title="Cliquer pour créer un RDV"
               >
                 <div className={`text-sm font-medium mb-1 ${isToday ? 'text-primary' : 'text-foreground'}`}>
                   {day.getDate()}
@@ -365,8 +456,11 @@ export function AgendaContent() {
                   {dayEvents.slice(0, 2).map(event => (
                     <div
                       key={event.id}
-                      onClick={() => setSelectedEvent(event)}
-                      className="text-xs p-1 bg-primary/10 text-primary rounded cursor-pointer truncate"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedEvent(event);
+                      }}
+                      className="text-xs p-1 bg-primary/10 text-primary rounded cursor-pointer hover:bg-primary/20 truncate"
                     >
                       {event.summary}
                     </div>
@@ -392,11 +486,7 @@ export function AgendaContent() {
             Agenda {organization && <span className="text-muted-foreground font-normal">— {organization.name}</span>}
           </h1>
         </div>
-        <Button onClick={() => {
-          const today = new Date().toISOString().split('T')[0];
-          setNewEvent(prev => ({ ...prev, startDate: today, endDate: today }));
-          setShowCreateModal(true);
-        }}>
+        <Button onClick={() => openCreateModal(new Date())}>
           <Plus className="h-4 w-4 mr-2" />
           Nouveau RDV
         </Button>
@@ -566,6 +656,25 @@ export function AgendaContent() {
               />
             </div>
 
+            <div className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                id="addGoogleMeet"
+                checked={newEvent.addGoogleMeet}
+                onChange={(e) => setNewEvent(prev => ({ ...prev, addGoogleMeet: e.target.checked }))}
+                className="h-4 w-4 rounded border-gray-300"
+              />
+              <Label htmlFor="addGoogleMeet" className="text-sm font-normal cursor-pointer">
+                Ajouter une visio Google Meet
+              </Label>
+            </div>
+
+            {newEvent.attendeeEmail && newEvent.addGoogleMeet && (
+              <p className="text-xs text-muted-foreground">
+                Une invitation avec le lien Google Meet sera envoyée à {newEvent.attendeeEmail}
+              </p>
+            )}
+
             <div className="space-y-2">
               <Label htmlFor="description">Description</Label>
               <Textarea
@@ -615,6 +724,20 @@ export function AgendaContent() {
                 <div className="flex items-center gap-2 text-muted-foreground">
                   <MapPin className="h-4 w-4" />
                   <span>{selectedEvent.location}</span>
+                </div>
+              )}
+
+              {selectedEvent.hangoutLink && (
+                <div className="flex items-center gap-2">
+                  <Video className="h-4 w-4 text-blue-500" />
+                  <a
+                    href={selectedEvent.hangoutLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-500 hover:underline text-sm"
+                  >
+                    Rejoindre la visio Google Meet
+                  </a>
                 </div>
               )}
 
