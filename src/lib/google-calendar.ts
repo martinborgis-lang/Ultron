@@ -37,33 +37,62 @@ export async function createCalendarEvent(
     endDateTime: string;
     attendees?: string[];
     location?: string;
+    addGoogleMeet?: boolean;
   }
 ) {
-  const calendar = getCalendarClient(credentials);
+  const oauth2Client = new google.auth.OAuth2(
+    process.env.GOOGLE_CLIENT_ID,
+    process.env.GOOGLE_CLIENT_SECRET
+  );
+
+  oauth2Client.setCredentials({
+    access_token: credentials.access_token,
+    refresh_token: credentials.refresh_token,
+    token_type: credentials.token_type || 'Bearer',
+    expiry_date: credentials.expiry_date,
+  });
+
+  const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
+
+  const requestBody: any = {
+    summary: event.summary,
+    description: event.description,
+    location: event.location,
+    start: {
+      dateTime: event.startDateTime,
+      timeZone: 'Europe/Paris',
+    },
+    end: {
+      dateTime: event.endDateTime,
+      timeZone: 'Europe/Paris',
+    },
+    attendees: event.attendees?.map(email => ({ email })),
+    reminders: {
+      useDefault: false,
+      overrides: [
+        { method: 'popup', minutes: 30 },
+        { method: 'email', minutes: 60 },
+      ],
+    },
+  };
+
+  // Ajouter Google Meet si demandé ou si il y a des participants
+  if (event.addGoogleMeet || (event.attendees && event.attendees.length > 0)) {
+    requestBody.conferenceData = {
+      createRequest: {
+        requestId: `meet-${Date.now()}`,
+        conferenceSolutionKey: {
+          type: 'hangoutsMeet',
+        },
+      },
+    };
+  }
 
   const response = await calendar.events.insert({
     calendarId: 'primary',
-    requestBody: {
-      summary: event.summary,
-      description: event.description,
-      location: event.location,
-      start: {
-        dateTime: event.startDateTime,
-        timeZone: 'Europe/Paris',
-      },
-      end: {
-        dateTime: event.endDateTime,
-        timeZone: 'Europe/Paris',
-      },
-      attendees: event.attendees?.map(email => ({ email })),
-      reminders: {
-        useDefault: false,
-        overrides: [
-          { method: 'popup', minutes: 30 },
-          { method: 'email', minutes: 60 },
-        ],
-      },
-    },
+    requestBody,
+    conferenceDataVersion: 1,
+    sendUpdates: 'all',
   });
 
   return response.data;

@@ -100,7 +100,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { summary, description, startDateTime, endDateTime, attendees, location } = body;
+    const { summary, description, startDateTime, endDateTime, attendees, location, addGoogleMeet } = body;
 
     if (!summary || !startDateTime || !endDateTime) {
       return NextResponse.json({ error: 'Champs requis manquants' }, { status: 400 });
@@ -113,6 +113,7 @@ export async function POST(request: NextRequest) {
       endDateTime,
       attendees,
       location,
+      addGoogleMeet,
     });
 
     return NextResponse.json({ event });
