@@ -131,7 +131,7 @@ export async function POST(request: NextRequest) {
 
     // Invite user by email - this sends an invitation email automatically
     const { data: inviteData, error: inviteError } = await adminAuth.auth.admin.inviteUserByEmail(email, {
-      redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/login`,
+      redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback`,
       data: {
         full_name,
         role,
