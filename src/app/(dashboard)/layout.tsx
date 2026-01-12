@@ -26,13 +26,13 @@ export default async function DashboardLayout({
     .single();
 
   return (
-    <div className="min-h-screen bg-zinc-50">
+    <div className="min-h-screen bg-background">
       <Sidebar userName={user?.full_name || undefined} />
       <MobileNav userName={user?.full_name || undefined} />
 
       <div className="lg:pl-64">
         <Header userName={user?.full_name || undefined} userEmail={user?.email} />
-        <main className="p-6">
+        <main className="p-6 bg-background">
           {children}
         </main>
       </div>
