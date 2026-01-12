@@ -3,6 +3,7 @@
 import { usePathname, useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { useTheme } from '@/components/providers/ThemeProvider';
+import { useOrganization } from '@/hooks/useOrganization';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import {
@@ -34,6 +35,7 @@ export function Header({ userName, userEmail }: HeaderProps) {
   const pathname = usePathname();
   const router = useRouter();
   const { resolvedTheme, setTheme } = useTheme();
+  const { organization } = useOrganization();
 
   const pageTitle = pageTitles[pathname] || 'Dashboard';
 
@@ -51,7 +53,12 @@ export function Header({ userName, userEmail }: HeaderProps) {
   return (
     <header className="sticky top-0 z-40 bg-background border-b border-border">
       <div className="flex items-center justify-between h-16 px-6">
-        <h1 className="text-xl font-semibold text-foreground">{pageTitle}</h1>
+        <div className="flex items-center gap-2">
+          <h1 className="text-xl font-semibold text-foreground">{pageTitle}</h1>
+          {organization?.name && (
+            <span className="text-muted-foreground font-normal">— {organization.name}</span>
+          )}
+        </div>
 
         <div className="flex items-center gap-3">
           {/* Theme Toggle Button */}

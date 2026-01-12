@@ -37,11 +37,11 @@ export function ActivityFeed({ activities }: ActivityFeedProps) {
             const Icon = getIcon(activity.action);
             return (
               <div key={activity.id} className="flex items-start gap-3">
-                <div className="p-2 rounded-lg bg-indigo-50">
-                  <Icon className="h-4 w-4 text-indigo-600" />
+                <div className="p-2 rounded-lg bg-indigo-50 dark:bg-indigo-950">
+                  <Icon className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-zinc-900">
+                  <p className="text-sm font-medium text-foreground">
                     {activity.action}
                   </p>
                   <p className="text-sm text-muted-foreground">
