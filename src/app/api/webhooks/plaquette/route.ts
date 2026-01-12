@@ -1,6 +1,6 @@
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getValidCredentials, GoogleCredentials, downloadFileFromDrive, updateGoogleSheetCells } from '@/lib/google';
-import { generateEmail, buildUserPrompt, DEFAULT_PROMPTS } from '@/lib/anthropic';
+import { generateEmailWithConfig, DEFAULT_PROMPTS, PromptConfig } from '@/lib/anthropic';
 import { sendEmailWithBufferAttachment, getEmailCredentialsByEmail } from '@/lib/gmail';
 import { NextRequest, NextResponse } from 'next/server';
 
@@ -135,12 +135,18 @@ export async function POST(request: NextRequest) {
     const plaquetteFile = await downloadFileFromDrive(sheetCredentials, plaquetteId);
     console.log('Plaquette downloaded:', plaquetteFile.fileName, plaquetteFile.mimeType);
 
-    // Get prompt (custom or default)
-    const systemPrompt = org.prompt_plaquette || DEFAULT_PROMPTS.plaquette;
-    const userPrompt = buildUserPrompt(prospect);
-
-    // Generate email with Claude
-    const email = await generateEmail(systemPrompt, userPrompt);
+    // Generate email with Claude using organization prompt config
+    const promptConfig = org.prompt_plaquette as PromptConfig | null;
+    const email = await generateEmailWithConfig(
+      promptConfig,
+      DEFAULT_PROMPTS.plaquette,
+      {
+        prenom: prospect.prenom,
+        nom: prospect.nom,
+        email: prospect.email,
+        besoins: prospect.besoins,
+      }
+    );
 
     // Send email with attachment via Gmail (using advisor's Gmail or org fallback)
     const result = await sendEmailWithBufferAttachment(emailCredentials, {

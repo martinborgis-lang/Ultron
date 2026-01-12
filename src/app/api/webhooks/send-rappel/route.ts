@@ -1,6 +1,6 @@
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getValidCredentials, GoogleCredentials, updateGoogleSheetCells } from '@/lib/google';
-import { generateEmail, buildUserPrompt, DEFAULT_PROMPTS } from '@/lib/anthropic';
+import { generateEmailWithConfig, DEFAULT_PROMPTS, PromptConfig } from '@/lib/anthropic';
 import { sendEmail, getEmailCredentialsByEmail } from '@/lib/gmail';
 import { NextRequest, NextResponse } from 'next/server';
 import type { RappelPayload } from '@/lib/qstash';
@@ -57,18 +57,19 @@ async function handleRappel(request: NextRequest) {
     const emailCredentials = emailCredentialsResult.credentials;
     console.log('Using email credentials from:', emailCredentialsResult.source, emailCredentialsResult.userId || 'org');
 
-    // Get prompt
-    const systemPrompt = org.prompt_rappel || DEFAULT_PROMPTS.rappel;
-    const userPrompt = buildUserPrompt({
-      prenom: prospectData.prenom,
-      nom: prospectData.nom,
-      email: prospectData.email,
-      qualificationIA: prospectData.qualification,
-      dateRdv: prospectData.dateRdvFormatted || prospectData.date_rdv,
-    });
-
-    // Generate email with Claude
-    const email = await generateEmail(systemPrompt, userPrompt);
+    // Generate email with Claude using organization prompt config
+    const promptConfig = org.prompt_rappel as PromptConfig | null;
+    const email = await generateEmailWithConfig(
+      promptConfig,
+      DEFAULT_PROMPTS.rappel,
+      {
+        prenom: prospectData.prenom,
+        nom: prospectData.nom,
+        email: prospectData.email,
+        qualification: prospectData.qualification,
+        date_rdv: prospectData.dateRdvFormatted || prospectData.date_rdv,
+      }
+    );
     console.log('Email generated:', email.objet);
 
     // Send email via Gmail (using advisor's Gmail or org fallback)

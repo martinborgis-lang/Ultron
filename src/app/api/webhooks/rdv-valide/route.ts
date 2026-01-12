@@ -1,6 +1,6 @@
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getValidCredentials, GoogleCredentials, updateGoogleSheetCells } from '@/lib/google';
-import { generateEmail, buildUserPrompt, DEFAULT_PROMPTS, qualifyProspect } from '@/lib/anthropic';
+import { generateEmailWithConfig, DEFAULT_PROMPTS, qualifyProspect, PromptConfig } from '@/lib/anthropic';
 import { sendEmail, getEmailCredentialsByEmail } from '@/lib/gmail';
 import { scheduleRappelEmail } from '@/lib/qstash';
 import { NextRequest, NextResponse } from 'next/server';
@@ -162,20 +162,20 @@ export async function POST(request: NextRequest) {
     }
 
     // Step 3: Generate synthesis email with Claude (using qualification for tone)
-    const systemPrompt = org.prompt_synthese || DEFAULT_PROMPTS.synthese;
-    const userPrompt = buildUserPrompt({
-      prenom: prospect.prenom,
-      nom: prospect.nom,
-      email: prospect.email,
-      telephone: prospect.telephone,
-      qualificationIA: prospect.qualificationIA,
-      scoreIA: prospect.scoreIA,
-      noteConseiller: prospect.notesAppel,
-      besoins: prospect.besoins,
-      dateRdv: prospect.dateRdv,
-    });
-
-    const email = await generateEmail(systemPrompt, userPrompt);
+    const promptConfig = org.prompt_synthese as PromptConfig | null;
+    const email = await generateEmailWithConfig(
+      promptConfig,
+      DEFAULT_PROMPTS.synthese,
+      {
+        prenom: prospect.prenom,
+        nom: prospect.nom,
+        email: prospect.email,
+        qualification: prospect.qualificationIA,
+        besoins: prospect.besoins,
+        notes_appel: prospect.notesAppel,
+        date_rdv: prospect.dateRdv,
+      }
+    );
     console.log('Email generated:', JSON.stringify(email));
 
     // Step 4: Send email via Gmail (using advisor's Gmail or org fallback)

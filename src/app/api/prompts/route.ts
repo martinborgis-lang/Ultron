@@ -1,5 +1,4 @@
 import { createClient } from '@/lib/supabase/server';
-import { DEFAULT_PROMPTS } from '@/lib/anthropic';
 import { NextRequest, NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
@@ -30,14 +29,14 @@ export async function GET() {
       .eq('id', user.organization_id)
       .single();
 
-    const prompts = {
-      qualification: org?.prompt_qualification || DEFAULT_PROMPTS.qualification,
-      synthese: org?.prompt_synthese || DEFAULT_PROMPTS.synthese,
-      rappel: org?.prompt_rappel || DEFAULT_PROMPTS.rappel,
-      plaquette: org?.prompt_plaquette || DEFAULT_PROMPTS.plaquette,
-    };
-
-    return NextResponse.json({ prompts });
+    return NextResponse.json({
+      prompts: {
+        prompt_qualification: org?.prompt_qualification,
+        prompt_synthese: org?.prompt_synthese,
+        prompt_rappel: org?.prompt_rappel,
+        prompt_plaquette: org?.prompt_plaquette,
+      },
+    });
   } catch (error) {
     console.error('Prompts fetch error:', error);
     return NextResponse.json(
@@ -59,7 +58,7 @@ export async function PUT(request: NextRequest) {
 
     const { data: user } = await supabase
       .from('users')
-      .select('organization_id')
+      .select('organization_id, role')
       .eq('auth_id', authUser.id)
       .single();
 
@@ -67,30 +66,39 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'Organisation non trouvee' }, { status: 404 });
     }
 
-    const body = await request.json();
-    const { type, prompt } = body;
-
-    if (!type || !prompt) {
+    // Seuls les admins peuvent modifier les prompts
+    if (user.role !== 'admin') {
       return NextResponse.json(
-        { error: 'Type et prompt requis' },
+        { error: 'Seuls les admins peuvent modifier les prompts' },
+        { status: 403 }
+      );
+    }
+
+    const body = await request.json();
+    const { type, config } = body;
+
+    if (!type) {
+      return NextResponse.json(
+        { error: 'Type requis' },
         { status: 400 }
       );
     }
 
-    const validTypes = ['qualification', 'synthese', 'rappel', 'plaquette'];
-    if (!validTypes.includes(type)) {
+    // Valider le type (accepte prompt_synthese ou synthese)
+    const validTypes = ['prompt_qualification', 'prompt_synthese', 'prompt_rappel', 'prompt_plaquette'];
+    const normalizedType = type.startsWith('prompt_') ? type : `prompt_${type}`;
+
+    if (!validTypes.includes(normalizedType)) {
       return NextResponse.json(
         { error: 'Type de prompt invalide' },
         { status: 400 }
       );
     }
 
-    const updateData: Record<string, string> = {};
-    updateData[`prompt_${type}`] = prompt;
-
+    // Mettre à jour avec le config object
     const { error: updateError } = await supabase
       .from('organizations')
-      .update(updateData)
+      .update({ [normalizedType]: config })
       .eq('id', user.organization_id);
 
     if (updateError) {
@@ -160,7 +168,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      defaultPrompt: DEFAULT_PROMPTS[type as keyof typeof DEFAULT_PROMPTS],
+      message: 'Prompt reset to default',
     });
   } catch (error) {
     console.error('Prompt reset error:', error);

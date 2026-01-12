@@ -303,3 +303,76 @@ RAPPELS :
 
 Retourne UNIQUEMENT le JSON {"objet": "...", "corps": "..."}.`;
 }
+
+// Type for new PromptConfig format
+export interface PromptConfig {
+  useAI: boolean;
+  systemPrompt: string;
+  userPromptTemplate: string;
+  fixedEmailSubject: string;
+  fixedEmailBody: string;
+}
+
+// Helper function to replace variables in templates
+export function replaceVariables(
+  template: string,
+  data: Record<string, string>
+): string {
+  let result = template;
+  for (const [key, value] of Object.entries(data)) {
+    result = result.replace(new RegExp(`{{${key}}}`, 'g'), value || '');
+  }
+  return result;
+}
+
+// Generate email using PromptConfig (supports both AI and fixed email modes)
+export async function generateEmailWithConfig(
+  promptConfig: PromptConfig | null,
+  defaultSystemPrompt: string,
+  prospectData: {
+    prenom?: string;
+    nom?: string;
+    email?: string;
+    qualification?: string;
+    besoins?: string;
+    notes_appel?: string;
+    date_rdv?: string;
+  }
+): Promise<EmailGenerated> {
+  const variables: Record<string, string> = {
+    prenom: prospectData.prenom || '',
+    nom: prospectData.nom || '',
+    email: prospectData.email || '',
+    qualification: prospectData.qualification || '',
+    besoins: prospectData.besoins || '',
+    notes_appel: prospectData.notes_appel || '',
+    date_rdv: prospectData.date_rdv || '',
+  };
+
+  // If no config or using AI mode
+  if (!promptConfig || promptConfig.useAI) {
+    const systemPrompt = promptConfig?.systemPrompt || defaultSystemPrompt;
+    const userPromptTemplate = promptConfig?.userPromptTemplate || buildDefaultUserPromptTemplate();
+    const userPrompt = replaceVariables(userPromptTemplate, variables);
+
+    return await generateEmail(systemPrompt, userPrompt);
+  }
+
+  // Fixed email mode - just replace variables
+  return {
+    objet: replaceVariables(promptConfig.fixedEmailSubject, variables),
+    corps: replaceVariables(promptConfig.fixedEmailBody, variables),
+  };
+}
+
+function buildDefaultUserPromptTemplate(): string {
+  return `Rédige un email pour :
+- Prénom : {{prenom}}
+- Nom : {{nom}}
+- Qualification : {{qualification}}
+- Besoins : {{besoins}}
+- Notes de l'appel : {{notes_appel}}
+- Date du RDV : {{date_rdv}}
+
+Retourne uniquement le JSON.`;
+}
