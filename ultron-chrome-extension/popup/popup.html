@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ultron Meeting Assistant</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>ULTRON</h1>
+      <p>Meeting Assistant</p>
+    </div>
+
+    <div id="login-section" class="section">
+      <h2>Connexion</h2>
+      <p>Connectez-vous a votre compte Ultron</p>
+      <input type="email" id="email" placeholder="Email">
+      <input type="password" id="password" placeholder="Mot de passe">
+      <button id="login-btn">Se connecter</button>
+      <p id="login-error" class="error"></p>
+    </div>
+
+    <div id="logged-section" class="section hidden">
+      <div class="user-info">
+        <span id="user-email"></span>
+        <button id="logout-btn" class="small">Deconnexion</button>
+      </div>
+
+      <div class="status">
+        <h3>Statut</h3>
+        <p id="meet-status">Pas sur Google Meet</p>
+      </div>
+
+      <div class="prospects">
+        <h3>Prospects avec RDV</h3>
+        <div id="prospects-list">
+          <p class="loading">Chargement...</p>
+        </div>
+      </div>
+
+      <div class="settings">
+        <h3>Parametres</h3>
+        <label>
+          <input type="checkbox" id="auto-panel" checked>
+          Afficher le panel automatiquement
+        </label>
+        <label>
+          <input type="checkbox" id="transcription-enabled">
+          Activer la transcription (beta)
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
