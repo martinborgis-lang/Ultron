@@ -73,6 +73,87 @@ export async function getEmailCredentials(
   return null;
 }
 
+/**
+ * Get Gmail credentials by looking up the user by email address.
+ * Priority: 1. User's gmail_credentials (by email) 2. Organization's google_credentials
+ */
+export async function getEmailCredentialsByEmail(
+  organizationId: string,
+  userEmail?: string
+): Promise<EmailCredentialsResult | null> {
+  const supabase = createAdminClient();
+
+  console.log('=== RECHERCHE CONSEILLER PAR EMAIL ===');
+  console.log('Email recherche:', userEmail);
+  console.log('Organization ID:', organizationId);
+
+  // If userEmail is provided, try to get user's Gmail credentials first
+  if (userEmail && userEmail.trim() !== '') {
+    const { data: user, error: userError } = await supabase
+      .from('users')
+      .select('id, email, gmail_credentials')
+      .eq('email', userEmail.trim().toLowerCase())
+      .eq('organization_id', organizationId)
+      .single();
+
+    console.log('Resultat recherche:', user ? `Trouve: ${user.email}` : 'Non trouve');
+    if (userError) console.log('Erreur recherche:', userError.message);
+    console.log('Gmail credentials presents:', !!user?.gmail_credentials);
+
+    if (user?.gmail_credentials) {
+      const validCredentials = await getValidCredentials(user.gmail_credentials as GoogleCredentials);
+
+      // Update credentials if refreshed
+      if (validCredentials !== user.gmail_credentials) {
+        await supabase
+          .from('users')
+          .update({ gmail_credentials: validCredentials })
+          .eq('id', user.id);
+      }
+
+      console.log('✅ Utilisation Gmail conseiller:', user.email);
+      return {
+        credentials: validCredentials,
+        source: 'user',
+        userId: user.id,
+      };
+    } else if (user) {
+      console.log('⚠️ Conseiller trouve mais sans Gmail connecte, fallback sur organisation');
+    } else {
+      console.log('⚠️ Conseiller non trouve dans la base, fallback sur organisation');
+    }
+  } else {
+    console.log('⚠️ Pas d\'email conseiller fourni, fallback sur organisation');
+  }
+
+  // Fallback to organization credentials
+  const { data: org } = await supabase
+    .from('organizations')
+    .select('id, google_credentials')
+    .eq('id', organizationId)
+    .single();
+
+  if (org?.google_credentials) {
+    const validCredentials = await getValidCredentials(org.google_credentials as GoogleCredentials);
+
+    // Update credentials if refreshed
+    if (validCredentials !== org.google_credentials) {
+      await supabase
+        .from('organizations')
+        .update({ google_credentials: validCredentials })
+        .eq('id', organizationId);
+    }
+
+    console.log('📧 Utilisation Gmail organisation');
+    return {
+      credentials: validCredentials,
+      source: 'organization',
+    };
+  }
+
+  return null;
+}
+
 export interface EmailOptions {
   to: string;
   subject: string;

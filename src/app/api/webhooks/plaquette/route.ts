@@ -1,7 +1,7 @@
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getValidCredentials, GoogleCredentials, downloadFileFromDrive, updateGoogleSheetCells } from '@/lib/google';
 import { generateEmail, buildUserPrompt, DEFAULT_PROMPTS } from '@/lib/anthropic';
-import { sendEmailWithBufferAttachment, getEmailCredentials } from '@/lib/gmail';
+import { sendEmailWithBufferAttachment, getEmailCredentialsByEmail } from '@/lib/gmail';
 import { NextRequest, NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
@@ -23,12 +23,14 @@ interface WebhookData {
   qualification?: string;
   score?: string;
   priorite?: string;
+  conseiller_email?: string;
 }
 
 interface WebhookPayload {
   sheet_id: string;
   row_number?: number;
   conseiller_id?: string; // Optional: advisor's user ID for per-user Gmail
+  conseiller_email?: string; // Optional: advisor's email (from Apps Script column Z)
   data: WebhookData;
   plaquette_url?: string;
 }
@@ -116,8 +118,9 @@ export async function POST(request: NextRequest) {
         .eq('id', org.id);
     }
 
-    // Get email credentials (advisor's Gmail or fallback to org)
-    const emailCredentialsResult = await getEmailCredentials(org.id, payload.conseiller_id);
+    // Get email credentials (advisor's Gmail by email, or fallback to org)
+    const conseillerEmail = payload.conseiller_email || payload.data?.conseiller_email;
+    const emailCredentialsResult = await getEmailCredentialsByEmail(org.id, conseillerEmail);
     if (!emailCredentialsResult) {
       return NextResponse.json(
         { error: 'No email credentials available' },
@@ -176,6 +179,7 @@ export async function POST(request: NextRequest) {
         to: prospect.email,
         subject: email.objet,
       },
+      emailSentFrom: emailCredentialsResult.source === 'user' ? conseillerEmail : 'organization',
     });
   } catch (error) {
     console.error('Plaquette webhook error:', error);

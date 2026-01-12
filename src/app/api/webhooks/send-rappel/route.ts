@@ -1,7 +1,7 @@
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getValidCredentials, GoogleCredentials, updateGoogleSheetCells } from '@/lib/google';
 import { generateEmail, buildUserPrompt, DEFAULT_PROMPTS } from '@/lib/anthropic';
-import { sendEmail, getEmailCredentials } from '@/lib/gmail';
+import { sendEmail, getEmailCredentialsByEmail } from '@/lib/gmail';
 import { NextRequest, NextResponse } from 'next/server';
 import type { RappelPayload } from '@/lib/qstash';
 
@@ -10,12 +10,13 @@ export const dynamic = 'force-dynamic';
 async function handleRappel(request: NextRequest) {
   try {
     const payload: RappelPayload = await request.json();
-    const { organizationId, conseillerId, prospectData, rowNumber } = payload;
+    const { organizationId, conseillerId, conseillerEmail, prospectData, rowNumber } = payload;
 
     console.log('=== ENVOI RAPPEL 24H via QStash ===');
     console.log('Prospect:', prospectData.email);
     console.log('Organization:', organizationId);
-    console.log('Conseiller:', conseillerId || 'non specifie');
+    console.log('Conseiller ID:', conseillerId || 'non specifie');
+    console.log('Conseiller Email:', conseillerEmail || 'non specifie');
 
     const supabase = createAdminClient();
 
@@ -47,8 +48,8 @@ async function handleRappel(request: NextRequest) {
         .eq('id', org.id);
     }
 
-    // Get email credentials (advisor's Gmail or fallback to org)
-    const emailCredentialsResult = await getEmailCredentials(organizationId, conseillerId);
+    // Get email credentials (advisor's Gmail by email, or fallback to org)
+    const emailCredentialsResult = await getEmailCredentialsByEmail(organizationId, conseillerEmail);
     if (!emailCredentialsResult) {
       console.error('No email credentials available');
       return NextResponse.json({ error: 'No email credentials available' }, { status: 400 });
@@ -104,6 +105,7 @@ async function handleRappel(request: NextRequest) {
     return NextResponse.json({
       success: true,
       messageId: result.messageId,
+      emailSentFrom: emailCredentialsResult.source === 'user' ? conseillerEmail : 'organization',
     });
   } catch (error) {
     console.error('Erreur envoi rappel:', error);
