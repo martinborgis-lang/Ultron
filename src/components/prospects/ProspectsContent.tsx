@@ -23,6 +23,7 @@ import {
   Settings,
   RefreshCw,
   X,
+  FileText,
 } from 'lucide-react';
 import type { Prospect as GoogleProspect } from '@/lib/google';
 
@@ -456,6 +457,18 @@ export function ProspectsContent() {
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-2">
+                          {prospect.dateRdv && prospect.dateRdv !== '-' && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              title="Préparer le RDV"
+                              onClick={() => window.open(`/meeting/prepare/${prospect.id}`, '_blank')}
+                            >
+                              <FileText className="h-4 w-4" />
+                              <span className="sr-only">Préparer le RDV</span>
+                            </Button>
+                          )}
                           {prospect.email && (
                             <Button
                               variant="ghost"
