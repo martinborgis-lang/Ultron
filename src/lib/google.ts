@@ -1,18 +1,22 @@
 import { google } from 'googleapis';
 import { OAuth2Client } from 'google-auth-library';
 
-// Scopes for organization-level OAuth (Sheets + Drive + Gmail)
+// Scopes for organization-level OAuth (Sheets + Drive + Gmail + Calendar)
 const ORGANIZATION_SCOPES = [
   'https://www.googleapis.com/auth/spreadsheets',
   'https://www.googleapis.com/auth/gmail.send',
   'https://www.googleapis.com/auth/userinfo.email',
   'https://www.googleapis.com/auth/drive.readonly',
+  'https://www.googleapis.com/auth/calendar',
+  'https://www.googleapis.com/auth/calendar.events',
 ];
 
-// Scopes for user-level Gmail OAuth
+// Scopes for user-level Gmail OAuth (Gmail + Calendar)
 const GMAIL_SCOPES = [
   'https://www.googleapis.com/auth/gmail.send',
   'https://www.googleapis.com/auth/userinfo.email',
+  'https://www.googleapis.com/auth/calendar',
+  'https://www.googleapis.com/auth/calendar.events',
 ];
 
 export type OAuthType = 'organization' | 'gmail';
