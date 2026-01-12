@@ -50,8 +50,9 @@ interface TeamManagerProps {
   currentUserId?: string;
 }
 
-export function TeamManager({ currentUserId }: TeamManagerProps) {
+export function TeamManager({ currentUserId: initialUserId }: TeamManagerProps) {
   const [members, setMembers] = useState<TeamMember[]>([]);
+  const [currentUserId, setCurrentUserId] = useState<string | undefined>(initialUserId);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [email, setEmail] = useState('');
@@ -59,6 +60,21 @@ export function TeamManager({ currentUserId }: TeamManagerProps) {
   const [role, setRole] = useState<'admin' | 'conseiller'>('conseiller');
   const [sheetOpen, setSheetOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Fetch current user ID if not provided
+  useEffect(() => {
+    if (!currentUserId) {
+      fetch('/api/user/me')
+        .then(res => res.json())
+        .then(data => {
+          if (data.id) {
+            console.log('[TeamManager] Fetched currentUserId:', data.id);
+            setCurrentUserId(data.id);
+          }
+        })
+        .catch(err => console.error('[TeamManager] Failed to fetch current user:', err));
+    }
+  }, [currentUserId]);
 
   const fetchTeam = useCallback(async () => {
     try {
