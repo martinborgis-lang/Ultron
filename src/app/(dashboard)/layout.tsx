@@ -25,13 +25,24 @@ export default async function DashboardLayout({
     .eq('auth_id', authUser.id)
     .single();
 
+  // Fetch organization name
+  let orgName: string | undefined;
+  if (user?.organization_id) {
+    const { data: org } = await supabase
+      .from('organizations')
+      .select('name')
+      .eq('id', user.organization_id)
+      .single();
+    orgName = org?.name;
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <Sidebar userName={user?.full_name || undefined} />
       <MobileNav userName={user?.full_name || undefined} />
 
       <div className="lg:pl-64">
-        <Header userName={user?.full_name || undefined} userEmail={user?.email} />
+        <Header userName={user?.full_name || undefined} userEmail={user?.email} orgName={orgName} />
         <main className="p-6 bg-background">
           {children}
         </main>

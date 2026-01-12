@@ -3,7 +3,6 @@
 import { usePathname, useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { useTheme } from '@/components/providers/ThemeProvider';
-import { useOrganization } from '@/hooks/useOrganization';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import {
@@ -29,13 +28,13 @@ const pageTitles: Record<string, string> = {
 interface HeaderProps {
   userName?: string;
   userEmail?: string;
+  orgName?: string;
 }
 
-export function Header({ userName, userEmail }: HeaderProps) {
+export function Header({ userName, userEmail, orgName }: HeaderProps) {
   const pathname = usePathname();
   const router = useRouter();
   const { resolvedTheme, setTheme } = useTheme();
-  const { organization } = useOrganization();
 
   const pageTitle = pageTitles[pathname] || 'Dashboard';
 
@@ -55,8 +54,8 @@ export function Header({ userName, userEmail }: HeaderProps) {
       <div className="flex items-center justify-between h-16 px-6">
         <div className="flex items-center gap-2">
           <h1 className="text-xl font-semibold text-foreground">{pageTitle}</h1>
-          {organization?.name && (
-            <span className="text-muted-foreground font-normal">— {organization.name}</span>
+          {orgName && (
+            <span className="text-muted-foreground font-normal">— {orgName}</span>
           )}
         </div>
 
