@@ -1,9 +1,9 @@
-import { PromptEditor } from '@/components/settings/PromptEditor';
+import { PromptsEditor } from '@/components/settings/PromptsEditor';
 
 export default function PromptsPage() {
   return (
-    <div className="space-y-6">
-      <PromptEditor />
+    <div className="container mx-auto py-6">
+      <PromptsEditor />
     </div>
   );
 }

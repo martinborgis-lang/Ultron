@@ -4,7 +4,7 @@ import { redirect } from 'next/navigation';
 import { GoogleSheetsConfig } from '@/components/settings/GoogleSheetsConfig';
 import { PlaquetteConfig } from '@/components/settings/PlaquetteConfig';
 import { TeamManager } from '@/components/settings/TeamManager';
-import { PromptEditor } from '@/components/settings/PromptEditor';
+import { PromptsEditor } from '@/components/settings/PromptsEditor';
 import { ThemeSelector } from '@/components/settings/ThemeSelector';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -92,7 +92,7 @@ export default async function SettingsPage() {
             <TeamManager />
           </TabsContent>
           <TabsContent value="prompts">
-            <PromptEditor />
+            <PromptsEditor />
           </TabsContent>
           <TabsContent value="appearance">
             <ThemeSelector />
