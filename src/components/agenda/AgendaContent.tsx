@@ -22,6 +22,7 @@ import {
   MapPin,
   Trash2,
   Loader2,
+  AlertTriangle,
 } from 'lucide-react';
 import { useOrganization } from '@/hooks/useOrganization';
 
@@ -44,6 +45,7 @@ export function AgendaContent() {
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
+  const [needsReconnect, setNeedsReconnect] = useState(false);
   const { organization } = useOrganization();
 
   // Form state
@@ -60,8 +62,28 @@ export function AgendaContent() {
   const [creating, setCreating] = useState(false);
 
   useEffect(() => {
-    fetchEvents();
-  }, [currentDate, view]);
+    checkCalendarAccess();
+  }, []);
+
+  useEffect(() => {
+    if (!needsReconnect) {
+      fetchEvents();
+    }
+  }, [currentDate, view, needsReconnect]);
+
+  const checkCalendarAccess = async () => {
+    try {
+      const response = await fetch('/api/google/check-scopes');
+      const data = await response.json();
+
+      if (data.needsReconnect || !data.hasCalendarScope) {
+        setNeedsReconnect(true);
+        setLoading(false);
+      }
+    } catch (error) {
+      console.error('Erreur vérification scopes:', error);
+    }
+  };
 
   const getViewStart = (date: Date, viewType: ViewType): Date => {
     const start = new Date(date);
@@ -415,12 +437,40 @@ export function AgendaContent() {
         </CardContent>
       </Card>
 
+      {/* Alerte reconnexion Google */}
+      {needsReconnect && (
+        <Card className="border-amber-500 bg-amber-500/10">
+          <CardContent className="p-4 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <AlertTriangle className="h-5 w-5 text-amber-600" />
+              <div>
+                <p className="font-medium text-amber-600">Reconnexion Google requise</p>
+                <p className="text-sm text-muted-foreground">
+                  Votre connexion Google doit être mise à jour pour accéder au calendrier.
+                </p>
+              </div>
+            </div>
+            <Button
+              variant="outline"
+              className="border-amber-500 text-amber-600 hover:bg-amber-500/20"
+              onClick={() => window.location.href = '/api/google/auth?type=gmail'}
+            >
+              Reconnecter Google
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Calendrier */}
       <Card>
         <CardContent className="p-4">
           {loading ? (
             <div className="flex items-center justify-center h-64">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : needsReconnect ? (
+            <div className="flex items-center justify-center h-64 text-muted-foreground">
+              Veuillez reconnecter votre compte Google pour afficher votre agenda.
             </div>
           ) : (
             <>
