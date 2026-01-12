@@ -36,9 +36,6 @@ interface CalendarEvent {
   location?: string;
   attendees?: { email: string }[];
   hangoutLink?: string;
-  conferenceData?: {
-    entryPoints?: { uri: string; entryPointType: string }[];
-  };
 }
 
 type ViewType = 'day' | 'week' | 'month';
@@ -66,6 +63,44 @@ export function AgendaContent() {
     addGoogleMeet: true,
   });
   const [creating, setCreating] = useState(false);
+
+  // Fonction pour formater une date sans problème de timezone
+  const formatDateForInput = (date: Date): string => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const resetNewEventForm = () => {
+    setNewEvent({
+      summary: '',
+      description: '',
+      startDate: '',
+      startTime: '09:00',
+      endDate: '',
+      endTime: '10:00',
+      location: '',
+      attendeeEmail: '',
+      addGoogleMeet: true,
+    });
+  };
+
+  const openCreateModal = (date: Date, startTime = '09:00', endTime = '10:00') => {
+    const dateStr = formatDateForInput(date);
+    setNewEvent({
+      summary: '',
+      description: '',
+      startDate: dateStr,
+      startTime,
+      endDate: dateStr,
+      endTime,
+      location: '',
+      attendeeEmail: '',
+      addGoogleMeet: true,
+    });
+    setShowCreateModal(true);
+  };
 
   useEffect(() => {
     checkCalendarAccess();
@@ -177,29 +212,13 @@ export function AgendaContent() {
     }
   };
 
-  const openCreateModal = (date: Date) => {
-    const dateStr = date.toISOString().split('T')[0];
-    setNewEvent({
-      summary: '',
-      description: '',
-      startDate: dateStr,
-      startTime: '09:00',
-      endDate: dateStr,
-      endTime: '10:00',
-      location: '',
-      attendeeEmail: '',
-      addGoogleMeet: true,
-    });
-    setShowCreateModal(true);
-  };
-
   const handleCreateEvent = async () => {
     if (!newEvent.summary || !newEvent.startDate || !newEvent.endDate) return;
 
     setCreating(true);
     try {
-      const startDateTime = new Date(`${newEvent.startDate}T${newEvent.startTime}:00`).toISOString();
-      const endDateTime = new Date(`${newEvent.endDate}T${newEvent.endTime}:00`).toISOString();
+      const startDateTime = `${newEvent.startDate}T${newEvent.startTime}:00`;
+      const endDateTime = `${newEvent.endDate}T${newEvent.endTime}:00`;
 
       const response = await fetch('/api/calendar/events', {
         method: 'POST',
@@ -217,29 +236,25 @@ export function AgendaContent() {
 
       const data = await response.json();
 
-      if (response.ok) {
-        if (data.event?.hangoutLink) {
-          console.log('Lien Google Meet:', data.event.hangoutLink);
+      if (response.ok && data.event) {
+        if (data.event.hangoutLink) {
+          try {
+            await navigator.clipboard.writeText(data.event.hangoutLink);
+            alert(`RDV créé ! Lien Google Meet copié dans le presse-papier :\n${data.event.hangoutLink}`);
+          } catch {
+            alert(`RDV créé ! Lien Google Meet :\n${data.event.hangoutLink}`);
+          }
         }
 
         setShowCreateModal(false);
-        setNewEvent({
-          summary: '',
-          description: '',
-          startDate: '',
-          startTime: '09:00',
-          endDate: '',
-          endTime: '10:00',
-          location: '',
-          attendeeEmail: '',
-          addGoogleMeet: true,
-        });
+        resetNewEventForm();
         fetchEvents();
       } else {
-        alert('Erreur: ' + data.error);
+        alert('Erreur: ' + (data.error || 'Erreur inconnue'));
       }
     } catch (error) {
       console.error('Erreur création événement:', error);
+      alert('Erreur lors de la création');
     }
     setCreating(false);
   };
@@ -280,15 +295,6 @@ export function AgendaContent() {
       days.push(day);
     }
 
-    const handleDayClick = (day: Date) => {
-      openCreateModal(day);
-    };
-
-    const handleDayHeaderClick = (day: Date) => {
-      setCurrentDate(day);
-      setView('day');
-    };
-
     return (
       <div className="grid grid-cols-7 gap-2">
         {days.map((day, index) => {
@@ -299,7 +305,10 @@ export function AgendaContent() {
             <div key={index} className="min-h-[200px]">
               <div
                 className={`text-center p-2 rounded-t-lg cursor-pointer hover:opacity-80 transition-opacity ${isToday ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}
-                onClick={() => handleDayHeaderClick(day)}
+                onClick={() => {
+                  setCurrentDate(day);
+                  setView('day');
+                }}
                 title="Cliquer pour voir le détail du jour"
               >
                 <div className="text-xs">
@@ -309,7 +318,7 @@ export function AgendaContent() {
               </div>
               <div
                 className="border border-t-0 rounded-b-lg p-1 space-y-1 min-h-[150px] bg-card cursor-pointer hover:bg-accent/50 transition-colors"
-                onClick={() => handleDayClick(day)}
+                onClick={() => openCreateModal(day)}
                 title="Cliquer pour créer un RDV"
               >
                 {dayEvents.map(event => (
@@ -341,24 +350,6 @@ export function AgendaContent() {
     const dayEvents = getEventsForDay(currentDate);
     const hours = Array.from({ length: 12 }, (_, i) => i + 8); // 8h à 19h
 
-    const handleHourClick = (hour: number) => {
-      const dateStr = currentDate.toISOString().split('T')[0];
-      const startTime = `${hour.toString().padStart(2, '0')}:00`;
-      const endTime = `${(hour + 1).toString().padStart(2, '0')}:00`;
-      setNewEvent({
-        summary: '',
-        description: '',
-        startDate: dateStr,
-        startTime,
-        endDate: dateStr,
-        endTime,
-        location: '',
-        attendeeEmail: '',
-        addGoogleMeet: true,
-      });
-      setShowCreateModal(true);
-    };
-
     return (
       <div className="space-y-1">
         {hours.map(hour => {
@@ -367,11 +358,14 @@ export function AgendaContent() {
             return eventHour === hour;
           });
 
+          const startTime = `${hour.toString().padStart(2, '0')}:00`;
+          const endTime = `${(hour + 1).toString().padStart(2, '0')}:00`;
+
           return (
             <div
               key={hour}
               className="flex border-b border-border cursor-pointer hover:bg-accent/30 transition-colors"
-              onClick={() => handleHourClick(hour)}
+              onClick={() => openCreateModal(currentDate, startTime, endTime)}
             >
               <div className="w-16 py-2 text-sm text-muted-foreground text-right pr-2">
                 {hour}:00
@@ -417,11 +411,6 @@ export function AgendaContent() {
       days.push(new Date(currentDate.getFullYear(), currentDate.getMonth(), i));
     }
 
-    const handleDayClick = (day: Date, e: React.MouseEvent) => {
-      e.stopPropagation();
-      openCreateModal(day);
-    };
-
     return (
       <div>
         <div className="grid grid-cols-7 gap-1 mb-2">
@@ -443,7 +432,7 @@ export function AgendaContent() {
             return (
               <div
                 key={index}
-                onClick={(e) => handleDayClick(day, e)}
+                onClick={() => openCreateModal(day)}
                 className={`min-h-[80px] border rounded p-1 cursor-pointer hover:bg-accent/50 transition-colors ${
                   isToday ? 'border-primary bg-primary/5' : 'border-border bg-card'
                 }`}
@@ -486,7 +475,7 @@ export function AgendaContent() {
             Agenda {organization && <span className="text-muted-foreground font-normal">— {organization.name}</span>}
           </h1>
         </div>
-        <Button onClick={() => openCreateModal(new Date())}>
+        <Button onClick={() => openCreateModal(currentDate)}>
           <Plus className="h-4 w-4 mr-2" />
           Nouveau RDV
         </Button>

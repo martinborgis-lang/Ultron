@@ -66,7 +66,6 @@ export async function createCalendarEvent(
       dateTime: event.endDateTime,
       timeZone: 'Europe/Paris',
     },
-    attendees: event.attendees?.map(email => ({ email })),
     reminders: {
       useDefault: false,
       overrides: [
@@ -76,11 +75,22 @@ export async function createCalendarEvent(
     },
   };
 
-  // Ajouter Google Meet si demandé ou si il y a des participants
-  if (event.addGoogleMeet || (event.attendees && event.attendees.length > 0)) {
+  // Ajouter les participants
+  if (event.attendees && event.attendees.length > 0) {
+    requestBody.attendees = event.attendees.map(email => ({
+      email,
+      responseStatus: 'needsAction',
+    }));
+    requestBody.guestsCanModify = false;
+    requestBody.guestsCanInviteOthers = false;
+    requestBody.guestsCanSeeOtherGuests = true;
+  }
+
+  // Ajouter Google Meet
+  if (event.addGoogleMeet) {
     requestBody.conferenceData = {
       createRequest: {
-        requestId: `meet-${Date.now()}`,
+        requestId: `ultron-meet-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         conferenceSolutionKey: {
           type: 'hangoutsMeet',
         },
@@ -88,12 +98,17 @@ export async function createCalendarEvent(
     };
   }
 
+  console.log('Creating event with requestBody:', JSON.stringify(requestBody, null, 2));
+
   const response = await calendar.events.insert({
     calendarId: 'primary',
     requestBody,
-    conferenceDataVersion: 1,
-    sendUpdates: 'all',
+    conferenceDataVersion: event.addGoogleMeet ? 1 : 0,
+    sendUpdates: event.attendees && event.attendees.length > 0 ? 'all' : 'none',
   });
+
+  console.log('Event created:', response.data.id);
+  console.log('Hangout link:', response.data.hangoutLink);
 
   return response.data;
 }
