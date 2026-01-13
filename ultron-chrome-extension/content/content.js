@@ -6,6 +6,12 @@ let recognition = null;
 let currentProspect = null;
 let userToken = null;
 let transcriptionBuffer = [];
+let realtimeAnalysisTimeout = null;
+let isPanelLarge = false;
+
+// Dragging state
+let isDragging = false;
+let dragOffset = { x: 0, y: 0 };
 
 // Initialization
 (async function init() {
@@ -36,10 +42,12 @@ function createPanel() {
 
   panelElement = document.createElement('div');
   panelElement.id = 'ultron-panel';
+  panelElement.className = 'ultron-panel-normal';
   panelElement.innerHTML = `
-    <div class="ultron-header">
+    <div class="ultron-header" id="ultron-drag-handle">
       <span class="ultron-logo">ULTRON</span>
       <div class="ultron-controls">
+        <button id="ultron-resize" title="Agrandir/Reduire">[]</button>
         <button id="ultron-minimize" title="Reduire">-</button>
         <button id="ultron-close" title="Fermer">x</button>
       </div>
@@ -50,13 +58,24 @@ function createPanel() {
       </div>
       <div id="ultron-transcription" class="hidden">
         <div class="ultron-section-header">
-          <span>Transcription</span>
+          <span>Transcription en direct</span>
           <button id="ultron-toggle-transcription">Activer</button>
         </div>
         <div id="ultron-transcription-text"></div>
       </div>
+      <div id="ultron-realtime-suggestions" class="hidden">
+        <div class="ultron-section-header">
+          <span>Suggestions IA temps reel</span>
+          <span id="ultron-ai-status" class="ultron-ai-status"></span>
+        </div>
+        <div id="ultron-realtime-content">
+          <div class="ultron-realtime-placeholder">
+            Activez la transcription pour recevoir des suggestions en temps reel
+          </div>
+        </div>
+      </div>
       <div id="ultron-suggestions" class="hidden">
-        <div class="ultron-section-header">Suggestions</div>
+        <div class="ultron-section-header">Preparation initiale</div>
         <div id="ultron-suggestions-list"></div>
       </div>
     </div>
@@ -74,7 +93,62 @@ function createPanel() {
     panelElement.classList.toggle('minimized');
   });
 
+  document.getElementById('ultron-resize').addEventListener('click', togglePanelSize);
   document.getElementById('ultron-toggle-transcription').addEventListener('click', toggleTranscription);
+
+  // Make panel draggable
+  setupDraggable();
+}
+
+function setupDraggable() {
+  const header = document.getElementById('ultron-drag-handle');
+
+  header.addEventListener('mousedown', (e) => {
+    if (e.target.tagName === 'BUTTON') return;
+
+    isDragging = true;
+    const rect = panelElement.getBoundingClientRect();
+    dragOffset.x = e.clientX - rect.left;
+    dragOffset.y = e.clientY - rect.top;
+
+    panelElement.style.transition = 'none';
+  });
+
+  document.addEventListener('mousemove', (e) => {
+    if (!isDragging || !panelElement) return;
+
+    const x = e.clientX - dragOffset.x;
+    const y = e.clientY - dragOffset.y;
+
+    // Keep panel within viewport
+    const maxX = window.innerWidth - panelElement.offsetWidth;
+    const maxY = window.innerHeight - panelElement.offsetHeight;
+
+    panelElement.style.left = Math.max(0, Math.min(x, maxX)) + 'px';
+    panelElement.style.top = Math.max(0, Math.min(y, maxY)) + 'px';
+    panelElement.style.right = 'auto';
+  });
+
+  document.addEventListener('mouseup', () => {
+    if (isDragging) {
+      isDragging = false;
+      panelElement.style.transition = '';
+    }
+  });
+}
+
+function togglePanelSize() {
+  isPanelLarge = !isPanelLarge;
+
+  if (isPanelLarge) {
+    panelElement.classList.remove('ultron-panel-normal');
+    panelElement.classList.add('ultron-panel-large');
+    document.getElementById('ultron-resize').textContent = '><';
+  } else {
+    panelElement.classList.remove('ultron-panel-large');
+    panelElement.classList.add('ultron-panel-normal');
+    document.getElementById('ultron-resize').textContent = '[]';
+  }
 }
 
 async function detectProspect() {
@@ -134,6 +208,7 @@ function displayProspectInfo(prospect) {
 
   document.getElementById('ultron-change-prospect')?.addEventListener('click', showProspectSelector);
   document.getElementById('ultron-transcription').classList.remove('hidden');
+  document.getElementById('ultron-realtime-suggestions').classList.remove('hidden');
   document.getElementById('ultron-suggestions').classList.remove('hidden');
 }
 
@@ -253,9 +328,11 @@ function toggleTranscription() {
   if (isTranscribing) {
     stopTranscription();
     btn.textContent = 'Activer';
+    btn.classList.remove('active');
   } else {
     startTranscription();
     btn.textContent = 'Arreter';
+    btn.classList.add('active');
   }
 }
 
@@ -282,6 +359,9 @@ function startTranscription() {
           text: transcript,
           timestamp: new Date().toISOString(),
         });
+
+        // Trigger real-time analysis after accumulating some text
+        scheduleRealtimeAnalysis();
       } else {
         interimTranscript += transcript;
       }
@@ -310,6 +390,11 @@ function startTranscription() {
 
   recognition.start();
   isTranscribing = true;
+
+  // Show status
+  const statusEl = document.getElementById('ultron-ai-status');
+  statusEl.textContent = 'En ecoute...';
+  statusEl.className = 'ultron-ai-status listening';
 }
 
 function stopTranscription() {
@@ -318,6 +403,116 @@ function stopTranscription() {
     recognition = null;
   }
   isTranscribing = false;
+
+  // Clear status
+  const statusEl = document.getElementById('ultron-ai-status');
+  statusEl.textContent = '';
+  statusEl.className = 'ultron-ai-status';
+
+  // Clear timeout
+  if (realtimeAnalysisTimeout) {
+    clearTimeout(realtimeAnalysisTimeout);
+    realtimeAnalysisTimeout = null;
+  }
+}
+
+function scheduleRealtimeAnalysis() {
+  // Debounce real-time analysis - wait 3 seconds after last speech
+  if (realtimeAnalysisTimeout) {
+    clearTimeout(realtimeAnalysisTimeout);
+  }
+
+  realtimeAnalysisTimeout = setTimeout(() => {
+    if (transcriptionBuffer.length >= 2) {
+      runRealtimeAnalysis();
+    }
+  }, 3000);
+}
+
+async function runRealtimeAnalysis() {
+  if (!currentProspect || transcriptionBuffer.length === 0) return;
+
+  const statusEl = document.getElementById('ultron-ai-status');
+  statusEl.textContent = 'Analyse...';
+  statusEl.className = 'ultron-ai-status analyzing';
+
+  const recentTranscript = transcriptionBuffer.slice(-10).map(t => t.text).join(' ');
+
+  try {
+    const response = await fetch(`${ULTRON_API_URL}/api/extension/analyze-realtime`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${userToken}`,
+      },
+      body: JSON.stringify({
+        prospect: currentProspect,
+        transcript: recentTranscript,
+      }),
+    });
+
+    const data = await response.json();
+
+    if (data.analysis) {
+      displayRealtimeSuggestions(data.analysis);
+    }
+
+    statusEl.textContent = 'En ecoute...';
+    statusEl.className = 'ultron-ai-status listening';
+  } catch (error) {
+    console.error('Ultron: Realtime analysis error', error);
+    statusEl.textContent = 'Erreur';
+    statusEl.className = 'ultron-ai-status error';
+  }
+}
+
+function displayRealtimeSuggestions(analysis) {
+  const container = document.getElementById('ultron-realtime-content');
+
+  let html = '';
+
+  if (analysis.objectionDetectee) {
+    html += `
+      <div class="ultron-alert objection">
+        <strong>Objection detectee:</strong> ${analysis.objectionDetectee}
+        <div class="ultron-response">
+          <strong>Reponse suggeree:</strong> ${analysis.reponseObjection || 'N/A'}
+        </div>
+      </div>
+    `;
+  }
+
+  if (analysis.questionSuivante) {
+    html += `
+      <div class="ultron-realtime-suggestion">
+        <strong>Question a poser maintenant:</strong>
+        <p>${analysis.questionSuivante}</p>
+      </div>
+    `;
+  }
+
+  if (analysis.pointCle) {
+    html += `
+      <div class="ultron-realtime-suggestion highlight">
+        <strong>Point cle a aborder:</strong>
+        <p>${analysis.pointCle}</p>
+      </div>
+    `;
+  }
+
+  if (analysis.tonalite) {
+    html += `
+      <div class="ultron-tonalite ${analysis.tonalite.toLowerCase()}">
+        Tonalite du prospect: <strong>${analysis.tonalite}</strong>
+      </div>
+    `;
+  }
+
+  if (!html) {
+    html = '<div class="ultron-realtime-placeholder">Continuez la conversation...</div>';
+  }
+
+  container.innerHTML = html;
 }
 
 // Utilities

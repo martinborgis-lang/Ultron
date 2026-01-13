@@ -141,15 +141,27 @@ async function loadProspects() {
     const data = await response.json();
 
     if (data.prospects && data.prospects.length > 0) {
-      prospectsList.innerHTML = data.prospects.map(p => `
-        <div class="prospect-item">
+      prospectsList.innerHTML = '';
+
+      data.prospects.forEach(p => {
+        const div = document.createElement('div');
+        div.className = 'prospect-item';
+        div.innerHTML = `
           <div>
             <div class="name">${p.prenom} ${p.nom}</div>
             <div class="date">${p.date_rdv || 'Date non definie'}</div>
           </div>
-          <button onclick="openPrep('${p.id}')">Preparer</button>
-        </div>
-      `).join('');
+          <button class="prep-btn">Preparer</button>
+        `;
+
+        // Add event listener properly
+        const btn = div.querySelector('.prep-btn');
+        btn.addEventListener('click', () => {
+          chrome.tabs.create({ url: `${ULTRON_API_URL}/meeting/prepare/${p.id}` });
+        });
+
+        prospectsList.appendChild(div);
+      });
     } else {
       prospectsList.innerHTML = '<p class="loading">Aucun RDV prevu</p>';
     }
@@ -157,11 +169,6 @@ async function loadProspects() {
     prospectsList.innerHTML = '<p class="loading">Erreur de chargement</p>';
   }
 }
-
-// Global function to open preparation
-window.openPrep = function(prospectId) {
-  chrome.tabs.create({ url: `${ULTRON_API_URL}/meeting/prepare/${prospectId}` });
-};
 
 async function saveSettings() {
   await chrome.storage.local.set({
