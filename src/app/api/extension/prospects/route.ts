@@ -2,8 +2,17 @@ import { createClient } from '@supabase/supabase-js';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { NextRequest, NextResponse } from 'next/server';
 import { readGoogleSheet, parseProspectsFromSheet, getValidCredentials } from '@/lib/google';
+import { corsHeaders } from '@/lib/cors';
 
 export const dynamic = 'force-dynamic';
+
+// Handle preflight
+export async function OPTIONS() {
+  return new NextResponse(null, {
+    status: 200,
+    headers: corsHeaders(),
+  });
+}
 
 // GET /api/extension/prospects - Get prospects with upcoming appointments
 export async function GET(request: NextRequest) {
@@ -11,7 +20,10 @@ export async function GET(request: NextRequest) {
     // Verify authorization header
     const authHeader = request.headers.get('Authorization');
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Non authentifie' }, { status: 401 });
+      return NextResponse.json(
+        { error: 'Non authentifie' },
+        { status: 401, headers: corsHeaders() }
+      );
     }
 
     const token = authHeader.replace('Bearer ', '');
@@ -25,7 +37,10 @@ export async function GET(request: NextRequest) {
     const { data: { user: authUser }, error: authError } = await supabase.auth.getUser(token);
 
     if (authError || !authUser) {
-      return NextResponse.json({ error: 'Token invalide' }, { status: 401 });
+      return NextResponse.json(
+        { error: 'Token invalide' },
+        { status: 401, headers: corsHeaders() }
+      );
     }
 
     // Get user and organization
@@ -37,7 +52,10 @@ export async function GET(request: NextRequest) {
       .single();
 
     if (userError || !user) {
-      return NextResponse.json({ error: 'Utilisateur non trouve' }, { status: 404 });
+      return NextResponse.json(
+        { error: 'Utilisateur non trouve' },
+        { status: 404, headers: corsHeaders() }
+      );
     }
 
     // Get organization with Google credentials
@@ -48,7 +66,10 @@ export async function GET(request: NextRequest) {
       .single();
 
     if (orgError || !org?.google_credentials || !org?.google_sheet_id) {
-      return NextResponse.json({ error: 'Google Sheet non configure' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Google Sheet non configure' },
+        { status: 400, headers: corsHeaders() }
+      );
     }
 
     // Get valid credentials
@@ -99,12 +120,15 @@ export async function GET(request: NextRequest) {
       }))
       .slice(0, 10); // Limit to 10 prospects
 
-    return NextResponse.json({ prospects: prospectsWithRdv });
+    return NextResponse.json(
+      { prospects: prospectsWithRdv },
+      { headers: corsHeaders() }
+    );
   } catch (error) {
     console.error('Extension prospects error:', error);
     return NextResponse.json(
       { error: 'Erreur lors de la recuperation des prospects' },
-      { status: 500 }
+      { status: 500, headers: corsHeaders() }
     );
   }
 }

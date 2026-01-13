@@ -1,10 +1,19 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextRequest, NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
+import { corsHeaders } from '@/lib/cors';
 
 export const dynamic = 'force-dynamic';
 
 const anthropic = new Anthropic();
+
+// Handle preflight
+export async function OPTIONS() {
+  return new NextResponse(null, {
+    status: 200,
+    headers: corsHeaders(),
+  });
+}
 
 // POST /api/extension/analyze-realtime - Real-time AI analysis during meeting
 export async function POST(request: NextRequest) {
@@ -12,7 +21,10 @@ export async function POST(request: NextRequest) {
     // Verify authorization header
     const authHeader = request.headers.get('Authorization');
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Non authentifie' }, { status: 401 });
+      return NextResponse.json(
+        { error: 'Non authentifie' },
+        { status: 401, headers: corsHeaders() }
+      );
     }
 
     const token = authHeader.replace('Bearer ', '');
@@ -26,13 +38,19 @@ export async function POST(request: NextRequest) {
     const { data: { user: authUser }, error: authError } = await supabase.auth.getUser(token);
 
     if (authError || !authUser) {
-      return NextResponse.json({ error: 'Token invalide' }, { status: 401 });
+      return NextResponse.json(
+        { error: 'Token invalide' },
+        { status: 401, headers: corsHeaders() }
+      );
     }
 
     const { prospect, transcript } = await request.json();
 
     if (!prospect || !transcript) {
-      return NextResponse.json({ error: 'Prospect et transcription requis' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Prospect et transcription requis' },
+        { status: 400, headers: corsHeaders() }
+      );
     }
 
     // Generate real-time AI analysis
@@ -93,12 +111,15 @@ Analyse cette portion de conversation et fournis des suggestions en temps reel.`
       };
     }
 
-    return NextResponse.json({ analysis });
+    return NextResponse.json(
+      { analysis },
+      { headers: corsHeaders() }
+    );
   } catch (error) {
     console.error('Extension realtime analyze error:', error);
     return NextResponse.json(
       { error: 'Erreur lors de l\'analyse temps reel' },
-      { status: 500 }
+      { status: 500, headers: corsHeaders() }
     );
   }
 }

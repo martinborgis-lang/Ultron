@@ -1,10 +1,19 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextRequest, NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
+import { corsHeaders } from '@/lib/cors';
 
 export const dynamic = 'force-dynamic';
 
 const anthropic = new Anthropic();
+
+// Handle preflight
+export async function OPTIONS() {
+  return new NextResponse(null, {
+    status: 200,
+    headers: corsHeaders(),
+  });
+}
 
 // POST /api/extension/analyze - AI analysis for meeting preparation
 export async function POST(request: NextRequest) {
@@ -12,7 +21,10 @@ export async function POST(request: NextRequest) {
     // Verify authorization header
     const authHeader = request.headers.get('Authorization');
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Non authentifie' }, { status: 401 });
+      return NextResponse.json(
+        { error: 'Non authentifie' },
+        { status: 401, headers: corsHeaders() }
+      );
     }
 
     const token = authHeader.replace('Bearer ', '');
@@ -26,13 +38,19 @@ export async function POST(request: NextRequest) {
     const { data: { user: authUser }, error: authError } = await supabase.auth.getUser(token);
 
     if (authError || !authUser) {
-      return NextResponse.json({ error: 'Token invalide' }, { status: 401 });
+      return NextResponse.json(
+        { error: 'Token invalide' },
+        { status: 401, headers: corsHeaders() }
+      );
     }
 
     const { prospect } = await request.json();
 
     if (!prospect) {
-      return NextResponse.json({ error: 'Prospect requis' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Prospect requis' },
+        { status: 400, headers: corsHeaders() }
+      );
     }
 
     // Generate AI analysis
@@ -100,12 +118,15 @@ Fournis des suggestions pour ce rendez-vous.`;
       };
     }
 
-    return NextResponse.json({ analysis });
+    return NextResponse.json(
+      { analysis },
+      { headers: corsHeaders() }
+    );
   } catch (error) {
     console.error('Extension analyze error:', error);
     return NextResponse.json(
       { error: 'Erreur lors de l\'analyse' },
-      { status: 500 }
+      { status: 500, headers: corsHeaders() }
     );
   }
 }
