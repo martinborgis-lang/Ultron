@@ -1,6 +1,6 @@
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getValidCredentials, GoogleCredentials, updateGoogleSheetCells } from '@/lib/google';
-import { generateEmailWithConfig, DEFAULT_PROMPTS, qualifyProspect, PromptConfig } from '@/lib/anthropic';
+import { generateEmailWithConfig, DEFAULT_PROMPTS, qualifyProspect, PromptConfig, ScoringConfig } from '@/lib/anthropic';
 import { sendEmail, getEmailCredentialsByEmail } from '@/lib/gmail';
 import { scheduleRappelEmail } from '@/lib/qstash';
 import { NextRequest, NextResponse } from 'next/server';
@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
     // Find organization by sheet_id
     const { data: org, error: orgError } = await supabase
       .from('organizations')
-      .select('id, google_credentials, google_sheet_id, prompt_synthese')
+      .select('id, google_credentials, google_sheet_id, prompt_synthese, scoring_config')
       .eq('google_sheet_id', payload.sheet_id)
       .single();
 
@@ -127,18 +127,21 @@ export async function POST(request: NextRequest) {
     if (!prospect.qualificationIA || prospect.qualificationIA.trim() === '') {
       console.log('Qualifying prospect before sending email...');
 
-      qualificationResult = await qualifyProspect({
-        prenom: prospect.prenom,
-        nom: prospect.nom,
-        email: prospect.email,
-        telephone: prospect.telephone,
-        age: prospect.age,
-        situationPro: prospect.situationPro,
-        revenus: prospect.revenus,
-        patrimoine: prospect.patrimoine,
-        besoins: prospect.besoins,
-        notesAppel: prospect.notesAppel,
-      });
+      qualificationResult = await qualifyProspect(
+        {
+          prenom: prospect.prenom,
+          nom: prospect.nom,
+          email: prospect.email,
+          telephone: prospect.telephone,
+          age: prospect.age,
+          situationPro: prospect.situationPro,
+          revenus: prospect.revenus,
+          patrimoine: prospect.patrimoine,
+          besoins: prospect.besoins,
+          notesAppel: prospect.notesAppel,
+        },
+        org.scoring_config as ScoringConfig | null
+      );
 
       // Update prospect object with new qualification
       prospect = {

@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { cn } from '@/lib/utils';
-import { Bot, LayoutDashboard, Users, Settings, LogOut, Calculator, Calendar } from 'lucide-react';
+import { Bot, LayoutDashboard, Users, Settings, LogOut, Calculator, Calendar, Sliders } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 
@@ -17,6 +17,7 @@ const navigation = [
 
 const features = [
   { name: 'Calculateur', href: '/features/calculateur', icon: Calculator },
+  { name: 'Scoring IA', href: '/settings/scoring', icon: Sliders },
 ];
 
 interface SidebarProps {
