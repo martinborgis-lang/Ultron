@@ -206,18 +206,105 @@ export async function generateEmail(
   }
 }
 
-export async function qualifyProspect(prospect: {
-  prenom: string;
-  nom: string;
-  email: string;
-  telephone?: string;
-  age?: string;
-  situationPro?: string;
-  revenus?: string;
-  patrimoine?: string;
-  besoins?: string;
-  notesAppel?: string;
-}): Promise<QualificationResult> {
+export interface ScoringConfig {
+  poids_analyse_ia: number;
+  poids_patrimoine: number;
+  poids_revenus: number;
+  seuil_patrimoine_min: number;
+  seuil_patrimoine_max: number;
+  seuil_revenus_min: number;
+  seuil_revenus_max: number;
+  seuil_chaud: number;
+  seuil_tiede: number;
+}
+
+export const DEFAULT_SCORING_CONFIG: ScoringConfig = {
+  poids_analyse_ia: 50,
+  poids_patrimoine: 25,
+  poids_revenus: 25,
+  seuil_patrimoine_min: 30000,
+  seuil_patrimoine_max: 300000,
+  seuil_revenus_min: 2500,
+  seuil_revenus_max: 10000,
+  seuil_chaud: 70,
+  seuil_tiede: 40,
+};
+
+function parseFinancialValue(value: string | number | undefined): number {
+  if (typeof value === 'number') return value;
+  if (!value) return 0;
+  // Remove currency symbols, spaces, and convert comma to dot
+  const cleaned = String(value).replace(/[^\d.,]/g, '').replace(',', '.');
+  return parseFloat(cleaned) || 0;
+}
+
+function calculateFinancialScore(value: number, min: number, max: number): number {
+  if (value <= min) return 0;
+  if (value >= max) return 100;
+  return Math.round(((value - min) / (max - min)) * 100);
+}
+
+function calculateFinalScore(
+  aiScore: number,
+  patrimoine: number,
+  revenus: number,
+  config: ScoringConfig
+): number {
+  const patrimoineScore = calculateFinancialScore(
+    patrimoine,
+    config.seuil_patrimoine_min,
+    config.seuil_patrimoine_max
+  );
+
+  const revenusScore = calculateFinancialScore(
+    revenus,
+    config.seuil_revenus_min,
+    config.seuil_revenus_max
+  );
+
+  const finalScore = Math.round(
+    (aiScore * config.poids_analyse_ia) / 100 +
+      (patrimoineScore * config.poids_patrimoine) / 100 +
+      (revenusScore * config.poids_revenus) / 100
+  );
+
+  return Math.min(100, Math.max(0, finalScore));
+}
+
+function getQualificationFromScore(score: number, config: ScoringConfig): 'CHAUD' | 'TIEDE' | 'FROID' {
+  if (score >= config.seuil_chaud) return 'CHAUD';
+  if (score >= config.seuil_tiede) return 'TIEDE';
+  return 'FROID';
+}
+
+function getPrioriteFromScore(score: number, config: ScoringConfig): 'HAUTE' | 'MOYENNE' | 'BASSE' {
+  if (score >= config.seuil_chaud) return 'HAUTE';
+  if (score >= config.seuil_tiede) return 'MOYENNE';
+  return 'BASSE';
+}
+
+export async function qualifyProspect(
+  prospect: {
+    prenom: string;
+    nom: string;
+    email: string;
+    telephone?: string;
+    age?: string;
+    situationPro?: string;
+    revenus?: string;
+    patrimoine?: string;
+    besoins?: string;
+    notesAppel?: string;
+  },
+  scoringConfig?: ScoringConfig | null
+): Promise<QualificationResult> {
+  const config = { ...DEFAULT_SCORING_CONFIG, ...(scoringConfig || {}) };
+
+  // Parse financial values
+  const patrimoineValue = parseFinancialValue(prospect.patrimoine);
+  const revenusValue = parseFinancialValue(prospect.revenus);
+
+  // Build prompt for AI analysis (focus on behavioral/intent score)
   const userPrompt = `Informations du prospect à qualifier:
 - Prénom: ${prospect.prenom}
 - Nom: ${prospect.nom}
@@ -228,7 +315,27 @@ ${prospect.situationPro ? `- Situation professionnelle: ${prospect.situationPro}
 ${prospect.revenus ? `- Revenus: ${prospect.revenus}` : ''}
 ${prospect.patrimoine ? `- Patrimoine: ${prospect.patrimoine}` : ''}
 ${prospect.besoins ? `- Besoins exprimés: ${prospect.besoins}` : ''}
-${prospect.notesAppel ? `- Notes de l'appel: ${prospect.notesAppel}` : ''}`;
+${prospect.notesAppel ? `- Notes de l'appel: ${prospect.notesAppel}` : ''}
+
+IMPORTANT: Retourne un score de 0 à 100 basé UNIQUEMENT sur:
+- La clarté et l'urgence des besoins exprimés
+- L'engagement et l'intention détectés dans les notes d'appel
+- La disponibilité et la réactivité du prospect
+
+NE PAS baser le score sur le patrimoine ou les revenus (ils seront pondérés séparément).`;
+
+  const aiAnalysisPrompt = `Tu es un expert en qualification de prospects pour conseillers en gestion de patrimoine.
+
+Analyse le profil du prospect et évalue son INTENTION et son ENGAGEMENT (pas ses moyens financiers).
+
+Score de 0 à 100 basé sur:
+- Clarté des besoins: besoins précis et identifiés = score élevé
+- Urgence: besoin immédiat ou projet à court terme = score élevé
+- Engagement: prospect réactif, disponible, motivé = score élevé
+- Signaux positifs: questions pertinentes, intérêt manifeste = score élevé
+
+Retourne UNIQUEMENT un JSON avec le format:
+{"score": 75, "justification": "Explication courte de l'évaluation comportementale"}`;
 
   const message = await anthropic.messages.create({
     model: 'claude-sonnet-4-20250514',
@@ -239,7 +346,7 @@ ${prospect.notesAppel ? `- Notes de l'appel: ${prospect.notesAppel}` : ''}`;
         content: userPrompt,
       },
     ],
-    system: DEFAULT_PROMPTS.analyseQualification,
+    system: aiAnalysisPrompt,
   });
 
   const content = message.content[0];
@@ -256,21 +363,35 @@ ${prospect.notesAppel ? `- Notes de l'appel: ${prospect.notesAppel}` : ''}`;
 
     const parsed = JSON.parse(jsonStr);
 
-    const qualification = parsed.qualification?.toUpperCase();
-    if (!['CHAUD', 'TIEDE', 'FROID'].includes(qualification)) {
-      throw new Error('Invalid qualification value');
-    }
+    // Get AI score (behavioral/intent analysis)
+    const aiScore = Math.min(100, Math.max(0, parseInt(parsed.score) || 50));
 
-    const priorite = parsed.priorite?.toUpperCase();
-    if (!['HAUTE', 'MOYENNE', 'BASSE'].includes(priorite)) {
-      throw new Error('Invalid priorite value');
-    }
+    // Calculate final weighted score
+    const finalScore = calculateFinalScore(aiScore, patrimoineValue, revenusValue, config);
+
+    // Determine qualification and priority based on thresholds
+    const qualification = getQualificationFromScore(finalScore, config);
+    const priorite = getPrioriteFromScore(finalScore, config);
+
+    // Build detailed justification
+    const patrimoineScore = calculateFinancialScore(
+      patrimoineValue,
+      config.seuil_patrimoine_min,
+      config.seuil_patrimoine_max
+    );
+    const revenusScore = calculateFinancialScore(
+      revenusValue,
+      config.seuil_revenus_min,
+      config.seuil_revenus_max
+    );
+
+    const justification = `${parsed.justification || 'Analyse comportementale'} | Score IA: ${aiScore}% (×${config.poids_analyse_ia}%), Patrimoine: ${patrimoineScore}% (×${config.poids_patrimoine}%), Revenus: ${revenusScore}% (×${config.poids_revenus}%)`;
 
     return {
-      qualification: qualification as 'CHAUD' | 'TIEDE' | 'FROID',
-      score: Math.min(100, Math.max(0, parseInt(parsed.score) || 50)),
-      priorite: priorite as 'HAUTE' | 'MOYENNE' | 'BASSE',
-      justification: parsed.justification || '',
+      qualification,
+      score: finalScore,
+      priorite,
+      justification,
     };
   } catch {
     throw new Error('Failed to parse qualification from Claude response: ' + content.text);
