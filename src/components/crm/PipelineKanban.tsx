@@ -20,7 +20,12 @@ interface PipelineKanbanProps {
   stages: PipelineStage[];
   prospects: CrmProspect[];
   onProspectClick: (prospect: CrmProspect) => void;
-  onProspectMove: (prospectId: string, newStageSlug: string) => Promise<void>;
+  onProspectMove: (
+    prospectId: string,
+    newStageSlug: string,
+    subtype?: 'plaquette' | 'rappel_differe'
+  ) => Promise<void>;
+  onWaitingDrop?: (prospectId: string, prospectName: string) => void;
 }
 
 export function PipelineKanban({
@@ -28,6 +33,7 @@ export function PipelineKanban({
   prospects,
   onProspectClick,
   onProspectMove,
+  onWaitingDrop,
 }: PipelineKanbanProps) {
   const [activeProspect, setActiveProspect] = useState<CrmProspect | null>(null);
   const [localProspects, setLocalProspects] = useState(prospects);
@@ -64,7 +70,16 @@ export function PipelineKanban({
     const prospect = localProspects.find((p) => p.id === prospectId);
     if (!prospect || prospect.stage_slug === newStageSlug) return;
 
-    // Optimistic update
+    // Special handling for "en_attente" stage - show modal first
+    if (newStageSlug === 'en_attente' && onWaitingDrop) {
+      const prospectName = [prospect.first_name, prospect.last_name]
+        .filter(Boolean)
+        .join(' ') || 'Ce prospect';
+      onWaitingDrop(prospectId, prospectName);
+      return;
+    }
+
+    // Optimistic update for other stages
     setLocalProspects((prev) =>
       prev.map((p) =>
         p.id === prospectId ? { ...p, stage_slug: newStageSlug } : p
@@ -74,7 +89,7 @@ export function PipelineKanban({
     try {
       await onProspectMove(prospectId, newStageSlug);
 
-      const newStage = stages.find(s => s.slug === newStageSlug);
+      const newStage = stages.find((s) => s.slug === newStageSlug);
       toast({
         title: 'Prospect deplace',
         description: `${prospect.first_name} ${prospect.last_name} -> ${newStage?.name}`,
@@ -91,10 +106,13 @@ export function PipelineKanban({
   };
 
   // Group prospects by stage
-  const prospectsByStage = stages.reduce((acc, stage) => {
-    acc[stage.slug] = localProspects.filter((p) => p.stage_slug === stage.slug);
-    return acc;
-  }, {} as Record<string, CrmProspect[]>);
+  const prospectsByStage = stages.reduce(
+    (acc, stage) => {
+      acc[stage.slug] = localProspects.filter((p) => p.stage_slug === stage.slug);
+      return acc;
+    },
+    {} as Record<string, CrmProspect[]>
+  );
 
   return (
     <DndContext
