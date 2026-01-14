@@ -12,8 +12,7 @@ const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Pipeline', href: '/pipeline', icon: LayoutGrid },
   { name: 'Prospects', href: '/prospects', icon: Users },
-  { name: 'Taches', href: '/tasks', icon: CheckSquare },
-  { name: 'Agenda', href: '/agenda', icon: Calendar },
+  { name: 'Planning', href: '/planning', icon: Calendar },
   { name: 'Importer', href: '/import', icon: Upload },
   { name: 'Configuration', href: '/settings', icon: Settings },
 ];
