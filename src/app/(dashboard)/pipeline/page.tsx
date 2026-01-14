@@ -123,7 +123,7 @@ export default function PipelinePage() {
         open={showForm}
         onOpenChange={setShowForm}
         onSuccess={fetchData}
-        stages={stages.filter(s => !s.is_won && !s.is_lost)}
+        stages={stages}
       />
     </div>
   );

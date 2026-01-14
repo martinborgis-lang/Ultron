@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -20,19 +20,24 @@ import {
 } from '@/components/ui/sheet';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
+import { PipelineStage } from '@/types/crm';
 
 interface ProspectFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
-  stages: { slug: string; name: string }[];
+  stages: PipelineStage[];
 }
 
 export function ProspectForm({ open, onOpenChange, onSuccess, stages }: ProspectFormProps) {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
-  const [formData, setFormData] = useState({
+  // Filtrer les stages actifs (pas gagne/perdu)
+  const activeStages = stages.filter((s) => !s.is_won && !s.is_lost);
+  const defaultStage = activeStages.find((s) => s.slug === 'nouveau') || activeStages[0];
+
+  const getInitialFormData = () => ({
     first_name: '',
     last_name: '',
     email: '',
@@ -40,11 +45,23 @@ export function ProspectForm({ open, onOpenChange, onSuccess, stages }: Prospect
     company: '',
     job_title: '',
     city: '',
-    stage_slug: 'nouveau',
+    stage_slug: defaultStage?.slug || 'nouveau',
     deal_value: '',
     notes: '',
     source: 'manual',
   });
+
+  const [formData, setFormData] = useState(getInitialFormData);
+
+  // Reset le stage quand les stages changent ou quand le form s'ouvre
+  useEffect(() => {
+    if (open && defaultStage) {
+      setFormData((prev) => ({
+        ...prev,
+        stage_slug: defaultStage.slug,
+      }));
+    }
+  }, [open, defaultStage]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -60,7 +77,11 @@ export function ProspectForm({ open, onOpenChange, onSuccess, stages }: Prospect
         }),
       });
 
-      if (!response.ok) throw new Error('Erreur lors de la creation');
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Erreur lors de la creation');
+      }
 
       toast({
         title: 'Prospect cree',
@@ -68,26 +89,16 @@ export function ProspectForm({ open, onOpenChange, onSuccess, stages }: Prospect
       });
 
       // Reset form
-      setFormData({
-        first_name: '',
-        last_name: '',
-        email: '',
-        phone: '',
-        company: '',
-        job_title: '',
-        city: '',
-        stage_slug: 'nouveau',
-        deal_value: '',
-        notes: '',
-        source: 'manual',
-      });
+      setFormData(getInitialFormData());
 
       onSuccess();
       onOpenChange(false);
-    } catch (error) {
+    } catch (error: unknown) {
+      console.error('Form error:', error);
+      const message = error instanceof Error ? error.message : 'Impossible de creer le prospect';
       toast({
         title: 'Erreur',
-        description: 'Impossible de creer le prospect',
+        description: message,
         variant: 'destructive',
       });
     } finally {
@@ -102,11 +113,11 @@ export function ProspectForm({ open, onOpenChange, onSuccess, stages }: Prospect
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
-        <SheetHeader>
+        <SheetHeader className="mb-6">
           <SheetTitle>Nouveau prospect</SheetTitle>
         </SheetHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4 mt-6">
+        <form onSubmit={handleSubmit} className="space-y-5">
           {/* Nom / Prenom */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
@@ -194,14 +205,24 @@ export function ProspectForm({ open, onOpenChange, onSuccess, stages }: Prospect
                 onValueChange={(value) => updateField('stage_slug', value)}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Selectionner" />
+                  <SelectValue placeholder="Selectionner un stage" />
                 </SelectTrigger>
                 <SelectContent>
-                  {stages.map((stage) => (
-                    <SelectItem key={stage.slug} value={stage.slug}>
-                      {stage.name}
-                    </SelectItem>
-                  ))}
+                  {activeStages.length > 0 ? (
+                    activeStages.map((stage) => (
+                      <SelectItem key={stage.slug} value={stage.slug}>
+                        <div className="flex items-center gap-2">
+                          <div
+                            className="w-2 h-2 rounded-full"
+                            style={{ backgroundColor: stage.color }}
+                          />
+                          {stage.name}
+                        </div>
+                      </SelectItem>
+                    ))
+                  ) : (
+                    <SelectItem value="nouveau">Nouveau</SelectItem>
+                  )}
                 </SelectContent>
               </Select>
             </div>
@@ -229,8 +250,8 @@ export function ProspectForm({ open, onOpenChange, onSuccess, stages }: Prospect
             />
           </div>
 
-          {/* Submit */}
-          <div className="flex justify-end gap-3 pt-4">
+          {/* Submit - avec plus d'espacement */}
+          <div className="flex justify-end gap-3 pt-6 border-t mt-6">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Annuler
             </Button>

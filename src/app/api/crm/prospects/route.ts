@@ -79,14 +79,14 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST : Créer un nouveau prospect
+// POST : Creer un nouveau prospect
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
 
     if (!user) {
-      return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
+      return NextResponse.json({ error: 'Non autorise' }, { status: 401 });
     }
 
     const { data: userData } = await supabase
@@ -96,39 +96,52 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (!userData?.organization_id) {
-      return NextResponse.json({ error: 'Organisation non trouvée' }, { status: 404 });
+      return NextResponse.json({ error: 'Organisation non trouvee' }, { status: 404 });
     }
 
     const body = await request.json();
+    console.log('Creating prospect with body:', JSON.stringify(body, null, 2));
 
-    // Récupérer le stage par défaut si non fourni
-    let stage_id = body.stage_id;
-    let stage_slug = body.stage_slug || 'nouveau';
+    // Recuperer le stage par defaut si non fourni
+    const stage_slug = body.stage_slug || 'nouveau';
 
-    if (!stage_id) {
-      const { data: defaultStage } = await supabase
-        .from('pipeline_stages')
-        .select('id, slug')
-        .eq('organization_id', userData.organization_id)
-        .eq('slug', stage_slug)
-        .single();
+    const { data: stageData, error: stageError } = await supabase
+      .from('pipeline_stages')
+      .select('id, slug')
+      .eq('organization_id', userData.organization_id)
+      .eq('slug', stage_slug)
+      .single();
 
-      if (defaultStage) {
-        stage_id = defaultStage.id;
-        stage_slug = defaultStage.slug;
-      }
-    }
+    console.log('Stage lookup:', { stageData, stageError, stage_slug });
+
+    // Preparer les donnees du prospect
+    const prospectData = {
+      organization_id: userData.organization_id,
+      first_name: body.first_name || null,
+      last_name: body.last_name || null,
+      email: body.email || null,
+      phone: body.phone || null,
+      company: body.company || null,
+      job_title: body.job_title || null,
+      city: body.city || null,
+      address: body.address || null,
+      postal_code: body.postal_code || null,
+      stage_id: stageData?.id || null,
+      stage_slug: stageData?.slug || stage_slug,
+      deal_value: body.deal_value ? parseFloat(body.deal_value) : null,
+      close_probability: body.close_probability || 50,
+      notes: body.notes || null,
+      source: body.source || 'manual',
+      assigned_to: body.assigned_to || userData.id,
+      tags: body.tags || [],
+      qualification: body.qualification || 'non_qualifie',
+    };
+
+    console.log('Inserting prospect data:', JSON.stringify(prospectData, null, 2));
 
     const { data, error } = await supabase
       .from('crm_prospects')
-      .insert({
-        organization_id: userData.organization_id,
-        ...body,
-        stage_id,
-        stage_slug,
-        assigned_to: body.assigned_to || userData.id,
-        tags: body.tags || [],
-      })
+      .insert(prospectData)
       .select(`
         *,
         stage:pipeline_stages(id, name, slug, color),
@@ -136,22 +149,28 @@ export async function POST(request: NextRequest) {
       `)
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error('Insert error:', error);
+      throw error;
+    }
 
-    // Créer une activité pour la création
+    console.log('Prospect created successfully:', data?.id);
+
+    // Creer une activite pour la creation
     await supabase.from('crm_activities').insert({
       organization_id: userData.organization_id,
       prospect_id: data.id,
       user_id: userData.id,
       type: 'note',
-      subject: 'Prospect créé',
-      content: `Prospect créé par ${user.email}`,
+      subject: 'Prospect cree',
+      content: `Prospect cree manuellement`,
     });
 
     return NextResponse.json(data, { status: 201 });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error creating prospect:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
