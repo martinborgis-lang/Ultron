@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase-admin';
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
   try {
+    // Auth check with regular client
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
 
@@ -12,7 +14,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Non autorise' }, { status: 401 });
     }
 
-    const { data: userData } = await supabase
+    // Use admin client for database operations (bypasses RLS)
+    const adminClient = createAdminClient();
+
+    const { data: userData } = await adminClient
       .from('users')
       .select('id, organization_id')
       .eq('auth_id', user.id)
@@ -30,7 +35,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Recuperer le stage par defaut
-    const { data: defaultStage } = await supabase
+    const { data: defaultStage } = await adminClient
       .from('pipeline_stages')
       .select('id, slug')
       .eq('organization_id', userData.organization_id)
@@ -89,7 +94,7 @@ export async function POST(request: NextRequest) {
     for (let i = 0; i < validProspects.length; i += batchSize) {
       const batch = validProspects.slice(i, i + batchSize);
 
-      const { data, error } = await supabase
+      const { data, error } = await adminClient
         .from('crm_prospects')
         .insert(batch)
         .select('id');
@@ -102,7 +107,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Creer une activite pour l'import
-    await supabase.from('crm_activities').insert({
+    await adminClient.from('crm_activities').insert({
       organization_id: userData.organization_id,
       user_id: userData.id,
       type: 'note',

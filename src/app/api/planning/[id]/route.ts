@@ -1,36 +1,67 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
-import { createAdminClient } from '@/lib/supabase/admin';
+import { getCurrentUserAndOrganization } from '@/lib/services/get-organization';
+import { getPlanningService } from '@/lib/services/factories/planning-factory';
+
+export const dynamic = 'force-dynamic';
+
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    const context = await getCurrentUserAndOrganization();
+
+    if (!context) {
+      return NextResponse.json({ error: 'Non authentifie' }, { status: 401 });
+    }
+
+    const { user, organization } = context;
+    const service = getPlanningService(organization, user.id);
+
+    const event = await service.getById(id);
+
+    if (!event) {
+      return NextResponse.json({ error: 'Evenement non trouve' }, { status: 404 });
+    }
+
+    return NextResponse.json(event);
+  } catch (error) {
+    console.error('GET /api/planning/[id] error:', error);
+    return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 });
+  }
+}
 
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const { id } = await params;
+    const context = await getCurrentUserAndOrganization();
 
-    if (!user) {
-      return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
+    if (!context) {
+      return NextResponse.json({ error: 'Non authentifie' }, { status: 401 });
     }
 
-    const { id } = await params;
+    const { user, organization } = context;
+    const service = getPlanningService(organization, user.id);
     const body = await request.json();
-    const adminClient = createAdminClient();
 
-    const { data, error } = await adminClient
-      .from('crm_events')
-      .update({
-        ...body,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', id)
-      .select()
-      .single();
+    const event = await service.update(id, {
+      title: body.title,
+      description: body.description,
+      type: body.type,
+      startDate: body.startDate || body.start_date,
+      endDate: body.endDate || body.end_date,
+      dueDate: body.dueDate || body.due_date,
+      allDay: body.allDay || body.all_day,
+      priority: body.priority,
+      status: body.status,
+      completedAt: body.completedAt || body.completed_at,
+    });
 
-    if (error) throw error;
-
-    return NextResponse.json(data);
+    return NextResponse.json(event);
   } catch (error) {
     console.error('PATCH /api/planning/[id] error:', error);
     return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 });
@@ -42,22 +73,17 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const { id } = await params;
+    const context = await getCurrentUserAndOrganization();
 
-    if (!user) {
-      return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
+    if (!context) {
+      return NextResponse.json({ error: 'Non authentifie' }, { status: 401 });
     }
 
-    const { id } = await params;
-    const adminClient = createAdminClient();
+    const { user, organization } = context;
+    const service = getPlanningService(organization, user.id);
 
-    const { error } = await adminClient
-      .from('crm_events')
-      .delete()
-      .eq('id', id);
-
-    if (error) throw error;
+    await service.delete(id);
 
     return NextResponse.json({ success: true });
   } catch (error) {

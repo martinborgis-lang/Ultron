@@ -1,0 +1,217 @@
+import { createAdminClient } from '@/lib/supabase-admin';
+import { IPlanningService, PlanningEvent, PlanningFilters } from '../interfaces';
+
+export class CrmPlanningService implements IPlanningService {
+  private supabase = createAdminClient();
+
+  constructor(
+    private organizationId: string,
+    private userId: string
+  ) {}
+
+  private mapDbToEvent(row: any): PlanningEvent {
+    return {
+      id: row.id,
+      type: row.type || 'task',
+      title: row.title,
+      description: row.description,
+      startDate: row.start_date,
+      endDate: row.end_date,
+      dueDate: row.due_date,
+      allDay: row.all_day || false,
+      status: row.status || 'pending',
+      completedAt: row.completed_at,
+      prospectId: row.prospect_id,
+      prospectName:
+        row.prospect_name ||
+        (row.prospect ? `${row.prospect.first_name} ${row.prospect.last_name}` : undefined),
+      assignedTo: row.assigned_to,
+      priority: row.priority || 'medium',
+      externalId: row.external_id,
+      createdAt: row.created_at,
+    };
+  }
+
+  async getAll(filters?: PlanningFilters): Promise<PlanningEvent[]> {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    let query = this.supabase
+      .from('crm_events')
+      .select(
+        `
+        *,
+        prospect:crm_prospects(first_name, last_name)
+      `
+      )
+      .eq('organization_id', this.organizationId)
+      .order('due_date', { ascending: true, nullsFirst: false });
+
+    // Appliquer les filtres
+    if (filters?.filter) {
+      switch (filters.filter) {
+        case 'today':
+          query = query
+            .gte('due_date', today.toISOString())
+            .lt('due_date', tomorrow.toISOString());
+          break;
+        case 'overdue':
+          query = query.lt('due_date', today.toISOString()).neq('status', 'completed');
+          break;
+        case 'upcoming':
+          query = query.gte('due_date', tomorrow.toISOString());
+          break;
+      }
+    }
+
+    if (filters?.prospectId) {
+      query = query.eq('prospect_id', filters.prospectId);
+    }
+
+    if (filters?.type) {
+      query = query.eq('type', filters.type);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      console.error('CrmPlanningService.getAll error:', error);
+      throw error;
+    }
+
+    return (data || []).map((row) => this.mapDbToEvent(row));
+  }
+
+  async getById(id: string): Promise<PlanningEvent | null> {
+    const { data, error } = await this.supabase
+      .from('crm_events')
+      .select(
+        `
+        *,
+        prospect:crm_prospects(first_name, last_name)
+      `
+      )
+      .eq('id', id)
+      .single();
+
+    if (error) {
+      if (error.code === 'PGRST116') return null;
+      throw error;
+    }
+
+    return this.mapDbToEvent(data);
+  }
+
+  async create(event: Partial<PlanningEvent>): Promise<PlanningEvent> {
+    // Si prospect_id fourni, recuperer le nom
+    let prospectName = event.prospectName;
+    if (event.prospectId && !prospectName) {
+      const { data: prospect } = await this.supabase
+        .from('crm_prospects')
+        .select('first_name, last_name')
+        .eq('id', event.prospectId)
+        .single();
+      if (prospect) {
+        prospectName = `${prospect.first_name} ${prospect.last_name}`;
+      }
+    }
+
+    const { data, error } = await this.supabase
+      .from('crm_events')
+      .insert({
+        organization_id: this.organizationId,
+        type: event.type || 'task',
+        title: event.title,
+        description: event.description,
+        start_date: event.startDate,
+        end_date: event.endDate,
+        due_date: event.dueDate,
+        all_day: event.allDay || false,
+        priority: event.priority || 'medium',
+        prospect_id: event.prospectId,
+        prospect_name: prospectName,
+        assigned_to: this.userId,
+        created_by: this.userId,
+        status: 'pending',
+      })
+      .select(
+        `
+        *,
+        prospect:crm_prospects(first_name, last_name)
+      `
+      )
+      .single();
+
+    if (error) {
+      console.error('CrmPlanningService.create error:', error);
+      throw error;
+    }
+
+    return this.mapDbToEvent(data);
+  }
+
+  async update(id: string, data: Partial<PlanningEvent>): Promise<PlanningEvent> {
+    const updateData: Record<string, any> = {
+      updated_at: new Date().toISOString(),
+    };
+
+    if (data.title !== undefined) updateData.title = data.title;
+    if (data.description !== undefined) updateData.description = data.description;
+    if (data.type !== undefined) updateData.type = data.type;
+    if (data.startDate !== undefined) updateData.start_date = data.startDate;
+    if (data.endDate !== undefined) updateData.end_date = data.endDate;
+    if (data.dueDate !== undefined) updateData.due_date = data.dueDate;
+    if (data.allDay !== undefined) updateData.all_day = data.allDay;
+    if (data.priority !== undefined) updateData.priority = data.priority;
+    if (data.status !== undefined) updateData.status = data.status;
+    if (data.completedAt !== undefined) updateData.completed_at = data.completedAt;
+
+    const { data: result, error } = await this.supabase
+      .from('crm_events')
+      .update(updateData)
+      .eq('id', id)
+      .select(
+        `
+        *,
+        prospect:crm_prospects(first_name, last_name)
+      `
+      )
+      .single();
+
+    if (error) {
+      console.error('CrmPlanningService.update error:', error);
+      throw error;
+    }
+
+    return this.mapDbToEvent(result);
+  }
+
+  async delete(id: string): Promise<void> {
+    const { error } = await this.supabase.from('crm_events').delete().eq('id', id);
+
+    if (error) {
+      console.error('CrmPlanningService.delete error:', error);
+      throw error;
+    }
+  }
+
+  async markComplete(id: string): Promise<PlanningEvent> {
+    return this.update(id, {
+      status: 'completed',
+      completedAt: new Date().toISOString(),
+    });
+  }
+
+  async markIncomplete(id: string): Promise<PlanningEvent> {
+    return this.update(id, {
+      status: 'pending',
+      completedAt: undefined,
+    });
+  }
+
+  async getByProspect(prospectId: string): Promise<PlanningEvent[]> {
+    return this.getAll({ prospectId });
+  }
+}

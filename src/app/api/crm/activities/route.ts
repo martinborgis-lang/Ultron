@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase-admin';
 
 export const dynamic = 'force-dynamic';
 
 // GET : Liste des activités (pour un prospect ou globales)
 export async function GET(request: NextRequest) {
   try {
+    // Auth check with regular client
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
 
@@ -13,7 +15,10 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
     }
 
-    const { data: userData } = await supabase
+    // Use admin client for database operations (bypasses RLS)
+    const adminClient = createAdminClient();
+
+    const { data: userData } = await adminClient
       .from('users')
       .select('organization_id')
       .eq('auth_id', user.id)
@@ -23,7 +28,7 @@ export async function GET(request: NextRequest) {
     const prospect_id = searchParams.get('prospect_id');
     const limit = parseInt(searchParams.get('limit') || '50');
 
-    let query = supabase
+    let query = adminClient
       .from('crm_activities')
       .select(`
         *,
@@ -52,6 +57,7 @@ export async function GET(request: NextRequest) {
 // POST : Créer une activité
 export async function POST(request: NextRequest) {
   try {
+    // Auth check with regular client
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
 
@@ -59,7 +65,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
     }
 
-    const { data: userData } = await supabase
+    // Use admin client for database operations (bypasses RLS)
+    const adminClient = createAdminClient();
+
+    const { data: userData } = await adminClient
       .from('users')
       .select('id, organization_id')
       .eq('auth_id', user.id)
@@ -67,7 +76,7 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
 
-    const { data, error } = await supabase
+    const { data, error } = await adminClient
       .from('crm_activities')
       .insert({
         organization_id: userData?.organization_id,
@@ -84,7 +93,7 @@ export async function POST(request: NextRequest) {
 
     // Mettre à jour last_activity_at sur le prospect
     if (body.prospect_id) {
-      await supabase
+      await adminClient
         .from('crm_prospects')
         .update({ last_activity_at: new Date().toISOString() })
         .eq('id', body.prospect_id);

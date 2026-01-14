@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase-admin';
 
 export const dynamic = 'force-dynamic';
 
 // GET : Liste des prospects avec filtres
 export async function GET(request: NextRequest) {
   try {
+    // Auth check with regular client
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
 
@@ -13,8 +15,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
     }
 
+    // Use admin client for database operations (bypasses RLS)
+    const adminClient = createAdminClient();
+
     // Récupérer l'organization_id de l'utilisateur
-    const { data: userData } = await supabase
+    const { data: userData } = await adminClient
       .from('users')
       .select('organization_id')
       .eq('auth_id', user.id)
@@ -32,7 +37,7 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '50');
     const offset = parseInt(searchParams.get('offset') || '0');
 
-    let query = supabase
+    let query = adminClient
       .from('crm_prospects')
       .select(`
         *,
@@ -82,6 +87,7 @@ export async function GET(request: NextRequest) {
 // POST : Creer un nouveau prospect
 export async function POST(request: NextRequest) {
   try {
+    // Auth check with regular client
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
 
@@ -89,7 +95,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Non autorise' }, { status: 401 });
     }
 
-    const { data: userData } = await supabase
+    // Use admin client for database operations (bypasses RLS)
+    const adminClient = createAdminClient();
+
+    const { data: userData } = await adminClient
       .from('users')
       .select('id, organization_id')
       .eq('auth_id', user.id)
@@ -105,7 +114,7 @@ export async function POST(request: NextRequest) {
     // Recuperer le stage par defaut si non fourni
     const stage_slug = body.stage_slug || 'nouveau';
 
-    const { data: stageData, error: stageError } = await supabase
+    const { data: stageData, error: stageError } = await adminClient
       .from('pipeline_stages')
       .select('id, slug')
       .eq('organization_id', userData.organization_id)
@@ -139,7 +148,7 @@ export async function POST(request: NextRequest) {
 
     console.log('Inserting prospect data:', JSON.stringify(prospectData, null, 2));
 
-    const { data, error } = await supabase
+    const { data, error } = await adminClient
       .from('crm_prospects')
       .insert(prospectData)
       .select(`
@@ -157,7 +166,7 @@ export async function POST(request: NextRequest) {
     console.log('Prospect created successfully:', data?.id);
 
     // Creer une activite pour la creation
-    await supabase.from('crm_activities').insert({
+    await adminClient.from('crm_activities').insert({
       organization_id: userData.organization_id,
       prospect_id: data.id,
       user_id: userData.id,

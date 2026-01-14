@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase-admin';
 
 export const dynamic = 'force-dynamic';
 
@@ -10,12 +11,17 @@ export async function PATCH(
 ) {
   try {
     const { id } = await params;
+
+    // Auth check with regular client
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
 
     if (!user) {
       return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
     }
+
+    // Use admin client for database operations (bypasses RLS)
+    const adminClient = createAdminClient();
 
     const body = await request.json();
 
@@ -26,7 +32,7 @@ export async function PATCH(
       body.completed_at = null;
     }
 
-    const { data, error } = await supabase
+    const { data, error } = await adminClient
       .from('crm_tasks')
       .update(body)
       .eq('id', id)
@@ -40,13 +46,13 @@ export async function PATCH(
 
     // Si tâche complétée et liée à un prospect, créer une activité
     if (body.is_completed && data.prospect_id) {
-      const { data: userData } = await supabase
+      const { data: userData } = await adminClient
         .from('users')
         .select('id, organization_id')
         .eq('auth_id', user.id)
         .single();
 
-      await supabase.from('crm_activities').insert({
+      await adminClient.from('crm_activities').insert({
         organization_id: userData?.organization_id,
         prospect_id: data.prospect_id,
         user_id: userData?.id,
@@ -70,6 +76,8 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params;
+
+    // Auth check with regular client
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
 
@@ -77,7 +85,10 @@ export async function DELETE(
       return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
     }
 
-    const { error } = await supabase
+    // Use admin client for database operations (bypasses RLS)
+    const adminClient = createAdminClient();
+
+    const { error } = await adminClient
       .from('crm_tasks')
       .delete()
       .eq('id', id);

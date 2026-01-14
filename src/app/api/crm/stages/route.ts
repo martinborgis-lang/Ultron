@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase-admin';
 
 export const dynamic = 'force-dynamic';
 
 // GET : Liste des stages
 export async function GET(request: NextRequest) {
   try {
+    // Auth check with regular client
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
 
@@ -13,7 +15,10 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
     }
 
-    const { data: userData } = await supabase
+    // Use admin client for database operations (bypasses RLS)
+    const adminClient = createAdminClient();
+
+    const { data: userData } = await adminClient
       .from('users')
       .select('organization_id')
       .eq('auth_id', user.id)
@@ -24,7 +29,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Récupérer les stages avec le count de prospects par stage
-    const { data: stages, error } = await supabase
+    const { data: stages, error } = await adminClient
       .from('pipeline_stages')
       .select('*')
       .eq('organization_id', userData.organization_id)
@@ -33,7 +38,7 @@ export async function GET(request: NextRequest) {
     if (error) throw error;
 
     // Récupérer les counts par stage
-    const { data: counts } = await supabase
+    const { data: counts } = await adminClient
       .from('crm_prospects')
       .select('stage_slug')
       .eq('organization_id', userData.organization_id);

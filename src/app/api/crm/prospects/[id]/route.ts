@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase-admin';
 
 export const dynamic = 'force-dynamic';
 
@@ -10,6 +11,8 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
+
+    // Auth check with regular client
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
 
@@ -17,7 +20,10 @@ export async function GET(
       return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
     }
 
-    const { data, error } = await supabase
+    // Use admin client for database operations (bypasses RLS)
+    const adminClient = createAdminClient();
+
+    const { data, error } = await adminClient
       .from('crm_prospects')
       .select(`
         *,
@@ -47,6 +53,8 @@ export async function PATCH(
 ) {
   try {
     const { id } = await params;
+
+    // Auth check with regular client
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
 
@@ -54,7 +62,10 @@ export async function PATCH(
       return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
     }
 
-    const { data: userData } = await supabase
+    // Use admin client for database operations (bypasses RLS)
+    const adminClient = createAdminClient();
+
+    const { data: userData } = await adminClient
       .from('users')
       .select('id, organization_id')
       .eq('auth_id', user.id)
@@ -63,7 +74,7 @@ export async function PATCH(
     const body = await request.json();
 
     // Récupérer l'ancien prospect pour comparer les changements
-    const { data: oldProspect } = await supabase
+    const { data: oldProspect } = await adminClient
       .from('crm_prospects')
       .select('stage_slug, qualification')
       .eq('id', id)
@@ -71,7 +82,7 @@ export async function PATCH(
 
     // Si le stage change, mettre à jour stage_id aussi
     if (body.stage_slug && body.stage_slug !== oldProspect?.stage_slug) {
-      const { data: newStage } = await supabase
+      const { data: newStage } = await adminClient
         .from('pipeline_stages')
         .select('id, slug, is_won, is_lost')
         .eq('organization_id', userData?.organization_id)
@@ -92,7 +103,7 @@ export async function PATCH(
 
     body.updated_at = new Date().toISOString();
 
-    const { data, error } = await supabase
+    const { data, error } = await adminClient
       .from('crm_prospects')
       .update(body)
       .eq('id', id)
@@ -107,7 +118,7 @@ export async function PATCH(
 
     // Créer une activité si le stage a changé
     if (body.stage_slug && body.stage_slug !== oldProspect?.stage_slug) {
-      await supabase.from('crm_activities').insert({
+      await adminClient.from('crm_activities').insert({
         organization_id: userData?.organization_id,
         prospect_id: id,
         user_id: userData?.id,
@@ -122,7 +133,7 @@ export async function PATCH(
 
     // Créer une activité si la qualification a changé
     if (body.qualification && body.qualification !== oldProspect?.qualification) {
-      await supabase.from('crm_activities').insert({
+      await adminClient.from('crm_activities').insert({
         organization_id: userData?.organization_id,
         prospect_id: id,
         user_id: userData?.id,
@@ -150,6 +161,8 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params;
+
+    // Auth check with regular client
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
 
@@ -157,7 +170,10 @@ export async function DELETE(
       return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
     }
 
-    const { error } = await supabase
+    // Use admin client for database operations (bypasses RLS)
+    const adminClient = createAdminClient();
+
+    const { error } = await adminClient
       .from('crm_prospects')
       .delete()
       .eq('id', id);

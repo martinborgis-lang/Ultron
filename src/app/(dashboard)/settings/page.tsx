@@ -8,7 +8,8 @@ import { PromptsEditor } from '@/components/settings/PromptsEditor';
 import { ThemeSelector } from '@/components/settings/ThemeSelector';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
-import { FileSpreadsheet, Users, Sparkles, Palette } from 'lucide-react';
+import { FileSpreadsheet, Users, Sparkles, Palette, Database } from 'lucide-react';
+import Link from 'next/link';
 
 async function getOrganizationData() {
   const supabase = await createClient();
@@ -58,7 +59,11 @@ export default async function SettingsPage() {
   return (
     <div className="space-y-6">
       <Tabs defaultValue="sheets" className="w-full">
-        <TabsList className="grid w-full grid-cols-4 lg:w-[500px]">
+        <TabsList className="grid w-full grid-cols-5 lg:w-[600px]">
+          <TabsTrigger value="data" className="gap-2">
+            <Database className="h-4 w-4" />
+            <span className="hidden sm:inline">Donnees</span>
+          </TabsTrigger>
           <TabsTrigger value="sheets" className="gap-2">
             <FileSpreadsheet className="h-4 w-4" />
             <span className="hidden sm:inline">Sheets</span>
@@ -77,6 +82,23 @@ export default async function SettingsPage() {
           </TabsTrigger>
         </TabsList>
         <div className="mt-6">
+          <TabsContent value="data">
+            <div className="border rounded-xl p-6 space-y-4">
+              <div>
+                <h2 className="text-lg font-semibold">Source de donnees</h2>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Choisissez entre le mode CRM (base Supabase) ou Google Sheet pour stocker vos prospects et taches.
+                </p>
+              </div>
+              <Link
+                href="/settings/data-source"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+              >
+                <Database className="w-4 h-4" />
+                Configurer la source de donnees
+              </Link>
+            </div>
+          </TabsContent>
           <TabsContent value="sheets">
             <div className="space-y-6">
               <Suspense fallback={<GoogleSheetsConfigSkeleton />}>
