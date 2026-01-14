@@ -77,15 +77,14 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   }, [theme, mounted]);
 
   const handleSetTheme = useCallback((newTheme: Theme) => {
+    if (typeof window === 'undefined') return;
     localStorage.setItem('theme', newTheme);
     // Dispatch storage event to trigger useSyncExternalStore update
     window.dispatchEvent(new StorageEvent('storage', { key: 'theme', newValue: newTheme }));
   }, []);
 
-  if (!mounted) {
-    return <>{children}</>;
-  }
-
+  // Always provide the context, even before mounting
+  // This prevents "useTheme must be used within a ThemeProvider" errors
   return (
     <ThemeContext.Provider value={{ theme, setTheme: handleSetTheme, resolvedTheme }}>
       {children}
