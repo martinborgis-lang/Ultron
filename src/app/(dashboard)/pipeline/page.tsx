@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { PipelineKanban } from '@/components/crm/PipelineKanban';
@@ -89,35 +89,57 @@ export default function PipelinePage() {
     prospectName: string;
   } | null>(null);
 
-  const fetchData = useCallback(async () => {
+  // Ref to prevent double fetch on mount
+  const hasFetched = useRef(false);
+
+  // Fetch function (not in useCallback to avoid dependency issues)
+  const fetchData = async (searchQuery?: string) => {
     setLoading(true);
     try {
-      // Fetch stages from unified API
-      const stagesRes = await fetch('/api/stages/unified');
-      const stagesData: UnifiedStage[] = await stagesRes.json();
-      setStages(stagesData.map(unifiedStageToPipelineStage));
+      const [stagesRes, prospectsRes] = await Promise.all([
+        fetch('/api/stages/unified'),
+        fetch(`/api/prospects/unified${searchQuery ? `?search=${encodeURIComponent(searchQuery)}` : ''}`),
+      ]);
 
-      // Fetch prospects from unified API
-      const prospectsRes = await fetch(
-        `/api/prospects/unified${search ? `?search=${encodeURIComponent(search)}` : ''}`
-      );
-      const prospectsData: ProspectData[] = await prospectsRes.json();
-      setProspects(prospectsData.map(prospectDataToCrmProspect));
+      if (stagesRes.ok) {
+        const stagesData: UnifiedStage[] = await stagesRes.json();
+        setStages(stagesData.map(unifiedStageToPipelineStage));
+      }
+
+      if (prospectsRes.ok) {
+        const prospectsData: ProspectData[] = await prospectsRes.json();
+        setProspects(prospectsData.map(prospectDataToCrmProspect));
+      }
     } catch (error) {
       console.error('Error fetching data:', error);
-      toast({
-        title: 'Erreur',
-        description: 'Impossible de charger les donnees',
-        variant: 'destructive',
-      });
     } finally {
       setLoading(false);
     }
-  }, [search, toast]);
+  };
 
+  // Initial fetch - only once on mount
   useEffect(() => {
+    if (hasFetched.current) return;
+    hasFetched.current = true;
     fetchData();
-  }, [fetchData]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Debounced search
+  useEffect(() => {
+    if (!hasFetched.current) return;
+
+    const timer = setTimeout(() => {
+      fetchData(search);
+    }, 500);
+
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search]);
+
+  const handleRefresh = () => {
+    fetchData(search);
+  };
 
   const handleProspectMove = async (
     prospectId: string,
@@ -152,9 +174,8 @@ export default function PipelinePage() {
     try {
       await handleProspectMove(pendingMove.prospectId, 'en_attente', subtype);
 
-      // TODO: If rappelDate, create event in planning
+      // Create planning event if rappel_differe with date
       if (rappelDate && subtype === 'rappel_differe') {
-        // Create a planning event for the callback
         try {
           await fetch('/api/planning', {
             method: 'POST',
@@ -181,7 +202,7 @@ export default function PipelinePage() {
             : `Rappel programme pour ${rappelDate?.toLocaleDateString('fr-FR')}`,
       });
 
-      fetchData();
+      fetchData(search);
     } catch (error) {
       toast({
         title: 'Erreur',
@@ -225,7 +246,7 @@ export default function PipelinePage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="icon" onClick={fetchData} disabled={loading}>
+          <Button variant="outline" size="icon" onClick={handleRefresh} disabled={loading}>
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
           </Button>
           <Button onClick={() => setShowForm(true)}>
@@ -267,7 +288,7 @@ export default function PipelinePage() {
       <ProspectForm
         open={showForm}
         onOpenChange={setShowForm}
-        onSuccess={fetchData}
+        onSuccess={handleRefresh}
         stages={stages}
       />
 

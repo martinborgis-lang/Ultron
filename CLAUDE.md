@@ -793,6 +793,47 @@ QSTASH_NEXT_SIGNING_KEY=xxx
 
 ---
 
+## 🎯 PIPELINE BI-MODE
+
+### Architecture
+```
+Mode CRM  → CrmProspectService  → Supabase (crm_prospects, pipeline_stages)
+Mode Sheet → SheetProspectService → Google Sheets API → Apps Script → Webhooks
+```
+
+### Stages Pipeline (validés)
+
+| Position | Slug | Nom | Couleur | Statut Sheet (Col N) | Subtype |
+|----------|------|-----|---------|---------------------|---------|
+| 0 | nouveau | Nouveau | #6366f1 | *(vide)* | - |
+| 1 | en_attente | En attente | #f59e0b | "À rappeler - Plaquette" | `plaquette` |
+| 1 | en_attente | En attente | #f59e0b | "À rappeler - RDV" | `rappel_differe` |
+| 2 | rdv_pris | RDV Pris | #10b981 | "RDV Validé" | - |
+| 3 | rdv_effectue | RDV Effectué | #3b82f6 | "RDV Effectué" | - |
+| 4 | negociation | Négociation | #8b5cf6 | "Négociation" | - |
+| 5 | gagne | Gagné ✓ | #22c55e | "Gagné" | - |
+| 6 | perdu | Perdu ✗ | #ef4444 | "Refus" | - |
+
+### Modale "En attente"
+Quand un prospect est déplacé vers "En attente", une modale demande :
+- **Plaquette** : Envoie automatiquement le mail + PDF plaquette
+- **Rappel différé** : Programme un rappel (génère lien Calendar via Apps Script)
+
+### APIs Pipeline
+| Route | Description |
+|-------|-------------|
+| GET `/api/stages/unified` | Retourne les stages (CRM: BDD, Sheet: fixes) |
+| PATCH `/api/prospects/unified/[id]/stage` | Change le stage d'un prospect |
+| PATCH `/api/sheets/update-status` | Update colonne N de la Sheet |
+
+### Mapping Functions (src/types/pipeline.ts)
+```typescript
+mapSheetStatusToStage(status) // "RDV Validé" → { slug: 'rdv_pris' }
+mapStageToSheetStatus(slug, subtype) // 'en_attente', 'plaquette' → "À rappeler - Plaquette"
+```
+
+---
+
 ## 📊 STRUCTURE GOOGLE SHEET (26 COLONNES A-Z)
 
 | Col | Lettre | Nom | Section |
@@ -907,8 +948,28 @@ Convention commits : feat, fix, style, refactor, docs, chore
 
 ## 📋 TODO / Prochaines étapes
 
-1. [ ] Migrer PipelineKanban vers APIs unifiées
-2. [ ] Implémenter SheetPlanningService avec Google Calendar API
-3. [ ] Ajouter drag & drop en mode Sheet (update colonne Statut Appel)
-4. [ ] Vue 360° prospect en mode Sheet
-5. [ ] Sync bidirectionnelle Sheet ↔ CRM (optionnel)
+### Sprint 1 : Pipeline bi-mode (PRIORITÉ)
+1. [ ] Créer `src/types/pipeline.ts` avec mapping stage ↔ statut
+2. [ ] Créer `/api/stages/unified` (stages CRM ou fixes Sheet)
+3. [ ] Créer `/api/sheets/update-status` (update colonne N)
+4. [ ] Implémenter `SheetProspectService.updateStage()`
+5. [ ] Créer modale `WaitingReasonModal` (plaquette vs rappel)
+6. [ ] Migrer `/pipeline/page.tsx` vers APIs unifiées
+7. [ ] Créer `/api/prospects/unified/[id]/stage`
+
+### Sprint 2 : Workflows CRM
+1. [ ] Ajouter `workflow_config` dans organizations
+2. [ ] Créer `/api/crm/workflows/process`
+3. [ ] Implémenter handlers (rdv_pris, en_attente_plaquette, etc.)
+4. [ ] Page Settings > Automatisations
+5. [ ] Boutons d'action dans fiche prospect
+
+### Sprint 3 : Planning avec Calendar
+1. [ ] Ajouter scope Calendar à OAuth
+2. [ ] Implémenter CrmPlanningService avec sync Calendar
+3. [ ] Implémenter SheetPlanningService avec Calendar
+4. [ ] UI Planning avec création Meet auto
+
+### À faire dans la Google Sheet
+- [ ] Ajouter "Négociation" dans les options de la colonne N
+- [ ] Ajouter "Gagné" dans les options de la colonne N
