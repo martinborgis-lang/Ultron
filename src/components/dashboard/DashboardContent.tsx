@@ -76,8 +76,9 @@ interface UnifiedProspect {
 
 // Adapter: Convert unified format to GoogleProspect for helper functions
 function unifiedToGoogleFormat(prospects: UnifiedProspect[]): GoogleProspect[] {
-  return prospects.map((p) => ({
+  return prospects.map((p, index) => ({
     id: p.id,
+    rowNumber: index + 2, // Placeholder - not used for display purposes
     dateLead: p.createdAt,
     nom: p.lastName,
     prenom: p.firstName,

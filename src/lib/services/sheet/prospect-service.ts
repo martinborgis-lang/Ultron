@@ -13,6 +13,7 @@ export class SheetProspectService implements IProspectService {
   private mapSheetToProspect(row: any): ProspectData {
     return {
       id: row.id || '',
+      rowNumber: row.rowNumber, // Numéro de ligne pour le drag & drop
       firstName: row.prenom || '',
       lastName: row.nom || '',
       email: row.email || '',
@@ -143,8 +144,44 @@ export class SheetProspectService implements IProspectService {
     throw new Error('En mode Sheet, supprimez les prospects directement dans Google Sheet.');
   }
 
-  async updateStage(_id: string, _stage: string): Promise<ProspectData> {
-    throw new Error("Le drag & drop n'est pas encore disponible en mode Sheet.");
+  async updateStage(
+    id: string,
+    stage: string,
+    subtype?: 'plaquette' | 'rappel_differe'
+  ): Promise<ProspectData> {
+    // 1. Trouver le prospect pour obtenir son rowNumber
+    const prospect = await this.getById(id);
+    if (!prospect) {
+      throw new Error('Prospect non trouvé');
+    }
+
+    if (!prospect.rowNumber) {
+      throw new Error('Impossible de mettre à jour: rowNumber manquant');
+    }
+
+    // 2. Appeler l'API pour mettre à jour la Sheet
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    const response = await fetch(`${baseUrl}/api/sheets/update-status`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        row_number: prospect.rowNumber,
+        stage_slug: stage,
+        subtype,
+      }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Erreur lors de la mise à jour du statut');
+    }
+
+    // 3. Retourner le prospect avec le nouveau stage
+    // Note: On met à jour localement car la Sheet est async
+    return {
+      ...prospect,
+      stage,
+    };
   }
 
   async getByStage(): Promise<Record<string, ProspectData[]>> {

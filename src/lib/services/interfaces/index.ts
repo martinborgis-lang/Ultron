@@ -35,6 +35,9 @@ export interface ProspectData {
   assignedTo?: string;
   createdAt: string;
   updatedAt?: string;
+
+  // Sheet-specific (pour le drag & drop)
+  rowNumber?: number;
 }
 
 export interface ProspectFilters {
@@ -50,7 +53,11 @@ export interface IProspectService {
   create(data: Partial<ProspectData>): Promise<ProspectData>;
   update(id: string, data: Partial<ProspectData>): Promise<ProspectData>;
   delete(id: string): Promise<void>;
-  updateStage(id: string, stage: string): Promise<ProspectData>;
+  updateStage(
+    id: string,
+    stage: string,
+    subtype?: 'plaquette' | 'rappel_differe'
+  ): Promise<ProspectData>;
   getByStage(): Promise<Record<string, ProspectData[]>>;
   getStats(): Promise<{
     total: number;

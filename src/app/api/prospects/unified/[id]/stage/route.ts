@@ -16,14 +16,14 @@ export async function PATCH(
       return NextResponse.json({ error: 'Non authentifie' }, { status: 401 });
     }
 
-    const { stage } = await request.json();
+    const { stage, subtype } = await request.json();
 
     if (!stage) {
       return NextResponse.json({ error: 'Stage requis' }, { status: 400 });
     }
 
     const service = getProspectService(context.organization);
-    const prospect = await service.updateStage(id, stage);
+    const prospect = await service.updateStage(id, stage, subtype);
 
     return NextResponse.json(prospect);
   } catch (error: any) {

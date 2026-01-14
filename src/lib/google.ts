@@ -31,6 +31,7 @@ export interface GoogleCredentials {
 
 export interface Prospect {
   id: string;
+  rowNumber: number; // Numéro de ligne dans la Sheet (2 = première ligne de données)
   dateLead: string;
   nom: string;
   prenom: string;
@@ -174,33 +175,36 @@ export function parseProspectsFromSheet(rows: string[][]): Prospect[] {
 
   const dataRows = rows.slice(1);
 
-  return dataRows.map((row) => ({
-    id: row[0] || '',
-    dateLead: row[1] || '',
-    nom: row[2] || '',
-    prenom: row[3] || '',
-    email: row[4] || '',
-    telephone: row[5] || '',
-    source: row[6] || '',
-    age: row[7] || '',
-    situationPro: row[8] || '',
-    revenus: row[9] || '',
-    patrimoine: row[10] || '',
-    besoins: row[11] || '',
-    notesAppel: row[12] || '',
-    statutAppel: row[13] || '',
-    dateRdv: row[14] || '',
-    rappelSouhaite: row[15] || '',
-    qualificationIA: row[16] || '',
-    scoreIA: row[17] || '',
-    prioriteIA: row[18] || '',
-    justificationIA: row[19] || '',
-    rdvPrevu: row[20] || '',
-    lienRappel: row[21] || '',
-    mailPlaquette: row[22] || '',
-    mailSynthese: row[23] || '',
-    mailRappel: row[24] || '',
-  })).filter((p) => p.nom || p.prenom || p.email);
+  return dataRows
+    .map((row, index) => ({
+      id: row[0] || '',
+      rowNumber: index + 2, // Row 1 = headers, Row 2 = first data row
+      dateLead: row[1] || '',
+      nom: row[2] || '',
+      prenom: row[3] || '',
+      email: row[4] || '',
+      telephone: row[5] || '',
+      source: row[6] || '',
+      age: row[7] || '',
+      situationPro: row[8] || '',
+      revenus: row[9] || '',
+      patrimoine: row[10] || '',
+      besoins: row[11] || '',
+      notesAppel: row[12] || '',
+      statutAppel: row[13] || '',
+      dateRdv: row[14] || '',
+      rappelSouhaite: row[15] || '',
+      qualificationIA: row[16] || '',
+      scoreIA: row[17] || '',
+      prioriteIA: row[18] || '',
+      justificationIA: row[19] || '',
+      rdvPrevu: row[20] || '',
+      lienRappel: row[21] || '',
+      mailPlaquette: row[22] || '',
+      mailSynthese: row[23] || '',
+      mailRappel: row[24] || '',
+    }))
+    .filter((p) => p.nom || p.prenom || p.email);
 }
 
 export function calculateStats(prospects: Prospect[]) {

@@ -146,7 +146,13 @@ export class CrmProspectService implements IProspectService {
     if (error) throw error;
   }
 
-  async updateStage(id: string, stage: string): Promise<ProspectData> {
+  async updateStage(
+    id: string,
+    stage: string,
+    _subtype?: 'plaquette' | 'rappel_differe'
+  ): Promise<ProspectData> {
+    // subtype is ignored in CRM mode for now
+    // Could be used later to trigger CRM workflows
     return this.update(id, { stage });
   }
 
