@@ -25,9 +25,22 @@ import {
   X,
   FileText,
 } from 'lucide-react';
-import type { Prospect as GoogleProspect } from '@/lib/google';
 
 type QualificationFilter = 'tous' | 'CHAUD' | 'TIEDE' | 'FROID';
+
+// Unified format from /api/prospects/unified
+interface UnifiedProspect {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone?: string;
+  stage: string;
+  qualification: string | null;
+  scoreIa?: number;
+  dateRdv?: string;
+  createdAt: string;
+}
 
 interface ProspectDisplay {
   id: string;
@@ -48,18 +61,18 @@ const qualificationColors: Record<string, string> = {
   FROID: 'bg-blue-100 text-blue-700 hover:bg-blue-100 dark:bg-blue-900 dark:text-blue-300',
 };
 
-function transformProspects(googleProspects: GoogleProspect[]): ProspectDisplay[] {
-  return googleProspects.map((p) => ({
-    id: p.id || Math.random().toString(),
-    nom: p.nom,
-    prenom: p.prenom,
+function transformProspects(unifiedProspects: UnifiedProspect[]): ProspectDisplay[] {
+  return unifiedProspects.map((p) => ({
+    id: p.id,
+    nom: p.lastName,
+    prenom: p.firstName,
     email: p.email,
-    telephone: p.telephone,
-    qualification: p.qualificationIA?.toUpperCase() || 'FROID',
-    score: parseInt(p.scoreIA) || 0,
-    statut: p.statutAppel || 'Nouveau',
-    dateRdv: p.dateRdv,
-    dateLead: p.dateLead,
+    telephone: p.phone || '',
+    qualification: p.qualification?.toUpperCase() || 'FROID',
+    score: p.scoreIa || 0,
+    statut: p.stage || 'Nouveau',
+    dateRdv: p.dateRdv || '',
+    dateLead: p.createdAt,
   }));
 }
 
@@ -183,7 +196,7 @@ export function ProspectsContent() {
     setNotConnected(false);
 
     try {
-      const response = await fetch('/api/sheets/prospects');
+      const response = await fetch('/api/prospects/unified');
       const data = await response.json();
 
       if (!response.ok) {
@@ -194,7 +207,8 @@ export function ProspectsContent() {
         throw new Error(data.error || 'Erreur');
       }
 
-      setProspects(transformProspects(data.prospects));
+      // Unified API returns an array directly
+      setProspects(transformProspects(data as UnifiedProspect[]));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur lors du chargement');
     } finally {

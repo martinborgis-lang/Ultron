@@ -60,6 +60,51 @@ function formatRelativeTime(date: Date): string {
   return date.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
 }
 
+// Unified format from /api/prospects/unified
+interface UnifiedProspect {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone?: string;
+  stage: string;
+  qualification: string | null;
+  scoreIa?: number;
+  dateRdv?: string;
+  createdAt: string;
+}
+
+// Adapter: Convert unified format to GoogleProspect for helper functions
+function unifiedToGoogleFormat(prospects: UnifiedProspect[]): GoogleProspect[] {
+  return prospects.map((p) => ({
+    id: p.id,
+    dateLead: p.createdAt,
+    nom: p.lastName,
+    prenom: p.firstName,
+    email: p.email,
+    telephone: p.phone || '',
+    source: '',
+    age: '',
+    situationPro: '',
+    revenus: '',
+    patrimoine: '',
+    besoins: '',
+    notesAppel: '',
+    statutAppel: p.stage,
+    dateRdv: p.dateRdv || '',
+    rappelSouhaite: '',
+    qualificationIA: p.qualification || '',
+    scoreIA: p.scoreIa?.toString() || '0',
+    prioriteIA: '',
+    justificationIA: '',
+    rdvPrevu: p.dateRdv ? 'Oui' : '',
+    lienRappel: '',
+    mailPlaquette: '',
+    mailSynthese: '',
+    mailRappel: '',
+  }));
+}
+
 function transformProspects(googleProspects: GoogleProspect[]): ProspectType[] {
   return googleProspects
     .map((p, index) => ({
@@ -261,8 +306,8 @@ export function DashboardContent() {
 
     try {
       const [statsRes, prospectsRes] = await Promise.all([
-        fetch('/api/sheets/stats'),
-        fetch('/api/sheets/prospects'),
+        fetch('/api/prospects/unified/stats'),
+        fetch('/api/prospects/unified'),
       ]);
 
       const statsData = await statsRes.json();
@@ -277,8 +322,19 @@ export function DashboardContent() {
         throw new Error(statsData.error || prospectsData.error || 'Erreur');
       }
 
-      setStats(statsData.stats);
-      const googleProspects = prospectsData.prospects as GoogleProspect[];
+      // Format unifie: { total, byQualification: { CHAUD, TIEDE, FROID, NON_QUALIFIE }, byStage }
+      setStats({
+        total: statsData.total || 0,
+        chauds: statsData.byQualification?.CHAUD || 0,
+        tiedes: statsData.byQualification?.TIEDE || 0,
+        froids: statsData.byQualification?.FROID || 0,
+        mailsEnvoyes: 0, // Non disponible dans le format unifie
+        rdvPris: statsData.byStage?.rdv_valide || 0,
+      });
+
+      // Convertir les prospects unifies au format Google pour les helpers existants
+      const unifiedProspects = prospectsData as UnifiedProspect[];
+      const googleProspects = unifiedToGoogleFormat(unifiedProspects);
       setProspects(transformProspects(googleProspects));
       setActivities(generateRealActivities(googleProspects));
       setChartData(generateRealChartData(googleProspects));
