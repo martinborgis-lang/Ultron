@@ -31,6 +31,10 @@ function unifiedStageToPipelineStage(stage: UnifiedStage): PipelineStage {
 
 // Adapter: Convert ProspectData to CrmProspect format for existing components
 function prospectDataToCrmProspect(prospect: ProspectData): CrmProspect {
+  // IMPORTANT: Ensure stage_slug is never undefined/null
+  // Default to 'nouveau' if no stage is set
+  const stageSlug = prospect.stage || 'nouveau';
+
   return {
     id: prospect.id,
     organization_id: '',
@@ -51,7 +55,7 @@ function prospectDataToCrmProspect(prospect: ProspectData): CrmProspect {
     age: prospect.age || null,
     profession: prospect.situationPro || null,
     stage_id: null,
-    stage_slug: prospect.stage,
+    stage_slug: stageSlug, // Never undefined!
     deal_value: null,
     close_probability: 50,
     expected_close_date: prospect.dateRdv || null,

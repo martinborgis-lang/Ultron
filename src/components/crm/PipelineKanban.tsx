@@ -62,24 +62,51 @@ export function PipelineKanban({
     const { active, over } = event;
     setActiveProspect(null);
 
-    if (!over) return;
+    // IMPORTANT: If dropped outside any column, do nothing
+    if (!over) {
+      console.log('Drop cancelled - outside any column');
+      return;
+    }
 
     const prospectId = active.id as string;
     const newStageSlug = over.id as string;
 
     const prospect = localProspects.find((p) => p.id === prospectId);
-    if (!prospect || prospect.stage_slug === newStageSlug) return;
+
+    // Guard: prospect not found
+    if (!prospect) {
+      console.error('Prospect not found:', prospectId);
+      return;
+    }
+
+    // Check if it's the same stage (no change needed)
+    if (prospect.stage_slug === newStageSlug) {
+      console.log('Same stage, no change needed');
+      return;
+    }
+
+    // DEBUG: Log what's happening
+    console.log('Moving prospect:', {
+      prospectId,
+      from: prospect.stage_slug,
+      to: newStageSlug,
+      hasOnWaitingDrop: !!onWaitingDrop,
+    });
 
     // Special handling for "en_attente" stage - show modal first
     if (newStageSlug === 'en_attente' && onWaitingDrop) {
       const prospectName = [prospect.first_name, prospect.last_name]
         .filter(Boolean)
         .join(' ') || 'Ce prospect';
+
+      console.log('Opening waiting modal for:', prospectName);
       onWaitingDrop(prospectId, prospectName);
-      return;
+      return; // Don't update yet, wait for modal confirmation
     }
 
-    // Optimistic update for other stages
+    // For other stages: Optimistic update
+    const previousStage = prospect.stage_slug;
+
     setLocalProspects((prev) =>
       prev.map((p) =>
         p.id === prospectId ? { ...p, stage_slug: newStageSlug } : p
@@ -92,11 +119,18 @@ export function PipelineKanban({
       const newStage = stages.find((s) => s.slug === newStageSlug);
       toast({
         title: 'Prospect deplace',
-        description: `${prospect.first_name} ${prospect.last_name} -> ${newStage?.name}`,
+        description: `${prospect.first_name || ''} ${prospect.last_name || ''} -> ${newStage?.name || newStageSlug}`,
       });
     } catch (error) {
-      // Rollback on error
-      setLocalProspects(prospects);
+      console.error('Error moving prospect:', error);
+
+      // Rollback to previous stage on error
+      setLocalProspects((prev) =>
+        prev.map((p) =>
+          p.id === prospectId ? { ...p, stage_slug: previousStage } : p
+        )
+      );
+
       toast({
         title: 'Erreur',
         description: 'Impossible de deplacer le prospect',
