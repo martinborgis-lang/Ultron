@@ -38,17 +38,38 @@ export function ProspectForm({ open, onOpenChange, onSuccess, stages }: Prospect
   const defaultStage = activeStages.find((s) => s.slug === 'nouveau') || activeStages[0];
 
   const getInitialFormData = () => ({
+    // Identite
     first_name: '',
     last_name: '',
     email: '',
     phone: '',
+
+    // Coordonnees
+    address: '',
+    postal_code: '',
+    city: '',
+
+    // Professionnel
     company: '',
     job_title: '',
-    city: '',
+    profession: '',
+
+    // Situation personnelle
+    age: '',
+    situation_familiale: '',
+    nb_enfants: '',
+
+    // Financier
+    revenus_annuels: '',
+    patrimoine_estime: '',
+
+    // Commercial
     stage_slug: defaultStage?.slug || 'nouveau',
     deal_value: '',
-    notes: '',
     source: 'manual',
+
+    // Notes
+    notes: '',
   });
 
   const [formData, setFormData] = useState(getInitialFormData);
@@ -74,6 +95,10 @@ export function ProspectForm({ open, onOpenChange, onSuccess, stages }: Prospect
         body: JSON.stringify({
           ...formData,
           deal_value: formData.deal_value ? parseFloat(formData.deal_value) : null,
+          age: formData.age ? parseInt(formData.age) : null,
+          nb_enfants: formData.nb_enfants ? parseInt(formData.nb_enfants) : null,
+          revenus_annuels: formData.revenus_annuels ? parseFloat(formData.revenus_annuels) : null,
+          patrimoine_estime: formData.patrimoine_estime ? parseFloat(formData.patrimoine_estime) : null,
         }),
       });
 
@@ -117,141 +142,287 @@ export function ProspectForm({ open, onOpenChange, onSuccess, stages }: Prospect
           <SheetTitle>Nouveau prospect</SheetTitle>
         </SheetHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-5">
-          {/* Nom / Prenom */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="first_name">Prenom</Label>
-              <Input
-                id="first_name"
-                value={formData.first_name}
-                onChange={(e) => updateField('first_name', e.target.value)}
-                placeholder="Jean"
-              />
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Section Identite */}
+          <div className="space-y-4">
+            <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">
+              Identite
+            </h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="first_name">Prenom</Label>
+                <Input
+                  id="first_name"
+                  value={formData.first_name}
+                  onChange={(e) => updateField('first_name', e.target.value)}
+                  placeholder="Jean"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="last_name">Nom</Label>
+                <Input
+                  id="last_name"
+                  value={formData.last_name}
+                  onChange={(e) => updateField('last_name', e.target.value)}
+                  placeholder="Dupont"
+                />
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="last_name">Nom</Label>
-              <Input
-                id="last_name"
-                value={formData.last_name}
-                onChange={(e) => updateField('last_name', e.target.value)}
-                placeholder="Dupont"
-              />
-            </div>
-          </div>
-
-          {/* Email / Telephone */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                value={formData.email}
-                onChange={(e) => updateField('email', e.target.value)}
-                placeholder="jean@exemple.fr"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="phone">Telephone</Label>
-              <Input
-                id="phone"
-                value={formData.phone}
-                onChange={(e) => updateField('phone', e.target.value)}
-                placeholder="06 12 34 56 78"
-              />
-            </div>
-          </div>
-
-          {/* Entreprise / Poste */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="company">Entreprise</Label>
-              <Input
-                id="company"
-                value={formData.company}
-                onChange={(e) => updateField('company', e.target.value)}
-                placeholder="Societe SAS"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="job_title">Poste</Label>
-              <Input
-                id="job_title"
-                value={formData.job_title}
-                onChange={(e) => updateField('job_title', e.target.value)}
-                placeholder="Directeur"
-              />
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) => updateField('email', e.target.value)}
+                  placeholder="jean@exemple.fr"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="phone">Telephone</Label>
+                <Input
+                  id="phone"
+                  value={formData.phone}
+                  onChange={(e) => updateField('phone', e.target.value)}
+                  placeholder="06 12 34 56 78"
+                />
+              </div>
             </div>
           </div>
 
-          {/* Ville */}
-          <div className="space-y-2">
-            <Label htmlFor="city">Ville</Label>
-            <Input
-              id="city"
-              value={formData.city}
-              onChange={(e) => updateField('city', e.target.value)}
-              placeholder="Paris"
-            />
+          {/* Section Coordonnees */}
+          <div className="space-y-4">
+            <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">
+              Coordonnees
+            </h3>
+            <div className="space-y-2">
+              <Label htmlFor="address">Adresse</Label>
+              <Input
+                id="address"
+                value={formData.address}
+                onChange={(e) => updateField('address', e.target.value)}
+                placeholder="123 rue de Paris"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="postal_code">Code postal</Label>
+                <Input
+                  id="postal_code"
+                  value={formData.postal_code}
+                  onChange={(e) => updateField('postal_code', e.target.value)}
+                  placeholder="75001"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="city">Ville</Label>
+                <Input
+                  id="city"
+                  value={formData.city}
+                  onChange={(e) => updateField('city', e.target.value)}
+                  placeholder="Paris"
+                />
+              </div>
+            </div>
           </div>
 
-          {/* Stage / Deal Value */}
-          <div className="grid grid-cols-2 gap-4">
+          {/* Section Situation */}
+          <div className="space-y-4">
+            <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">
+              Situation
+            </h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="age">Age</Label>
+                <Input
+                  id="age"
+                  type="number"
+                  value={formData.age}
+                  onChange={(e) => updateField('age', e.target.value)}
+                  placeholder="45"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="situation_familiale">Situation familiale</Label>
+                <Select
+                  value={formData.situation_familiale}
+                  onValueChange={(value) => updateField('situation_familiale', value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selectionner" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="celibataire">Celibataire</SelectItem>
+                    <SelectItem value="marie">Marie(e)</SelectItem>
+                    <SelectItem value="pacse">Pacse(e)</SelectItem>
+                    <SelectItem value="divorce">Divorce(e)</SelectItem>
+                    <SelectItem value="veuf">Veuf/Veuve</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="nb_enfants">Nombre d'enfants</Label>
+                <Input
+                  id="nb_enfants"
+                  type="number"
+                  value={formData.nb_enfants}
+                  onChange={(e) => updateField('nb_enfants', e.target.value)}
+                  placeholder="2"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="profession">Profession</Label>
+                <Input
+                  id="profession"
+                  value={formData.profession}
+                  onChange={(e) => updateField('profession', e.target.value)}
+                  placeholder="Cadre superieur"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Section Professionnel */}
+          <div className="space-y-4">
+            <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">
+              Professionnel
+            </h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="company">Entreprise</Label>
+                <Input
+                  id="company"
+                  value={formData.company}
+                  onChange={(e) => updateField('company', e.target.value)}
+                  placeholder="Societe SAS"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="job_title">Poste</Label>
+                <Input
+                  id="job_title"
+                  value={formData.job_title}
+                  onChange={(e) => updateField('job_title', e.target.value)}
+                  placeholder="Directeur"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Section Financier */}
+          <div className="space-y-4">
+            <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">
+              Situation financiere
+            </h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="revenus_annuels">Revenus annuels (EUR)</Label>
+                <Input
+                  id="revenus_annuels"
+                  type="number"
+                  value={formData.revenus_annuels}
+                  onChange={(e) => updateField('revenus_annuels', e.target.value)}
+                  placeholder="80000"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="patrimoine_estime">Patrimoine estime (EUR)</Label>
+                <Input
+                  id="patrimoine_estime"
+                  type="number"
+                  value={formData.patrimoine_estime}
+                  onChange={(e) => updateField('patrimoine_estime', e.target.value)}
+                  placeholder="500000"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Section Commercial */}
+          <div className="space-y-4">
+            <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">
+              Commercial
+            </h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="stage_slug">Stage</Label>
+                <Select
+                  value={formData.stage_slug}
+                  onValueChange={(value) => updateField('stage_slug', value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selectionner un stage" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {activeStages.length > 0 ? (
+                      activeStages.map((stage) => (
+                        <SelectItem key={stage.slug} value={stage.slug}>
+                          <div className="flex items-center gap-2">
+                            <div
+                              className="w-2 h-2 rounded-full"
+                              style={{ backgroundColor: stage.color }}
+                            />
+                            {stage.name}
+                          </div>
+                        </SelectItem>
+                      ))
+                    ) : (
+                      <SelectItem value="nouveau">Nouveau</SelectItem>
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="deal_value">Valeur deal (EUR)</Label>
+                <Input
+                  id="deal_value"
+                  type="number"
+                  value={formData.deal_value}
+                  onChange={(e) => updateField('deal_value', e.target.value)}
+                  placeholder="50000"
+                />
+              </div>
+            </div>
             <div className="space-y-2">
-              <Label htmlFor="stage_slug">Stage</Label>
+              <Label htmlFor="source">Source</Label>
               <Select
-                value={formData.stage_slug}
-                onValueChange={(value) => updateField('stage_slug', value)}
+                value={formData.source}
+                onValueChange={(value) => updateField('source', value)}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Selectionner un stage" />
+                  <SelectValue placeholder="Selectionner une source" />
                 </SelectTrigger>
                 <SelectContent>
-                  {activeStages.length > 0 ? (
-                    activeStages.map((stage) => (
-                      <SelectItem key={stage.slug} value={stage.slug}>
-                        <div className="flex items-center gap-2">
-                          <div
-                            className="w-2 h-2 rounded-full"
-                            style={{ backgroundColor: stage.color }}
-                          />
-                          {stage.name}
-                        </div>
-                      </SelectItem>
-                    ))
-                  ) : (
-                    <SelectItem value="nouveau">Nouveau</SelectItem>
-                  )}
+                  <SelectItem value="manual">Ajout manuel</SelectItem>
+                  <SelectItem value="website">Site web</SelectItem>
+                  <SelectItem value="referral">Recommandation</SelectItem>
+                  <SelectItem value="linkedin">LinkedIn</SelectItem>
+                  <SelectItem value="event">Evenement</SelectItem>
+                  <SelectItem value="other">Autre</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="deal_value">Valeur (EUR)</Label>
-              <Input
-                id="deal_value"
-                type="number"
-                value={formData.deal_value}
-                onChange={(e) => updateField('deal_value', e.target.value)}
-                placeholder="50000"
-              />
-            </div>
           </div>
 
-          {/* Notes */}
-          <div className="space-y-2">
-            <Label htmlFor="notes">Notes</Label>
+          {/* Section Notes */}
+          <div className="space-y-4">
+            <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">
+              Notes
+            </h3>
             <Textarea
               id="notes"
               value={formData.notes}
               onChange={(e) => updateField('notes', e.target.value)}
-              placeholder="Informations complementaires..."
-              rows={3}
+              placeholder="Informations complementaires sur le prospect..."
+              rows={4}
             />
           </div>
 
-          {/* Submit - avec plus d'espacement */}
-          <div className="flex justify-end gap-3 pt-6 border-t mt-6">
+          {/* Submit */}
+          <div className="flex justify-end gap-3 pt-6 border-t">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Annuler
             </Button>

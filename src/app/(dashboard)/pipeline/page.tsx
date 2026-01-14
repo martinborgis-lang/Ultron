@@ -175,8 +175,21 @@ export default function PipelinePage() {
   ) => {
     if (!pendingMove) return;
 
+    // Find the target waiting stage - support both CRM and Sheet slugs
+    const targetStage = stages.find(s =>
+      s.slug === 'en_attente' || s.slug === 'contacte' || s.slug === 'a_rappeler'
+    );
+    const targetSlug = targetStage?.slug || 'en_attente';
+
+    // Optimistic update BEFORE API call
+    setProspects(prev => prev.map(p =>
+      p.id === pendingMove.prospectId
+        ? { ...p, stage_slug: targetSlug }
+        : p
+    ));
+
     try {
-      await handleProspectMove(pendingMove.prospectId, 'en_attente', subtype);
+      await handleProspectMove(pendingMove.prospectId, targetSlug, subtype);
 
       // Create planning event if rappel_differe with date
       if (rappelDate && subtype === 'rappel_differe') {
@@ -206,8 +219,11 @@ export default function PipelinePage() {
             : `Rappel programme pour ${rappelDate?.toLocaleDateString('fr-FR')}`,
       });
 
-      fetchData(search);
+      // Refresh to sync with server
+      await fetchData(search);
     } catch (error) {
+      // Rollback on error - refresh to get actual state
+      await fetchData(search);
       toast({
         title: 'Erreur',
         description: 'Impossible de mettre le prospect en attente',

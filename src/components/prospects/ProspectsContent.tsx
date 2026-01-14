@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -25,6 +26,24 @@ import {
   X,
   FileText,
 } from 'lucide-react';
+
+// Helper to display readable stage names
+function getStageDisplayName(stageSlug: string): string {
+  const stageNames: Record<string, string> = {
+    'nouveau': 'Nouveau',
+    'contacte': 'Contacté',
+    'en_attente': 'En attente',
+    'a_rappeler': 'À rappeler',
+    'rdv_valide': 'RDV Validé',
+    'rdv_pris': 'RDV Pris',
+    'rdv_effectue': 'RDV Effectué',
+    'proposition': 'Proposition',
+    'negociation': 'Négociation',
+    'gagne': 'Gagné',
+    'perdu': 'Perdu',
+  };
+  return stageNames[stageSlug] || stageSlug;
+}
 
 type QualificationFilter = 'tous' | 'CHAUD' | 'TIEDE' | 'FROID';
 
@@ -116,6 +135,7 @@ function NotConnectedMessage() {
 }
 
 export function ProspectsContent() {
+  const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [notConnected, setNotConnected] = useState(false);
@@ -432,7 +452,11 @@ export function ProspectsContent() {
                 </TableHeader>
                 <TableBody>
                   {filteredProspects.map((prospect) => (
-                    <TableRow key={prospect.id}>
+                    <TableRow
+                      key={prospect.id}
+                      className="cursor-pointer hover:bg-muted/50"
+                      onClick={() => router.push(`/prospects/${prospect.id}`)}
+                    >
                       <TableCell className="font-medium">
                         {prospect.prenom} {prospect.nom}
                       </TableCell>
@@ -464,13 +488,16 @@ export function ProspectsContent() {
                         </div>
                       </TableCell>
                       <TableCell className="text-muted-foreground">
-                        {prospect.statut || '-'}
+                        {getStageDisplayName(prospect.statut) || '-'}
                       </TableCell>
                       <TableCell className="text-muted-foreground">
                         {prospect.dateRdv || '-'}
                       </TableCell>
                       <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-2">
+                        <div
+                          className="flex items-center justify-end gap-2"
+                          onClick={(e) => e.stopPropagation()}
+                        >
                           {prospect.dateRdv && prospect.dateRdv !== '-' && (
                             <Button
                               variant="ghost"

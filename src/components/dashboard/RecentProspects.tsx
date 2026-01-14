@@ -1,5 +1,6 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -22,7 +23,27 @@ const qualificationColors: Record<string, string> = {
   FROID: 'bg-blue-100 text-blue-700 hover:bg-blue-100',
 };
 
+// Helper to display readable stage names
+function getStageDisplayName(stageSlug: string): string {
+  const stageNames: Record<string, string> = {
+    'nouveau': 'Nouveau',
+    'contacte': 'Contacté',
+    'en_attente': 'En attente',
+    'a_rappeler': 'À rappeler',
+    'rdv_valide': 'RDV Validé',
+    'rdv_pris': 'RDV Pris',
+    'rdv_effectue': 'RDV Effectué',
+    'proposition': 'Proposition',
+    'negociation': 'Négociation',
+    'gagne': 'Gagné',
+    'perdu': 'Perdu',
+  };
+  return stageNames[stageSlug] || stageSlug;
+}
+
 export function RecentProspects({ prospects }: RecentProspectsProps) {
+  const router = useRouter();
+
   return (
     <Card className="shadow-sm">
       <CardHeader>
@@ -40,7 +61,11 @@ export function RecentProspects({ prospects }: RecentProspectsProps) {
           </TableHeader>
           <TableBody>
             {prospects.map((prospect) => (
-              <TableRow key={prospect.id}>
+              <TableRow
+                key={prospect.id}
+                className="cursor-pointer hover:bg-muted/50 transition-colors"
+                onClick={() => router.push(`/prospects/${prospect.id}`)}
+              >
                 <TableCell className="font-medium">
                   {prospect.prenom} {prospect.nom}
                 </TableCell>
@@ -66,7 +91,7 @@ export function RecentProspects({ prospects }: RecentProspectsProps) {
                   </div>
                 </TableCell>
                 <TableCell className="text-muted-foreground">
-                  {prospect.statut}
+                  {getStageDisplayName(prospect.statut)}
                 </TableCell>
               </TableRow>
             ))}
