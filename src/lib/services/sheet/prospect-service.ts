@@ -1,16 +1,33 @@
-import { IProspectService, ProspectData, ProspectFilters } from '../interfaces';
+import { IProspectService, ProspectData, ProspectFilters, Organization } from '../interfaces';
+import {
+  getValidCredentials,
+  readGoogleSheet,
+  parseProspectsFromSheet,
+  updateGoogleSheetCells,
+  GoogleCredentials,
+} from '@/lib/google';
+import { createAdminClient } from '@/lib/supabase-admin';
+import { mapStageToSheetStatus, WaitingSubtype } from '@/types/pipeline';
 
 /**
  * Service Prospect pour le mode Google Sheet
- * Appelle les APIs existantes /api/sheets/prospects et /api/sheets/stats
+ * Utilise directement les credentials et l'API Google Sheets
  */
 export class SheetProspectService implements IProspectService {
-  constructor(private organizationId: string) {}
+  private organizationId: string;
+  private googleCredentials?: Record<string, unknown>;
+  private googleSheetId?: string;
+
+  constructor(organization: Organization) {
+    this.organizationId = organization.id;
+    this.googleCredentials = organization.google_credentials;
+    this.googleSheetId = organization.google_sheet_id;
+  }
 
   /**
    * Mapping des donnees Sheet vers ProspectData unifie
    */
-  private mapSheetToProspect(row: any): ProspectData {
+  private mapSheetToProspect(row: ReturnType<typeof parseProspectsFromSheet>[0]): ProspectData {
     return {
       id: row.id || '',
       rowNumber: row.rowNumber, // Numéro de ligne pour le drag & drop
@@ -19,17 +36,17 @@ export class SheetProspectService implements IProspectService {
       email: row.email || '',
       phone: row.telephone,
       source: row.source,
-      age: row.age ? parseInt(row.age) : undefined,
+      age: row.age ? parseInt(String(row.age)) : undefined,
       situationPro: row.situationPro,
-      revenusMensuels: row.revenus ? parseInt(row.revenus) / 12 : undefined,
-      patrimoine: row.patrimoine ? parseInt(row.patrimoine) : undefined,
+      revenusMensuels: row.revenus ? parseInt(String(row.revenus)) / 12 : undefined,
+      patrimoine: row.patrimoine ? parseInt(String(row.patrimoine)) : undefined,
       besoins: row.besoins,
       notesAppel: row.notesAppel,
 
       // Mapping Statut Appel -> Stage
       stage: this.mapStatutToStage(row.statutAppel),
       qualification: this.mapQualification(row.qualificationIA),
-      scoreIa: row.scoreIA ? parseInt(row.scoreIA) : undefined,
+      scoreIa: row.scoreIA ? parseInt(String(row.scoreIA)) : undefined,
       justificationIa: row.justificationIA,
 
       dateRdv: row.dateRdv,
@@ -81,25 +98,56 @@ export class SheetProspectService implements IProspectService {
     return null;
   }
 
+  /**
+   * Get valid credentials and save if refreshed
+   */
+  private async getCredentials(): Promise<GoogleCredentials> {
+    if (!this.googleCredentials) {
+      throw new Error('Google non connecté');
+    }
+
+    console.log('📊 SheetProspectService - Getting valid credentials...');
+    const credentials = await getValidCredentials(this.googleCredentials as unknown as GoogleCredentials);
+
+    // Compare access_token to detect if credentials were refreshed
+    const originalCredentials = this.googleCredentials as unknown as GoogleCredentials;
+    if (credentials.access_token !== originalCredentials.access_token) {
+      console.log('🔄 SheetProspectService - Credentials refreshed, saving...');
+      const adminClient = createAdminClient();
+      await adminClient
+        .from('organizations')
+        .update({ google_credentials: credentials })
+        .eq('id', this.organizationId);
+      // Update local cache
+      this.googleCredentials = credentials as unknown as Record<string, unknown>;
+    }
+
+    return credentials;
+  }
+
   async getAll(filters?: ProspectFilters): Promise<ProspectData[]> {
     try {
-      // Appeler l'API Sheet existante - utiliser un import dynamique pour eviter les problemes SSR
-      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-      const res = await fetch(`${baseUrl}/api/sheets/prospects`, {
-        headers: { 'Content-Type': 'application/json' },
-        cache: 'no-store',
-      });
+      console.log('📊 SheetProspectService.getAll - Starting...');
+      console.log('📊 SheetProspectService.getAll - org:', this.organizationId);
+      console.log('📊 SheetProspectService.getAll - has credentials:', !!this.googleCredentials);
+      console.log('📊 SheetProspectService.getAll - sheetId:', this.googleSheetId);
 
-      if (!res.ok) {
-        console.error('SheetProspectService.getAll: API error', res.status);
+      if (!this.googleSheetId) {
+        console.error('📊 SheetProspectService.getAll - No sheet ID configured');
         return [];
       }
 
-      const data = await res.json();
-      const rawProspects = data.prospects || [];
+      const credentials = await this.getCredentials();
+      console.log('📊 SheetProspectService.getAll - Got credentials, reading sheet...');
+
+      const rows = await readGoogleSheet(credentials, this.googleSheetId);
+      console.log('📊 SheetProspectService.getAll - Got rows:', rows.length);
+
+      const rawProspects = parseProspectsFromSheet(rows);
+      console.log('📊 SheetProspectService.getAll - Parsed prospects:', rawProspects.length);
 
       // Mapper vers le format unifie
-      let prospects = rawProspects.map((row: any) => this.mapSheetToProspect(row));
+      let prospects = rawProspects.map((row) => this.mapSheetToProspect(row));
 
       // Appliquer les filtres
       if (filters?.stage) {
@@ -120,7 +168,7 @@ export class SheetProspectService implements IProspectService {
 
       return prospects;
     } catch (error) {
-      console.error('SheetProspectService.getAll error:', error);
+      console.error('📊 SheetProspectService.getAll - ERROR:', error);
       return [];
     }
   }
@@ -147,7 +195,7 @@ export class SheetProspectService implements IProspectService {
   async updateStage(
     id: string,
     stage: string,
-    subtype?: 'plaquette' | 'rappel_differe'
+    subtype?: WaitingSubtype
   ): Promise<ProspectData> {
     // 1. Trouver le prospect pour obtenir son rowNumber
     const prospect = await this.getById(id);
@@ -159,25 +207,30 @@ export class SheetProspectService implements IProspectService {
       throw new Error('Impossible de mettre à jour: rowNumber manquant');
     }
 
-    // 2. Appeler l'API pour mettre à jour la Sheet
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-    const response = await fetch(`${baseUrl}/api/sheets/update-status`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        row_number: prospect.rowNumber,
-        stage_slug: stage,
-        subtype,
-      }),
-    });
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || 'Erreur lors de la mise à jour du statut');
+    if (!this.googleSheetId) {
+      throw new Error('Aucun ID de Google Sheet configuré');
     }
 
-    // 3. Retourner le prospect avec le nouveau stage
-    // Note: On met à jour localement car la Sheet est async
+    // 2. Get credentials
+    const credentials = await this.getCredentials();
+
+    // 3. Convert stage to Sheet status
+    const newStatus = mapStageToSheetStatus(stage, subtype);
+
+    // 4. Prepare updates
+    const updates: { range: string; value: string }[] = [
+      { range: `N${prospect.rowNumber}`, value: newStatus },
+    ];
+
+    // If "en_attente" with "rappel_differe", also set column P = "Oui"
+    if (stage === 'en_attente' && subtype === 'rappel_differe') {
+      updates.push({ range: `P${prospect.rowNumber}`, value: 'Oui' });
+    }
+
+    // 5. Update the Sheet
+    await updateGoogleSheetCells(credentials, this.googleSheetId, updates);
+
+    // 6. Retourner le prospect avec le nouveau stage
     return {
       ...prospect,
       stage,
@@ -214,35 +267,7 @@ export class SheetProspectService implements IProspectService {
     byQualification: Record<string, number>;
     byStage: Record<string, number>;
   }> {
-    try {
-      // Appeler l'API stats existante
-      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-      const res = await fetch(`${baseUrl}/api/sheets/stats`, {
-        headers: { 'Content-Type': 'application/json' },
-        cache: 'no-store',
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        const stats = data.stats || data;
-
-        return {
-          total: stats.total || 0,
-          byQualification: {
-            CHAUD: stats.chauds || 0,
-            TIEDE: stats.tiedes || 0,
-            FROID: stats.froids || 0,
-            NON_QUALIFIE:
-              (stats.total || 0) - (stats.chauds || 0) - (stats.tiedes || 0) - (stats.froids || 0),
-          },
-          byStage: {},
-        };
-      }
-    } catch (error) {
-      console.error('SheetProspectService.getStats API error:', error);
-    }
-
-    // Fallback: calculer depuis les prospects
+    // Calculer depuis les prospects
     const prospects = await this.getAll();
 
     const byQualification: Record<string, number> = {

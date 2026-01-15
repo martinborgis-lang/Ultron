@@ -120,4 +120,5 @@ export interface Organization {
   name: string;
   data_mode: 'sheet' | 'crm';
   google_sheet_id?: string;
+  google_credentials?: Record<string, unknown>;
 }
