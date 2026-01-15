@@ -14,6 +14,7 @@ const ORGANIZATION_SCOPES = [
 // Scopes for user-level Gmail OAuth (Gmail + Calendar)
 const GMAIL_SCOPES = [
   'https://www.googleapis.com/auth/gmail.send',
+  'https://www.googleapis.com/auth/gmail.readonly',
   'https://www.googleapis.com/auth/userinfo.email',
   'https://www.googleapis.com/auth/calendar',
   'https://www.googleapis.com/auth/calendar.events',
