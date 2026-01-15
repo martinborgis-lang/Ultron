@@ -1,5 +1,11 @@
 import { createAdminClient } from '@/lib/supabase-admin';
 import { IPlanningService, PlanningEvent, PlanningFilters } from '../interfaces';
+import {
+  createCalendarEvent,
+  updateCalendarEvent,
+  deleteCalendarEvent,
+  getCalendarCredentials,
+} from '@/lib/calendar';
 
 export class CrmPlanningService implements IPlanningService {
   private supabase = createAdminClient();
@@ -149,6 +155,34 @@ export class CrmPlanningService implements IPlanningService {
       throw error;
     }
 
+    // Sync with Google Calendar (best effort - don't block if it fails)
+    try {
+      const credentials = await getCalendarCredentials(this.userId, this.organizationId);
+
+      if (credentials && data.start_date && data.end_date) {
+        const calendarEvent = await createCalendarEvent(credentials, {
+          summary: event.title || 'Événement Ultron',
+          description: event.description || (prospectName ? `Prospect: ${prospectName}` : undefined),
+          startDateTime: data.start_date,
+          endDateTime: data.end_date,
+          allDay: event.allDay,
+        });
+
+        // Store the external_id for future sync
+        await this.supabase
+          .from('crm_events')
+          .update({
+            external_id: calendarEvent.id,
+            external_source: 'google_calendar',
+          })
+          .eq('id', data.id);
+
+        console.log('✅ Event synced to Google Calendar:', calendarEvent.id);
+      }
+    } catch (calendarError) {
+      console.error('⚠️ Failed to sync to Google Calendar (non-blocking):', calendarError);
+    }
+
     return this.mapDbToEvent(data);
   }
 
@@ -185,15 +219,62 @@ export class CrmPlanningService implements IPlanningService {
       throw error;
     }
 
+    // Sync update with Google Calendar
+    try {
+      const { data: eventData } = await this.supabase
+        .from('crm_events')
+        .select('external_id')
+        .eq('id', id)
+        .single();
+
+      if (eventData?.external_id) {
+        const credentials = await getCalendarCredentials(this.userId, this.organizationId);
+
+        if (credentials) {
+          await updateCalendarEvent(credentials, eventData.external_id, {
+            summary: data.title,
+            description: data.description,
+            startDateTime: data.startDate,
+            endDateTime: data.endDate,
+            allDay: data.allDay,
+          });
+          console.log('✅ Event updated in Google Calendar:', eventData.external_id);
+        }
+      }
+    } catch (calendarError) {
+      console.error('⚠️ Failed to update Google Calendar (non-blocking):', calendarError);
+    }
+
     return this.mapDbToEvent(result);
   }
 
   async delete(id: string): Promise<void> {
+    // Get the external_id before deleting
+    const { data: existing } = await this.supabase
+      .from('crm_events')
+      .select('external_id')
+      .eq('id', id)
+      .single();
+
     const { error } = await this.supabase.from('crm_events').delete().eq('id', id);
 
     if (error) {
       console.error('CrmPlanningService.delete error:', error);
       throw error;
+    }
+
+    // Delete from Google Calendar
+    try {
+      if (existing?.external_id) {
+        const credentials = await getCalendarCredentials(this.userId, this.organizationId);
+
+        if (credentials) {
+          await deleteCalendarEvent(credentials, existing.external_id);
+          console.log('✅ Event deleted from Google Calendar:', existing.external_id);
+        }
+      }
+    } catch (calendarError) {
+      console.error('⚠️ Failed to delete from Google Calendar (non-blocking):', calendarError);
     }
   }
 
