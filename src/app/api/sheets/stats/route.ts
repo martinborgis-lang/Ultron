@@ -52,7 +52,10 @@ export async function GET() {
 
     const credentials = await getValidCredentials(org.google_credentials as GoogleCredentials);
 
-    if (credentials !== org.google_credentials) {
+    // Compare access_token to detect if credentials were refreshed
+    const originalCredentials = org.google_credentials as GoogleCredentials;
+    if (credentials.access_token !== originalCredentials.access_token) {
+      console.log('🔄 Google credentials refreshed, saving new tokens');
       await supabase
         .from('organizations')
         .update({ google_credentials: credentials })
