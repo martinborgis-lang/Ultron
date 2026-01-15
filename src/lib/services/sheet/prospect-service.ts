@@ -62,30 +62,47 @@ export class SheetProspectService implements IProspectService {
 
   /**
    * Mapping Statut Appel (Sheet) -> Stage (Pipeline)
+   * MUST match SHEET_STAGES slugs in src/types/pipeline.ts:
+   * nouveau, en_attente, rdv_pris, rdv_effectue, negociation, gagne, perdu
    */
   private mapStatutToStage(statut?: string): string {
     if (!statut || statut.trim() === '') return 'nouveau';
 
     const s = statut.toLowerCase().trim();
 
-    if (s.includes('refuse') || s.includes('refusé') || s === 'perdu') return 'perdu';
-    if (s.includes('gagne') || s.includes('gagné') || s === 'gagne') return 'gagne';
-    if (s.includes('rdv valide') || s.includes('rdv validé')) return 'rdv_valide';
-    if (s.includes('rdv effectue') || s.includes('rdv effectué') || s.includes('apres rdv'))
-      return 'proposition';
-    if (s.includes('proposition') || s.includes('negociation') || s.includes('négociation'))
-      return 'negociation';
+    // Perdu / Refus
+    if (s.includes('refuse') || s.includes('refusé') || s === 'perdu' || s === 'refus') return 'perdu';
+
+    // Gagné
+    if (s.includes('gagne') || s.includes('gagné')) return 'gagne';
+
+    // RDV Validé -> rdv_pris
+    if (s.includes('rdv valide') || s.includes('rdv validé')) return 'rdv_pris';
+
+    // RDV Effectué -> rdv_effectue
+    if (s.includes('rdv effectue') || s.includes('rdv effectué') || s.includes('apres rdv') || s.includes('après rdv'))
+      return 'rdv_effectue';
+
+    // Négociation
+    if (s.includes('negociation') || s.includes('négociation')) return 'negociation';
+
+    // En attente (À rappeler, Plaquette, Contacté, etc.) -> en_attente
     if (
       s.includes('rappeler') ||
       s.includes('plaquette') ||
       s.includes('contacte') ||
       s.includes('contacté') ||
       s.includes('appele') ||
-      s.includes('appelé')
+      s.includes('appelé') ||
+      s.includes('attente')
     )
-      return 'contacte';
+      return 'en_attente';
+
+    // Nouveau
     if (s === 'nouveau') return 'nouveau';
 
+    // Default
+    console.log('📊 Unknown sheet status, defaulting to nouveau:', statut);
     return 'nouveau';
   }
 
@@ -240,11 +257,12 @@ export class SheetProspectService implements IProspectService {
   async getByStage(): Promise<Record<string, ProspectData[]>> {
     const prospects = await this.getAll();
 
+    // MUST match SHEET_STAGES slugs
     const byStage: Record<string, ProspectData[]> = {
       nouveau: [],
-      contacte: [],
-      rdv_valide: [],
-      proposition: [],
+      en_attente: [],
+      rdv_pris: [],
+      rdv_effectue: [],
       negociation: [],
       gagne: [],
       perdu: [],
@@ -276,11 +294,12 @@ export class SheetProspectService implements IProspectService {
       FROID: 0,
       NON_QUALIFIE: 0,
     };
+    // MUST match SHEET_STAGES slugs
     const byStage: Record<string, number> = {
       nouveau: 0,
-      contacte: 0,
-      rdv_valide: 0,
-      proposition: 0,
+      en_attente: 0,
+      rdv_pris: 0,
+      rdv_effectue: 0,
       negociation: 0,
       gagne: 0,
       perdu: 0,
