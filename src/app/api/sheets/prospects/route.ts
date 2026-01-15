@@ -11,11 +11,14 @@ export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
+    console.log('📊 Sheets prospects - Starting request');
     const supabase = await createClient();
 
     const { data: { user: authUser } } = await supabase.auth.getUser();
+    console.log('📊 Sheets prospects - authUser:', authUser?.id);
 
     if (!authUser) {
+      console.log('📊 Sheets prospects - No auth user, returning 401');
       return NextResponse.json({ error: 'Non authentifie' }, { status: 401 });
     }
 
@@ -25,15 +28,21 @@ export async function GET() {
       .eq('auth_id', authUser.id)
       .single();
 
+    console.log('📊 Sheets prospects - user organization_id:', user?.organization_id);
+
     if (!user?.organization_id) {
       return NextResponse.json({ error: 'Organisation non trouvee' }, { status: 404 });
     }
 
     const { data: org } = await supabase
       .from('organizations')
-      .select('google_credentials, google_sheet_id')
+      .select('id, google_credentials, google_sheet_id')
       .eq('id', user.organization_id)
       .single();
+
+    console.log('📊 Sheets prospects - org:', org?.id);
+    console.log('📊 Sheets prospects - has credentials:', !!org?.google_credentials);
+    console.log('📊 Sheets prospects - sheet_id:', org?.google_sheet_id);
 
     if (!org?.google_credentials) {
       return NextResponse.json(
@@ -49,7 +58,9 @@ export async function GET() {
       );
     }
 
+    console.log('📊 Sheets prospects - Getting valid credentials...');
     const credentials = await getValidCredentials(org.google_credentials as GoogleCredentials);
+    console.log('📊 Sheets prospects - Got valid credentials');
 
     // Compare access_token to detect if credentials were refreshed
     const originalCredentials = org.google_credentials as GoogleCredentials;
@@ -61,16 +72,21 @@ export async function GET() {
         .eq('id', user.organization_id);
     }
 
+    console.log('📊 Sheets prospects - Reading sheet...');
     const rows = await readGoogleSheet(credentials, org.google_sheet_id);
+    console.log('📊 Sheets prospects - Got rows:', rows.length);
     const prospects = parseProspectsFromSheet(rows);
+    console.log('📊 Sheets prospects - Parsed prospects:', prospects.length);
 
     return NextResponse.json({ prospects });
   } catch (error) {
-    console.error('Prospects fetch error:', error);
+    console.error('📊 Sheets prospects - ERROR:', error);
 
     const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue';
+    console.error('📊 Sheets prospects - Error message:', errorMessage);
 
     if (errorMessage.includes('invalid_grant') || errorMessage.includes('Token has been expired')) {
+      console.log('📊 Sheets prospects - Token expired, returning 401');
       return NextResponse.json(
         { error: 'Session Google expiree', needsReconnect: true },
         { status: 401 }
