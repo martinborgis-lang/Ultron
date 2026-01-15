@@ -92,8 +92,10 @@ export async function POST(request: NextRequest) {
     // Get valid credentials (refresh if needed)
     const credentials = await getValidCredentials(org.google_credentials as GoogleCredentials);
 
-    // Save refreshed credentials if changed
-    if (credentials !== org.google_credentials) {
+    // Compare access_token to detect if credentials were refreshed
+    const originalCredentials = org.google_credentials as GoogleCredentials;
+    if (credentials.access_token !== originalCredentials.access_token) {
+      console.log('🔄 Google credentials refreshed, saving new tokens');
       await adminClient
         .from('organizations')
         .update({ google_credentials: credentials })
