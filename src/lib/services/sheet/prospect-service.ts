@@ -107,10 +107,10 @@ export class SheetProspectService implements IProspectService {
     }
 
     console.log('📊 SheetProspectService - Getting valid credentials...');
-    const credentials = await getValidCredentials(this.googleCredentials as GoogleCredentials);
+    const credentials = await getValidCredentials(this.googleCredentials as unknown as GoogleCredentials);
 
     // Compare access_token to detect if credentials were refreshed
-    const originalCredentials = this.googleCredentials as GoogleCredentials;
+    const originalCredentials = this.googleCredentials as unknown as GoogleCredentials;
     if (credentials.access_token !== originalCredentials.access_token) {
       console.log('🔄 SheetProspectService - Credentials refreshed, saving...');
       const adminClient = createAdminClient();
@@ -119,7 +119,7 @@ export class SheetProspectService implements IProspectService {
         .update({ google_credentials: credentials })
         .eq('id', this.organizationId);
       // Update local cache
-      this.googleCredentials = credentials as Record<string, unknown>;
+      this.googleCredentials = credentials as unknown as Record<string, unknown>;
     }
 
     return credentials;
