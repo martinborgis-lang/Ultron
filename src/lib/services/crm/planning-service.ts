@@ -124,6 +124,23 @@ export class CrmPlanningService implements IPlanningService {
       }
     }
 
+    // Générer start_date et end_date si non fournis mais due_date existe
+    let startDate = event.startDate;
+    let endDate = event.endDate;
+
+    if (!startDate && event.dueDate) {
+      startDate = event.dueDate;
+    }
+
+    if (!endDate && startDate) {
+      // Par défaut, événement d'1 heure
+      const endDateTime = new Date(startDate);
+      endDateTime.setHours(endDateTime.getHours() + 1);
+      endDate = endDateTime.toISOString();
+    }
+
+    console.log('📅 Planning create - dates:', { startDate, endDate, dueDate: event.dueDate });
+
     const { data, error } = await this.supabase
       .from('crm_events')
       .insert({
@@ -131,9 +148,9 @@ export class CrmPlanningService implements IPlanningService {
         type: event.type || 'task',
         title: event.title,
         description: event.description,
-        start_date: event.startDate,
-        end_date: event.endDate,
-        due_date: event.dueDate,
+        start_date: startDate,
+        end_date: endDate,
+        due_date: event.dueDate || startDate,
         all_day: event.allDay || false,
         priority: event.priority || 'medium',
         prospect_id: event.prospectId,
@@ -156,10 +173,17 @@ export class CrmPlanningService implements IPlanningService {
     }
 
     // Sync with Google Calendar (best effort - don't block if it fails)
+    console.log('📅 Calendar sync check:', {
+      startDate: data.start_date,
+      endDate: data.end_date,
+    });
+
     try {
       const credentials = await getCalendarCredentials(this.userId, this.organizationId);
+      console.log('📅 Calendar credentials found:', !!credentials);
 
       if (credentials && data.start_date && data.end_date) {
+        console.log('📅 Creating calendar event...');
         const calendarEvent = await createCalendarEvent(credentials, {
           summary: event.title || 'Événement Ultron',
           description: event.description || (prospectName ? `Prospect: ${prospectName}` : undefined),
