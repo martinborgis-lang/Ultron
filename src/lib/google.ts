@@ -171,6 +171,36 @@ export async function updateGoogleSheetCells(
   });
 }
 
+/**
+ * Append a row to a Google Sheet
+ */
+export async function appendGoogleSheetRow(
+  credentials: GoogleCredentials,
+  sheetId: string,
+  values: string[],
+  range: string = 'Leads!A:Z'
+): Promise<{ updatedRange: string; rowNumber: number }> {
+  const sheets = createSheetsClient(credentials);
+
+  const response = await sheets.spreadsheets.values.append({
+    spreadsheetId: sheetId,
+    range,
+    valueInputOption: 'USER_ENTERED',
+    requestBody: {
+      values: [values],
+    },
+  });
+
+  // Extract the row number from the updated range (e.g., "Leads!A42:Z42" -> 42)
+  const updatedRange = response.data.updates?.updatedRange || '';
+  const match = updatedRange.match(/:?[A-Z]+(\d+)/);
+  const rowNumber = match ? parseInt(match[1]) : 0;
+
+  console.log('✅ Row appended to Sheet:', { updatedRange, rowNumber });
+
+  return { updatedRange, rowNumber };
+}
+
 export function parseProspectsFromSheet(rows: string[][]): Prospect[] {
   if (rows.length < 2) return [];
 
