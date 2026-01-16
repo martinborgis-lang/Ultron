@@ -37,6 +37,7 @@ import {
   Loader2,
   Trash2,
   Save,
+  AlertCircle,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -61,32 +62,101 @@ export default function ProspectDetailPage() {
   const [saving, setSaving] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [formData, setFormData] = useState<Partial<CrmProspect>>({});
+  const [isSheetMode, setIsSheetMode] = useState(false);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const [prospectRes, activitiesRes, tasksRes, stagesRes] = await Promise.all([
-        fetch(`/api/crm/prospects/${prospectId}`),
-        fetch(`/api/crm/activities?prospect_id=${prospectId}`),
-        fetch(`/api/crm/tasks?prospect_id=${prospectId}`),
-        fetch('/api/crm/stages'),
+      console.log('🔍 Fetching prospect:', prospectId);
+
+      // Use unified API which works for both CRM and Sheet modes
+      const [prospectRes, stagesRes] = await Promise.all([
+        fetch(`/api/prospects/unified/${prospectId}`),
+        fetch('/api/stages/unified'),
       ]);
 
       if (!prospectRes.ok) {
-        router.push('/pipeline');
+        console.error('🔍 Prospect not found:', prospectRes.status);
+        router.push('/prospects');
         return;
       }
 
       const prospectData = await prospectRes.json();
-      const activitiesData = await activitiesRes.json();
-      const tasksData = await tasksRes.json();
       const stagesData = await stagesRes.json();
 
-      setProspect(prospectData);
-      setFormData(prospectData);
-      setActivities(activitiesData);
-      setTasks(tasksData);
+      console.log('🔍 Prospect data:', prospectData);
+
+      // Detect Sheet mode by checking if ID starts with 'sheet-' or has rowNumber
+      const sheetMode = prospectId.startsWith('sheet-') || prospectData.rowNumber !== undefined;
+      setIsSheetMode(sheetMode);
+
+      // Convert unified format to CRM format for compatibility
+      let crmProspect: CrmProspect;
+      if (sheetMode) {
+        // Sheet mode - convert ProspectData to CrmProspect format
+        crmProspect = {
+          id: prospectData.id,
+          organization_id: '',
+          first_name: prospectData.firstName,
+          last_name: prospectData.lastName,
+          email: prospectData.email,
+          phone: prospectData.phone || null,
+          company: null,
+          job_title: null,
+          address: null,
+          city: null,
+          postal_code: null,
+          country: 'France',
+          patrimoine_estime: prospectData.patrimoine || null,
+          revenus_annuels: prospectData.revenusMensuels ? prospectData.revenusMensuels * 12 : null,
+          situation_familiale: null,
+          nb_enfants: null,
+          age: prospectData.age || null,
+          profession: prospectData.situationPro || null,
+          stage_id: null,
+          stage_slug: prospectData.stage,
+          deal_value: null,
+          close_probability: 50,
+          expected_close_date: prospectData.dateRdv || null,
+          qualification: prospectData.qualification?.toLowerCase() || 'non_qualifie',
+          score_ia: prospectData.scoreIa || null,
+          analyse_ia: prospectData.justificationIa || null,
+          derniere_qualification: null,
+          source: prospectData.source || null,
+          source_detail: null,
+          assigned_to: prospectData.assignedTo || null,
+          tags: [],
+          notes: prospectData.notesAppel || null,
+          lost_reason: null,
+          won_date: null,
+          lost_date: null,
+          last_activity_at: null,
+          created_at: prospectData.createdAt,
+          updated_at: prospectData.updatedAt || null,
+        };
+      } else {
+        // CRM mode - data is already in CRM format
+        crmProspect = prospectData;
+      }
+
+      setProspect(crmProspect);
+      setFormData(crmProspect);
       setStages(stagesData);
+
+      // Only fetch activities and tasks in CRM mode
+      if (!sheetMode) {
+        const [activitiesRes, tasksRes] = await Promise.all([
+          fetch(`/api/crm/activities?prospect_id=${prospectId}`),
+          fetch(`/api/crm/tasks?prospect_id=${prospectId}`),
+        ]);
+        const activitiesData = await activitiesRes.json();
+        const tasksData = await tasksRes.json();
+        setActivities(activitiesData);
+        setTasks(tasksData);
+      } else {
+        setActivities([]);
+        setTasks([]);
+      }
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {
@@ -205,7 +275,11 @@ export default function ProspectDetailPage() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          {editMode ? (
+          {isSheetMode ? (
+            <div className="text-sm text-muted-foreground bg-muted px-3 py-1 rounded-md">
+              Mode lecture seule (Google Sheet)
+            </div>
+          ) : editMode ? (
             <>
               <Button variant="outline" onClick={() => setEditMode(false)}>
                 Annuler
@@ -246,6 +320,18 @@ export default function ProspectDetailPage() {
           )}
         </div>
       </div>
+
+      {/* Sheet mode info banner */}
+      {isSheetMode && (
+        <Card className="bg-amber-50 dark:bg-amber-950 border-amber-200 dark:border-amber-800">
+          <CardContent className="py-3 flex items-center gap-2 text-amber-800 dark:text-amber-200">
+            <AlertCircle className="w-4 h-4" />
+            <span className="text-sm">
+              Ce prospect est synchronise depuis Google Sheet. Les modifications doivent etre faites directement dans la Sheet.
+            </span>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Column - Info */}
