@@ -33,17 +33,30 @@ export async function POST(request: NextRequest) {
     const context = await getCurrentUserAndOrganization();
 
     if (!context) {
+      console.log('🔧 API unified POST - No auth context');
       return NextResponse.json({ error: 'Non authentifie' }, { status: 401 });
     }
 
-    const { organization } = context;
-    const service = getProspectService(organization);
+    const { organization, user } = context;
     const body = await request.json();
 
+    console.log('🔧 API unified POST - Request received:', {
+      organizationId: organization.id,
+      organizationName: organization.name,
+      dataMode: organization.data_mode,
+      userId: user.id,
+      body,
+    });
+
+    const service = getProspectService(organization);
+    console.log('🔧 API unified POST - Service type:', organization.data_mode === 'sheet' ? 'SheetProspectService' : 'CrmProspectService');
+
     const prospect = await service.create(body);
+    console.log('🔧 API unified POST - Prospect created:', prospect);
+
     return NextResponse.json(prospect, { status: 201 });
   } catch (error: any) {
-    console.error('POST /api/prospects/unified error:', error);
+    console.error('🔧 API unified POST - Error:', error);
     return NextResponse.json({ error: error.message || 'Erreur serveur' }, { status: 500 });
   }
 }

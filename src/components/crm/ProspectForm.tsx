@@ -89,20 +89,32 @@ export function ProspectForm({ open, onOpenChange, onSuccess, stages }: Prospect
     setLoading(true);
 
     try {
-      const response = await fetch('/api/crm/prospects', {
+      // Map form fields (snake_case) to unified API fields (camelCase)
+      const unifiedData = {
+        firstName: formData.first_name,
+        lastName: formData.last_name,
+        email: formData.email,
+        phone: formData.phone,
+        source: formData.source,
+        age: formData.age ? parseInt(formData.age) : undefined,
+        situationPro: formData.profession || formData.job_title,
+        revenusMensuels: formData.revenus_annuels ? Math.round(parseFloat(formData.revenus_annuels) / 12) : undefined,
+        patrimoine: formData.patrimoine_estime ? parseFloat(formData.patrimoine_estime) : undefined,
+        besoins: formData.notes,
+        stage: formData.stage_slug || 'nouveau',
+      };
+
+      console.log('🔧 ProspectForm - Creating prospect:', unifiedData);
+
+      // Use unified API which supports both CRM and Sheet modes
+      const response = await fetch('/api/prospects/unified', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...formData,
-          deal_value: formData.deal_value ? parseFloat(formData.deal_value) : null,
-          age: formData.age ? parseInt(formData.age) : null,
-          nb_enfants: formData.nb_enfants ? parseInt(formData.nb_enfants) : null,
-          revenus_annuels: formData.revenus_annuels ? parseFloat(formData.revenus_annuels) : null,
-          patrimoine_estime: formData.patrimoine_estime ? parseFloat(formData.patrimoine_estime) : null,
-        }),
+        body: JSON.stringify(unifiedData),
       });
 
       const data = await response.json();
+      console.log('🔧 ProspectForm - API response:', { ok: response.ok, status: response.status, data });
 
       if (!response.ok) {
         throw new Error(data.error || 'Erreur lors de la creation');

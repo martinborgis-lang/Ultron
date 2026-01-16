@@ -197,11 +197,17 @@ export class SheetProspectService implements IProspectService {
   }
 
   async create(data: Partial<ProspectData>): Promise<ProspectData> {
+    console.log('🔧 SheetProspectService.create - Starting with data:', data);
+    console.log('🔧 SheetProspectService.create - SheetId:', this.googleSheetId);
+
     if (!this.googleSheetId) {
+      console.error('🔧 SheetProspectService.create - No sheet ID configured');
       throw new Error('Aucun ID de Google Sheet configuré');
     }
 
+    console.log('🔧 SheetProspectService.create - Getting credentials...');
     const credentials = await this.getCredentials();
+    console.log('🔧 SheetProspectService.create - Got credentials');
 
     // Get existing rows to determine the next ID
     const existingRows = await readGoogleSheet(credentials, this.googleSheetId);
