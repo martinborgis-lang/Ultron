@@ -2,7 +2,7 @@ import { google } from 'googleapis';
 import { OAuth2Client } from 'google-auth-library';
 
 // Default tab name in Google Sheet (can be customized per organization in the future)
-export const SHEET_TAB_NAME = 'Prospects';
+export const SHEET_TAB_NAME = 'Prospect';
 
 // Scopes for organization-level OAuth (Sheets + Drive + Gmail + Calendar)
 const ORGANIZATION_SCOPES = [
