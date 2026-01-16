@@ -1,6 +1,9 @@
 import { google } from 'googleapis';
 import { OAuth2Client } from 'google-auth-library';
 
+// Default tab name in Google Sheet (can be customized per organization in the future)
+export const SHEET_TAB_NAME = 'Prospects';
+
 // Scopes for organization-level OAuth (Sheets + Drive + Gmail + Calendar)
 const ORGANIZATION_SCOPES = [
   'https://www.googleapis.com/auth/spreadsheets',
@@ -178,7 +181,7 @@ export async function appendGoogleSheetRow(
   credentials: GoogleCredentials,
   sheetId: string,
   values: string[],
-  range: string = 'Leads!A:Z'
+  range: string = `${SHEET_TAB_NAME}!A:Z`
 ): Promise<{ updatedRange: string; rowNumber: number }> {
   const sheets = createSheetsClient(credentials);
 
@@ -191,7 +194,7 @@ export async function appendGoogleSheetRow(
     },
   });
 
-  // Extract the row number from the updated range (e.g., "Leads!A42:Z42" -> 42)
+  // Extract the row number from the updated range (e.g., "Prospects!A42:Z42" -> 42)
   const updatedRange = response.data.updates?.updatedRange || '';
   const match = updatedRange.match(/:?[A-Z]+(\d+)/);
   const rowNumber = match ? parseInt(match[1]) : 0;
