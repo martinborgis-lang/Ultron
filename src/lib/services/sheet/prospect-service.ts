@@ -4,6 +4,7 @@ import {
   readGoogleSheet,
   parseProspectsFromSheet,
   updateGoogleSheetCells,
+  appendGoogleSheetRow,
   GoogleCredentials,
 } from '@/lib/google';
 import { createAdminClient } from '@/lib/supabase-admin';
@@ -195,10 +196,86 @@ export class SheetProspectService implements IProspectService {
     return prospects.find((p) => p.id === id) || null;
   }
 
-  async create(_data: Partial<ProspectData>): Promise<ProspectData> {
-    throw new Error(
-      'En mode Sheet, ajoutez les prospects directement dans Google Sheet ou utilisez les workflows automatiques.'
+  async create(data: Partial<ProspectData>): Promise<ProspectData> {
+    if (!this.googleSheetId) {
+      throw new Error('Aucun ID de Google Sheet configuré');
+    }
+
+    const credentials = await this.getCredentials();
+
+    // Get existing rows to determine the next ID
+    const existingRows = await readGoogleSheet(credentials, this.googleSheetId);
+    const nextId = existingRows.length.toString(); // Row 1 = headers, so length = next ID
+
+    // Date du jour au format DD/MM/YYYY
+    const today = new Date();
+    const dateLead = `${today.getDate().toString().padStart(2, '0')}/${(today.getMonth() + 1).toString().padStart(2, '0')}/${today.getFullYear()}`;
+
+    // Construire la nouvelle ligne selon la structure de la Sheet :
+    // A: ID, B: Date Lead, C: Nom, D: Prénom, E: Email, F: Téléphone, G: Source,
+    // H: Âge, I: Situation Pro, J: Revenus Mensuels, K: Patrimoine, L: Besoins,
+    // M: Notes Appel, N: Statut Appel, O: Date RDV, P: Rappel Souhaité,
+    // Q: Qualification IA, R: Score IA, S: Priorité, T: Justification IA,
+    // U: RDV Prévu, V: Lien rappel, W: Mail Plaquette, X: Mail Synthèse,
+    // Y: Mail Rappel, Z: Email Conseiller
+    const newRow = [
+      nextId,                                                    // A: ID
+      dateLead,                                                  // B: Date Lead
+      data.lastName || '',                                       // C: Nom
+      data.firstName || '',                                      // D: Prénom
+      data.email || '',                                          // E: Email
+      data.phone || '',                                          // F: Téléphone
+      data.source || '',                                         // G: Source
+      data.age?.toString() || '',                                // H: Âge
+      data.situationPro || '',                                   // I: Situation Pro
+      data.revenusMensuels ? `${data.revenusMensuels}` : '',     // J: Revenus
+      data.patrimoine ? `${data.patrimoine}` : '',               // K: Patrimoine
+      data.besoins || '',                                        // L: Besoins
+      data.notesAppel || '',                                     // M: Notes Appel
+      '',                                                        // N: Statut Appel (vide = Nouveau)
+      '',                                                        // O: Date RDV
+      '',                                                        // P: Rappel Souhaité
+      '',                                                        // Q: Qualification IA
+      '',                                                        // R: Score IA
+      '',                                                        // S: Priorité
+      '',                                                        // T: Justification IA
+      '',                                                        // U: RDV Prévu
+      '',                                                        // V: Lien rappel
+      '',                                                        // W: Mail Plaquette
+      '',                                                        // X: Mail Synthèse
+      '',                                                        // Y: Mail Rappel
+      '',                                                        // Z: Email Conseiller
+    ];
+
+    // Ajouter la ligne à la Sheet
+    const { rowNumber } = await appendGoogleSheetRow(
+      credentials,
+      this.googleSheetId,
+      newRow,
+      'Leads!A:Z'
     );
+
+    console.log('✅ Prospect créé dans la Sheet:', { id: nextId, rowNumber });
+
+    // Retourner le prospect créé
+    return {
+      id: `sheet-${rowNumber}`,
+      rowNumber,
+      firstName: data.firstName || '',
+      lastName: data.lastName || '',
+      email: data.email || '',
+      phone: data.phone,
+      source: data.source,
+      age: data.age,
+      situationPro: data.situationPro,
+      revenusMensuels: data.revenusMensuels,
+      patrimoine: data.patrimoine,
+      besoins: data.besoins,
+      notesAppel: data.notesAppel,
+      stage: 'nouveau',
+      qualification: null,
+      createdAt: new Date().toISOString(),
+    };
   }
 
   async update(_id: string, _data: Partial<ProspectData>): Promise<ProspectData> {
