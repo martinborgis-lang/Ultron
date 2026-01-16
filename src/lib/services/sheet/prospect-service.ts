@@ -6,6 +6,7 @@ import {
   updateGoogleSheetCells,
   appendGoogleSheetRow,
   GoogleCredentials,
+  SHEET_TAB_NAME,
 } from '@/lib/google';
 import { createAdminClient } from '@/lib/supabase-admin';
 import { mapStageToSheetStatus, WaitingSubtype } from '@/types/pipeline';
@@ -258,7 +259,7 @@ export class SheetProspectService implements IProspectService {
       credentials,
       this.googleSheetId,
       newRow,
-      'Leads!A:Z'
+      `${SHEET_TAB_NAME}!A:Z`
     );
 
     console.log('✅ Prospect créé dans la Sheet:', { id: nextId, rowNumber });
