@@ -21,7 +21,7 @@ interface PromptConfig {
   id: string;
   type: PromptType;
   name: string;
-  icon: React.ElementType;
+  icon: React.ComponentType<{ className?: string }>;
   description: string;
 }
 
