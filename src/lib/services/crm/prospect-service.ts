@@ -124,6 +124,7 @@ export class CrmProspectService implements IProspectService {
     if (data.revenusMensuels !== undefined) dbData.revenus_annuels = data.revenusMensuels * 12;
     if (data.patrimoine !== undefined) dbData.patrimoine_estime = data.patrimoine;
     if (data.besoins !== undefined) dbData.notes = data.besoins;
+    if (data.notesAppel !== undefined) dbData.notes = data.notesAppel;
     if (data.stage !== undefined) dbData.stage_slug = data.stage;
     if (data.qualification !== undefined) dbData.qualification = data.qualification;
     if (data.scoreIa !== undefined) dbData.score_ia = data.scoreIa;

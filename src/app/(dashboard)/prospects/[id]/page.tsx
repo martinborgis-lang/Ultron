@@ -42,6 +42,10 @@ import {
   Calendar,
   Brain,
   TrendingUp,
+  Send,
+  Paperclip,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -69,6 +73,8 @@ export default function ProspectDetailPage() {
   const [activities, setActivities] = useState<CrmActivity[]>([]);
   const [tasks, setTasks] = useState<CrmTask[]>([]);
   const [stages, setStages] = useState<PipelineStage[]>([]);
+  const [emails, setEmails] = useState<any[]>([]);
+  const [expandedEmails, setExpandedEmails] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [editMode, setEditMode] = useState(false);
@@ -164,6 +170,23 @@ export default function ProspectDetailPage() {
       } else {
         setActivities([]);
         setTasks([]);
+      }
+
+      // Fetch email history if prospect has an email
+      const prospectEmail = sheetMode ? prospectData.email : crmProspect.email;
+      if (prospectEmail) {
+        try {
+          const emailsRes = await fetch(`/api/crm/emails?prospect_email=${encodeURIComponent(prospectEmail)}`);
+          if (emailsRes.ok) {
+            const emailsData = await emailsRes.json();
+            setEmails(emailsData);
+          }
+        } catch (err) {
+          console.error('Error fetching emails:', err);
+          setEmails([]);
+        }
+      } else {
+        setEmails([]);
       }
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -677,6 +700,92 @@ export default function ProspectDetailPage() {
               />
             </CardContent>
           </Card>
+
+          {/* Email History */}
+          {emails.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Mail className="w-4 h-4" />
+                  Historique des emails ({emails.length})
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {emails.map((email) => {
+                  const isExpanded = expandedEmails.has(email.id);
+                  const emailTypeLabels: Record<string, string> = {
+                    plaquette: 'Plaquette',
+                    synthese: 'Synthese RDV',
+                    rappel: 'Rappel 24h',
+                    rdv_notes: 'Confirmation RDV',
+                  };
+                  const emailTypeColors: Record<string, string> = {
+                    plaquette: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
+                    synthese: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
+                    rappel: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200',
+                    rdv_notes: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200',
+                  };
+
+                  return (
+                    <div
+                      key={email.id}
+                      className="border rounded-lg p-4 space-y-2"
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-center gap-2">
+                          <Send className="w-4 h-4 text-muted-foreground" />
+                          <Badge
+                            variant="secondary"
+                            className={emailTypeColors[email.email_type] || 'bg-gray-100 text-gray-800'}
+                          >
+                            {emailTypeLabels[email.email_type] || email.email_type}
+                          </Badge>
+                          {email.has_attachment && (
+                            <Paperclip className="w-3 h-3 text-muted-foreground" />
+                          )}
+                        </div>
+                        <span className="text-xs text-muted-foreground">
+                          {email.sent_at
+                            ? format(new Date(email.sent_at), 'dd MMM yyyy HH:mm', { locale: fr })
+                            : '-'}
+                        </span>
+                      </div>
+
+                      <div className="font-medium text-sm">{email.subject}</div>
+
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="w-full justify-between text-muted-foreground hover:text-foreground"
+                        onClick={() => {
+                          const newExpanded = new Set(expandedEmails);
+                          if (isExpanded) {
+                            newExpanded.delete(email.id);
+                          } else {
+                            newExpanded.add(email.id);
+                          }
+                          setExpandedEmails(newExpanded);
+                        }}
+                      >
+                        <span>{isExpanded ? 'Masquer le contenu' : 'Voir le contenu'}</span>
+                        {isExpanded ? (
+                          <ChevronUp className="w-4 h-4" />
+                        ) : (
+                          <ChevronDown className="w-4 h-4" />
+                        )}
+                      </Button>
+
+                      {isExpanded && email.body && (
+                        <div className="mt-2 p-3 bg-muted rounded-lg text-sm whitespace-pre-wrap max-h-64 overflow-y-auto">
+                          {email.body}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
     </div>
