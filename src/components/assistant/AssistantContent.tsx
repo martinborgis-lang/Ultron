@@ -2,8 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { AnimatePresence } from 'framer-motion';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Card } from '@/components/ui/card';
+import { Bot } from 'lucide-react';
 import { WelcomeScreen } from './WelcomeScreen';
 import { ChatMessage } from './ChatMessage';
 import { ChatInput } from './ChatInput';
@@ -14,18 +13,17 @@ import type { ChatMessage as ChatMessageType, AssistantResponse, ConversationCon
 export function AssistantContent() {
   const [messages, setMessages] = useState<ChatMessageType[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
   // Scroll to bottom when messages change
+  const scrollToBottom = useCallback(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, []);
+
   useEffect(() => {
-    if (scrollAreaRef.current) {
-      const scrollContainer = scrollAreaRef.current.querySelector('[data-radix-scroll-area-viewport]');
-      if (scrollContainer) {
-        scrollContainer.scrollTop = scrollContainer.scrollHeight;
-      }
-    }
-  }, [messages, isLoading]);
+    scrollToBottom();
+  }, [messages, isLoading, scrollToBottom]);
 
   // Build conversation history for context
   const getConversationHistory = useCallback((): ConversationContext[] => {
@@ -108,43 +106,59 @@ export function AssistantContent() {
   }, [sendMessage]);
 
   return (
-    <div className="h-[calc(100vh-120px)] flex flex-col">
+    <div className="h-[calc(100vh-64px)] flex flex-col relative">
+      {/* Background gradient */}
+      <div className="absolute inset-0 bg-gradient-to-b from-indigo-500/5 via-transparent to-purple-500/5 pointer-events-none" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-indigo-500/10 via-transparent to-transparent pointer-events-none" />
+
       {/* Header */}
-      <div className="px-6 py-4 border-b border-border">
-        <h1 className="text-xl font-semibold">Assistant Ultron</h1>
-        <p className="text-sm text-muted-foreground">
-          Interrogez vos donnees en langage naturel
-        </p>
+      <div className="relative z-10 px-6 py-4 border-b border-border/50 bg-background/80 backdrop-blur-sm">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/20">
+            <Bot className="w-5 h-5 text-white" />
+          </div>
+          <div>
+            <h1 className="text-lg font-semibold">Assistant Ultron</h1>
+            <p className="text-xs text-muted-foreground">
+              Interrogez vos donnees en langage naturel
+            </p>
+          </div>
+        </div>
       </div>
 
-      {/* Chat Area */}
-      <Card className="flex-1 mx-4 my-4 overflow-hidden flex flex-col border-border/50">
+      {/* Chat Area - Native scroll */}
+      <div className="flex-1 overflow-y-auto relative z-10">
         {messages.length === 0 ? (
           <WelcomeScreen onSuggestionClick={handleSuggestionClick} />
         ) : (
-          <ScrollArea ref={scrollAreaRef} className="flex-1 p-4">
-            <div className="space-y-4">
-              {messages.map((message, index) => (
-                <ChatMessage
-                  key={message.id}
-                  message={message}
-                  index={index}
-                />
-              ))}
+          <div className="max-w-4xl mx-auto px-4 py-6">
+            {messages.map((message, index) => (
+              <ChatMessage
+                key={message.id}
+                message={message}
+                index={index}
+              />
+            ))}
 
-              <AnimatePresence>
-                {isLoading && <TypingIndicator />}
-              </AnimatePresence>
-            </div>
-          </ScrollArea>
+            <AnimatePresence>
+              {isLoading && <TypingIndicator />}
+            </AnimatePresence>
+
+            {/* Scroll anchor */}
+            <div ref={messagesEndRef} />
+          </div>
         )}
+      </div>
 
-        {/* Input Area */}
-        <ChatInput
-          onSend={sendMessage}
-          isLoading={isLoading}
-        />
-      </Card>
+      {/* Input Area - Fixed at bottom */}
+      <div className="relative z-10 border-t border-border/50 bg-background/80 backdrop-blur-sm">
+        <div className="max-w-4xl mx-auto">
+          <ChatInput
+            onSend={sendMessage}
+            isLoading={isLoading}
+          />
+        </div>
+      </div>
     </div>
   );
 }
