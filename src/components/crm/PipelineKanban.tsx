@@ -30,12 +30,12 @@ interface PipelineKanbanProps {
 }
 
 // Slugs qui déclenchent la modale "En attente"
-// Supporte les deux formats (CRM et Sheet)
-const WAITING_STAGE_SLUGS = ['en_attente', 'contacte', 'a_rappeler'];
+// Slug unifié pour les deux modes (CRM et Sheet)
+const WAITING_STAGE_SLUGS = ['en_attente'];
 
 // Slugs qui déclenchent la modale "RDV Notes"
-// Supporte les deux formats (CRM et Sheet)
-const RDV_STAGE_SLUGS = ['rdv_pris', 'rdv_valide', 'qualifie'];
+// Slug unifié pour les deux modes (CRM et Sheet)
+const RDV_STAGE_SLUGS = ['rdv_pris'];
 
 export function PipelineKanban({
   stages,

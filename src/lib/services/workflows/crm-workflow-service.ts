@@ -442,12 +442,12 @@ async function workflowRdvValide(
 }
 
 // Stage slugs that trigger the "Plaquette" workflow
-// Supports both CRM and Sheet stage names
-const WAITING_STAGE_SLUGS = ['en_attente', 'contacte', 'a_rappeler'];
+// Slug unifié pour les deux modes
+const WAITING_STAGE_SLUGS = ['en_attente'];
 
 // Stage slugs that trigger the "RDV Validé" workflow (with qualification)
-// Supports Sheet format (rdv_pris), CRM format (rdv_valide, qualifie)
-const RDV_STAGE_SLUGS = ['rdv_pris', 'rdv_valide', 'qualifie'];
+// Slug unifié pour les deux modes
+const RDV_STAGE_SLUGS = ['rdv_pris'];
 
 /**
  * Main function to trigger CRM workflows based on stage change
