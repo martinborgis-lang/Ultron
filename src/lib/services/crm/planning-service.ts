@@ -147,7 +147,15 @@ export class CrmPlanningService implements IPlanningService {
       endDate = endDateTime.toISOString();
     }
 
-    console.log('📅 Planning create - dates:', { startDate, endDate, dueDate: event.dueDate, addGoogleMeet: event.addGoogleMeet });
+    console.log('📅 Planning create - FULL EVENT DATA:', JSON.stringify({
+      startDate,
+      endDate,
+      dueDate: event.dueDate,
+      addGoogleMeet: event.addGoogleMeet,
+      type: event.type,
+      title: event.title,
+      prospectId: event.prospectId,
+    }));
 
     const { data, error } = await this.supabase
       .from('crm_events')
@@ -193,7 +201,7 @@ export class CrmPlanningService implements IPlanningService {
       console.log('📅 Calendar credentials found:', !!credentials);
 
       if (credentials && data.start_date && data.end_date) {
-        console.log('📅 Creating calendar event with Meet:', event.addGoogleMeet);
+        console.log('📅 Creating SINGLE calendar event with Meet:', event.addGoogleMeet, '- NO OTHER EVENTS SHOULD BE CREATED');
         const calendarEvent = await createCalendarEvent(credentials, {
           summary: event.title || 'Événement Ultron',
           description: event.description || (prospectName ? `Prospect: ${prospectName}` : undefined),
