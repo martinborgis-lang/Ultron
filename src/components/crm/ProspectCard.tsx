@@ -2,16 +2,18 @@
 
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { motion } from 'framer-motion';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { CrmProspect } from '@/types/crm';
-import { User, Building2, Phone, Mail, Euro, Sparkles } from 'lucide-react';
+import { User, Building2, Phone, Mail, Euro, Sparkles, Zap } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface ProspectCardProps {
   prospect: CrmProspect;
   onClick?: () => void;
   isDragging?: boolean;
+  index?: number;
 }
 
 const qualificationColors: Record<string, string> = {
@@ -28,8 +30,28 @@ const qualificationLabels: Record<string, string> = {
   non_qualifie: 'Nouveau',
 };
 
-export function ProspectCard({ prospect, onClick, isDragging }: ProspectCardProps) {
+// Animation variants for cards
+const cardVariants = {
+  hidden: { opacity: 0, y: 20, scale: 0.95 },
+  visible: (i: number) => ({
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: {
+      delay: i * 0.05,
+      duration: 0.3,
+      ease: [0.4, 0, 0.2, 1] as const,
+    },
+  }),
+  hover: {
+    scale: 1.02,
+    transition: { duration: 0.2 },
+  },
+};
+
+export function ProspectCard({ prospect, onClick, isDragging, index = 0 }: ProspectCardProps) {
   const fullName = [prospect.first_name, prospect.last_name].filter(Boolean).join(' ') || 'Sans nom';
+  const isHighScore = (prospect.score_ia ?? 0) > 80;
 
   const formatCurrency = (value: number | null) => {
     if (!value) return null;
@@ -41,40 +63,69 @@ export function ProspectCard({ prospect, onClick, isDragging }: ProspectCardProp
   };
 
   return (
-    <Card
-      onClick={onClick}
+    <motion.div
+      custom={index}
+      initial="hidden"
+      animate="visible"
+      whileHover={!isDragging ? "hover" : undefined}
+      variants={cardVariants}
       className={cn(
-        'p-3 cursor-pointer hover:border-primary/50 transition-all',
-        'bg-card border border-border',
-        isDragging && 'opacity-50 rotate-2 scale-105 shadow-xl'
+        'relative group',
+        isHighScore && 'shine-border'
       )}
     >
-      {/* Header: Nom + Qualification */}
-      <div className="flex items-start justify-between gap-2 mb-2">
-        <div className="flex items-center gap-2 min-w-0">
-          <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
-            <User className="w-4 h-4 text-primary" />
+      {/* Shine Border Effect for High Score */}
+      {isHighScore && (
+        <div className="absolute -inset-[1px] rounded-xl bg-gradient-to-r from-amber-500 via-orange-500 to-red-500 opacity-75 blur-sm group-hover:opacity-100 transition-opacity animate-pulse" />
+      )}
+
+      <Card
+        onClick={onClick}
+        className={cn(
+          'relative p-3 cursor-pointer transition-all',
+          'bg-card border border-border',
+          isHighScore && 'border-amber-500/50 bg-gradient-to-br from-card to-amber-500/5',
+          !isHighScore && 'hover:border-primary/50',
+          isDragging && 'opacity-50 rotate-2 scale-105 shadow-xl'
+        )}
+      >
+        {/* High Score Indicator */}
+        {isHighScore && (
+          <div className="absolute -top-2 -right-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 shadow-lg">
+            <Zap className="w-3 h-3" />
+            {prospect.score_ia}
           </div>
-          <div className="min-w-0">
-            <p className="font-medium text-sm truncate">{fullName}</p>
-            {prospect.company && (
-              <p className="text-xs text-muted-foreground truncate flex items-center gap-1">
-                <Building2 className="w-3 h-3" />
-                {prospect.company}
-              </p>
+        )}
+
+        {/* Header: Nom + Qualification */}
+        <div className="flex items-start justify-between gap-2 mb-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <div className={cn(
+              'w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0',
+              isHighScore ? 'bg-gradient-to-br from-amber-500/20 to-orange-500/20' : 'bg-primary/20'
+            )}>
+              <User className={cn('w-4 h-4', isHighScore ? 'text-amber-500' : 'text-primary')} />
+            </div>
+            <div className="min-w-0">
+              <p className="font-medium text-sm truncate">{fullName}</p>
+              {prospect.company && (
+                <p className="text-xs text-muted-foreground truncate flex items-center gap-1">
+                  <Building2 className="w-3 h-3" />
+                  {prospect.company}
+                </p>
+              )}
+            </div>
+          </div>
+          <Badge
+            variant="outline"
+            className={cn('text-[10px] px-1.5 py-0 flex items-center gap-1', qualificationColors[prospect.qualification] || qualificationColors.non_qualifie)}
+          >
+            {(!prospect.qualification || prospect.qualification === 'non_qualifie') && (
+              <Sparkles className="w-3 h-3" />
             )}
-          </div>
+            {qualificationLabels[prospect.qualification] || qualificationLabels.non_qualifie}
+          </Badge>
         </div>
-        <Badge
-          variant="outline"
-          className={cn('text-[10px] px-1.5 py-0 flex items-center gap-1', qualificationColors[prospect.qualification] || qualificationColors.non_qualifie)}
-        >
-          {(!prospect.qualification || prospect.qualification === 'non_qualifie') && (
-            <Sparkles className="w-3 h-3" />
-          )}
-          {qualificationLabels[prospect.qualification] || qualificationLabels.non_qualifie}
-        </Badge>
-      </div>
 
       {/* Deal Value */}
       {prospect.deal_value && (
@@ -105,27 +156,28 @@ export function ProspectCard({ prospect, onClick, isDragging }: ProspectCardProp
         )}
       </div>
 
-      {/* Tags */}
-      {prospect.tags && prospect.tags.length > 0 && (
-        <div className="flex flex-wrap gap-1 mt-2">
-          {prospect.tags.slice(0, 3).map((tag) => (
-            <Badge key={tag} variant="secondary" className="text-[10px] px-1.5 py-0">
-              {tag}
-            </Badge>
-          ))}
-          {prospect.tags.length > 3 && (
-            <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
-              +{prospect.tags.length - 3}
-            </Badge>
-          )}
-        </div>
-      )}
-    </Card>
+        {/* Tags */}
+        {prospect.tags && prospect.tags.length > 0 && (
+          <div className="flex flex-wrap gap-1 mt-2">
+            {prospect.tags.slice(0, 3).map((tag) => (
+              <Badge key={tag} variant="secondary" className="text-[10px] px-1.5 py-0">
+                {tag}
+              </Badge>
+            ))}
+            {prospect.tags.length > 3 && (
+              <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                +{prospect.tags.length - 3}
+              </Badge>
+            )}
+          </div>
+        )}
+      </Card>
+    </motion.div>
   );
 }
 
 // Version draggable
-export function DraggableProspectCard({ prospect, onClick }: ProspectCardProps) {
+export function DraggableProspectCard({ prospect, onClick, index = 0 }: ProspectCardProps) {
   const {
     attributes,
     listeners,
@@ -142,7 +194,7 @@ export function DraggableProspectCard({ prospect, onClick }: ProspectCardProps) 
 
   return (
     <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
-      <ProspectCard prospect={prospect} onClick={onClick} isDragging={isDragging} />
+      <ProspectCard prospect={prospect} onClick={onClick} isDragging={isDragging} index={index} />
     </div>
   );
 }

@@ -11,6 +11,7 @@ import {
   useSensors,
   closestCenter,
 } from '@dnd-kit/core';
+import { motion, AnimatePresence } from 'framer-motion';
 import { PipelineStage, CrmProspect } from '@/types/crm';
 import { PipelineColumn } from './PipelineColumn';
 import { ProspectCard } from './ProspectCard';
@@ -197,22 +198,33 @@ export function PipelineKanban({
       onDragEnd={handleDragEnd}
     >
       <div className="flex gap-4 overflow-x-auto pb-4 h-[calc(100vh-200px)]">
-        {stages.map((stage) => (
+        {stages.map((stage, index) => (
           <PipelineColumn
             key={stage.id}
             stage={stage}
             prospects={prospectsByStage[stage.slug] || []}
             onProspectClick={onProspectClick}
+            columnIndex={index}
           />
         ))}
       </div>
 
-      <DragOverlay>
-        {activeProspect && (
-          <div className="rotate-3 scale-105">
-            <ProspectCard prospect={activeProspect} isDragging />
-          </div>
-        )}
+      <DragOverlay dropAnimation={{
+        duration: 250,
+        easing: 'cubic-bezier(0.18, 0.67, 0.6, 1.22)',
+      }}>
+        <AnimatePresence>
+          {activeProspect && (
+            <motion.div
+              initial={{ scale: 1, rotate: 0 }}
+              animate={{ scale: 1.05, rotate: 3 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="shadow-2xl"
+            >
+              <ProspectCard prospect={activeProspect} isDragging />
+            </motion.div>
+          )}
+        </AnimatePresence>
       </DragOverlay>
     </DndContext>
   );
