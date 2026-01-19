@@ -162,18 +162,23 @@ async function workflowPlaquette(
     }
 
     // Determine which user's Gmail to use
-    // Priority: user parameter (assigned advisor from route) > prospect.assigned_to > fallback
+    // Priority: user parameter (assigned advisor from route) > prospect.assigned_to
     const advisorUserId = user.id || prospect.assigned_to;
     const advisorEmail = user.email || prospect.assigned_user?.email;
-    console.log('📧 Workflow Plaquette - Using advisor:', advisorUserId, advisorEmail);
+    console.log('📧 Workflow Plaquette - Advisor from params:', user.id, user.email);
+    console.log('📧 Workflow Plaquette - Prospect assigned_to:', prospect.assigned_to);
+    console.log('📧 Workflow Plaquette - Final advisor:', advisorUserId, advisorEmail);
     actions.push(`Conseiller: ${advisorEmail}`);
 
-    // Get email credentials (from assigned advisor or current user)
-    const emailCredentialsResult = await getEmailCredentials(organization.id, advisorUserId);
+    // Get email credentials - try assigned advisor first
+    let emailCredentialsResult = await getEmailCredentials(organization.id, advisorUserId);
+    console.log('📧 Workflow Plaquette - Credentials result:', emailCredentialsResult?.source, emailCredentialsResult?.userId);
+
     if (!emailCredentialsResult) {
+      console.log('📧 Workflow Plaquette - No credentials found for advisor, cannot send email');
       return { workflow: 'plaquette', success: false, actions, error: `Pas de credentials email pour ${advisorEmail}` };
     }
-    actions.push(`Credentials: ${emailCredentialsResult.source} (${advisorEmail})`);
+    actions.push(`Credentials: ${emailCredentialsResult.source} (${emailCredentialsResult.userId || 'org'})`);
 
     // Generate email content
     const promptConfig = fullOrg.prompt_plaquette as PromptConfig | null;
@@ -298,10 +303,12 @@ async function workflowRdvValide(
     actions.push('Org data loaded');
 
     // Determine which user's Gmail to use
-    // Priority: user parameter (assigned advisor from route) > prospect.assigned_to > fallback
+    // Priority: user parameter (assigned advisor from route) > prospect.assigned_to
     const advisorUserId = user.id || prospect.assigned_to;
     const advisorEmail = user.email || prospect.assigned_user?.email;
-    console.log('📧 Workflow RDV Validé - Using advisor:', advisorUserId, advisorEmail);
+    console.log('📧 Workflow RDV Validé - Advisor from params:', user.id, user.email);
+    console.log('📧 Workflow RDV Validé - Prospect assigned_to:', prospect.assigned_to);
+    console.log('📧 Workflow RDV Validé - Final advisor:', advisorUserId, advisorEmail);
     actions.push(`Conseiller: ${advisorEmail}`);
 
     // 1. Qualify prospect if not already done
@@ -338,12 +345,15 @@ async function workflowRdvValide(
       }
     }
 
-    // 2. Get email credentials (from assigned advisor or current user)
+    // 2. Get email credentials
     const emailCredentialsResult = await getEmailCredentials(organization.id, advisorUserId);
+    console.log('📧 Workflow RDV Validé - Credentials result:', emailCredentialsResult?.source, emailCredentialsResult?.userId);
+
     if (!emailCredentialsResult) {
+      console.log('📧 Workflow RDV Validé - No credentials found for advisor, cannot send email');
       return { workflow: 'rdv_valide', success: false, actions, error: `Pas de credentials email pour ${advisorEmail}` };
     }
-    actions.push(`Credentials: ${emailCredentialsResult.source} (${advisorEmail})`);
+    actions.push(`Credentials: ${emailCredentialsResult.source} (${emailCredentialsResult.userId || 'org'})`);
 
     // 3. Generate and send synthese email
     const promptConfig = fullOrg.prompt_synthese as PromptConfig | null;

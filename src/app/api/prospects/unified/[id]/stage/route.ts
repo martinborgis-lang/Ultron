@@ -156,22 +156,29 @@ export async function PATCH(
     let advisorEmail = user.email;
     let advisorId = user.id;
 
+    console.log('📧 Stage route - body.assignedTo:', body.assignedTo);
+    console.log('📧 Stage route - prospect.assignedTo:', prospect.assignedTo);
+    console.log('📧 Stage route - prospect.emailConseiller:', prospect.emailConseiller);
+    console.log('📧 Stage route - current user:', user.id, user.email);
+
     // If assignedTo is provided in request body, use that advisor
     if (body.assignedTo) {
       const assignedAdvisorEmail = await getAdvisorEmail(body.assignedTo, organization.id);
+      console.log('📧 Stage route - Looked up advisor email for', body.assignedTo, ':', assignedAdvisorEmail);
       if (assignedAdvisorEmail) {
         advisorEmail = assignedAdvisorEmail;
         advisorId = body.assignedTo;
-        console.log('📧 Using assigned advisor from request:', advisorEmail);
+        console.log('📧 Using assigned advisor from request:', advisorId, advisorEmail);
       }
     }
     // If prospect has an assigned advisor, use their email
     else if (prospect.assignedTo) {
       const prospectAdvisorEmail = await getAdvisorEmail(prospect.assignedTo, organization.id);
+      console.log('📧 Stage route - Looked up prospect advisor email:', prospectAdvisorEmail);
       if (prospectAdvisorEmail) {
         advisorEmail = prospectAdvisorEmail;
         advisorId = prospect.assignedTo;
-        console.log('📧 Using prospect assigned advisor:', advisorEmail);
+        console.log('📧 Using prospect assigned advisor:', advisorId, advisorEmail);
       }
     }
     // Fallback to emailConseiller field (from Sheet column Z)
@@ -179,6 +186,11 @@ export async function PATCH(
       advisorEmail = prospect.emailConseiller;
       console.log('📧 Using prospect emailConseiller:', advisorEmail);
     }
+    else {
+      console.log('📧 Using current user as fallback:', advisorId, advisorEmail);
+    }
+
+    console.log('📧 Stage route - FINAL advisor to use:', advisorId, advisorEmail);
 
     // 3. Trigger workflows based on mode
     let workflowResult: WorkflowResult | null = null;
