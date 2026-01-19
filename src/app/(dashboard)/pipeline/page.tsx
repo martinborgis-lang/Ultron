@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { PipelineKanban } from '@/components/crm/PipelineKanban';
 import { ProspectForm } from '@/components/crm/ProspectForm';
 import { WaitingReasonModal } from '@/components/crm/WaitingReasonModal';
+import { RdvNotesModal } from '@/components/crm/RdvNotesModal';
 import { PipelineStage, CrmProspect } from '@/types/crm';
 import { UnifiedStage } from '@/types/pipeline';
 import { ProspectData } from '@/lib/services/interfaces';
@@ -91,6 +92,14 @@ export default function PipelinePage() {
   const [pendingMove, setPendingMove] = useState<{
     prospectId: string;
     prospectName: string;
+  } | null>(null);
+
+  // State for RDV modal
+  const [showRdvModal, setShowRdvModal] = useState(false);
+  const [pendingRdvMove, setPendingRdvMove] = useState<{
+    prospectId: string;
+    prospectName: string;
+    targetStageSlug: string;
   } | null>(null);
 
   // Ref to prevent double fetch on mount
@@ -192,7 +201,11 @@ export default function PipelinePage() {
       await handleProspectMove(pendingMove.prospectId, targetSlug, subtype);
 
       // Create planning event if rappel_differe with date
+      // The planning service automatically syncs to Google Calendar
       if (rappelDate && subtype === 'rappel_differe') {
+        const endDate = new Date(rappelDate.getTime() + 30 * 60 * 1000); // 30 min duration
+
+        // Create planning event in Ultron (auto-syncs to Google Calendar)
         try {
           await fetch('/api/planning', {
             method: 'POST',
@@ -200,14 +213,30 @@ export default function PipelinePage() {
             body: JSON.stringify({
               type: 'call',
               title: `Rappeler ${pendingMove.prospectName}`,
+              description: `Rappel programmé depuis le pipeline`,
               prospectId: pendingMove.prospectId,
-              prospectName: pendingMove.prospectName,
-              dueDate: rappelDate.toISOString(),
+              startDate: rappelDate.toISOString(),
+              endDate: endDate.toISOString(),
               priority: 'high',
             }),
           });
         } catch (err) {
-          console.error('Error creating planning event:', err);
+          // If planning fails (sheet mode), create Google Calendar event directly
+          console.log('Planning event not created, trying direct calendar:', err);
+          try {
+            await fetch('/api/calendar/events', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                summary: `📞 Rappeler ${pendingMove.prospectName}`,
+                description: `Rappel programmé pour le prospect ${pendingMove.prospectName}.\n\nProspect ID: ${pendingMove.prospectId}`,
+                startDateTime: rappelDate.toISOString(),
+                endDateTime: endDate.toISOString(),
+              }),
+            });
+          } catch (calErr) {
+            console.error('Error creating Google Calendar event:', calErr);
+          }
         }
       }
 
@@ -237,6 +266,96 @@ export default function PipelinePage() {
 
   const handleProspectClick = (prospect: CrmProspect) => {
     router.push(`/prospects/${prospect.id}`);
+  };
+
+  // Called when dropping on RDV stage - show modal for notes
+  const handleRdvDrop = (prospectId: string, prospectName: string, targetStageSlug: string) => {
+    setPendingRdvMove({ prospectId, prospectName, targetStageSlug });
+    setShowRdvModal(true);
+  };
+
+  // Called when user confirms the RDV with notes
+  const handleRdvConfirm = async (notes: string, rdvDate: Date) => {
+    if (!pendingRdvMove) return;
+
+    const { prospectId, prospectName, targetStageSlug } = pendingRdvMove;
+
+    // Optimistic update
+    setProspects(prev => prev.map(p =>
+      p.id === prospectId
+        ? { ...p, stage_slug: targetStageSlug, notes, expected_close_date: rdvDate.toISOString() }
+        : p
+    ));
+
+    try {
+      // 1. Update prospect with notes and RDV date BEFORE moving stage
+      await fetch(`/api/prospects/unified/${prospectId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          notesAppel: notes,
+          dateRdv: rdvDate.toISOString(),
+        }),
+      });
+
+      // 2. Move to RDV stage (this triggers the workflow with qualification + email)
+      await handleProspectMove(prospectId, targetStageSlug);
+
+      // 3. Create planning event in Ultron (for CRM mode)
+      const endDate = new Date(rdvDate.getTime() + 60 * 60 * 1000); // 1h duration
+      try {
+        await fetch('/api/planning', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: 'meeting',
+            title: `RDV avec ${prospectName}`,
+            description: `Notes de l'appel:\n${notes}`,
+            prospectId: prospectId,
+            startDate: rdvDate.toISOString(),
+            endDate: endDate.toISOString(),
+            priority: 'high',
+          }),
+        });
+      } catch (err) {
+        // Silently fail for sheet mode (planning managed via Google Calendar)
+        console.log('Planning event not created (probably sheet mode):', err);
+      }
+
+      // 4. Create Google Calendar event for the RDV
+      try {
+        await fetch('/api/calendar/events', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            summary: `🤝 RDV avec ${prospectName}`,
+            description: `Rendez-vous avec le prospect ${prospectName}.\n\nNotes de l'appel:\n${notes}\n\nProspect ID: ${prospectId}`,
+            startDateTime: rdvDate.toISOString(),
+            endDateTime: endDate.toISOString(),
+            addGoogleMeet: true,
+          }),
+        });
+      } catch (err) {
+        console.error('Error creating Google Calendar event:', err);
+      }
+
+      toast({
+        title: 'RDV programme',
+        description: `Le prospect sera qualifie et recevra un email de confirmation.`,
+      });
+
+      await fetchData(search);
+    } catch (error) {
+      await fetchData(search);
+      toast({
+        title: 'Erreur',
+        description: 'Impossible de programmer le RDV',
+        variant: 'destructive',
+      });
+    } finally {
+      setShowRdvModal(false);
+      setPendingRdvMove(null);
+    }
   };
 
   // Stats
@@ -301,6 +420,7 @@ export default function PipelinePage() {
           onProspectClick={handleProspectClick}
           onProspectMove={handleProspectMove}
           onWaitingDrop={handleWaitingDrop}
+          onRdvDrop={handleRdvDrop}
         />
       )}
 
@@ -321,6 +441,17 @@ export default function PipelinePage() {
         }}
         prospectName={pendingMove?.prospectName || ''}
         onConfirm={handleWaitingConfirm}
+      />
+
+      {/* RDV Notes Modal */}
+      <RdvNotesModal
+        open={showRdvModal}
+        onOpenChange={(open) => {
+          setShowRdvModal(open);
+          if (!open) setPendingRdvMove(null);
+        }}
+        prospectName={pendingRdvMove?.prospectName || ''}
+        onConfirm={handleRdvConfirm}
       />
     </div>
   );

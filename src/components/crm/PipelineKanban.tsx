@@ -26,11 +26,16 @@ interface PipelineKanbanProps {
     subtype?: 'plaquette' | 'rappel_differe'
   ) => Promise<void>;
   onWaitingDrop?: (prospectId: string, prospectName: string) => void;
+  onRdvDrop?: (prospectId: string, prospectName: string, targetStageSlug: string) => void;
 }
 
 // Slugs qui déclenchent la modale "En attente"
 // Supporte les deux formats (CRM et Sheet)
 const WAITING_STAGE_SLUGS = ['en_attente', 'contacte', 'a_rappeler'];
+
+// Slugs qui déclenchent la modale "RDV Notes"
+// Supporte les deux formats (CRM et Sheet)
+const RDV_STAGE_SLUGS = ['rdv_pris', 'rdv_valide'];
 
 export function PipelineKanban({
   stages,
@@ -38,6 +43,7 @@ export function PipelineKanban({
   onProspectClick,
   onProspectMove,
   onWaitingDrop,
+  onRdvDrop,
 }: PipelineKanbanProps) {
   const [activeProspect, setActiveProspect] = useState<CrmProspect | null>(null);
   const [localProspects, setLocalProspects] = useState(prospects);
@@ -115,6 +121,7 @@ export function PipelineKanban({
       from: prospect.stage_slug,
       to: newStageSlug,
       isWaitingStage: WAITING_STAGE_SLUGS.includes(newStageSlug),
+      isRdvStage: RDV_STAGE_SLUGS.includes(newStageSlug),
     });
 
     // Check if this is a "waiting" stage that should trigger the modal
@@ -125,6 +132,17 @@ export function PipelineKanban({
 
       console.log('Opening waiting modal for:', prospectName);
       onWaitingDrop(prospectId, prospectName);
+      return;
+    }
+
+    // Check if this is an "RDV" stage that should trigger the notes modal
+    if (RDV_STAGE_SLUGS.includes(newStageSlug) && onRdvDrop) {
+      const prospectName = [prospect.first_name, prospect.last_name]
+        .filter(Boolean)
+        .join(' ') || 'Ce prospect';
+
+      console.log('Opening RDV notes modal for:', prospectName);
+      onRdvDrop(prospectId, prospectName, newStageSlug);
       return;
     }
 
