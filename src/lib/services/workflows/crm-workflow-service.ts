@@ -161,9 +161,10 @@ async function workflowPlaquette(
       return { workflow: 'plaquette', success: false, actions, error: 'Plaquette non configurée' };
     }
 
-    // Determine which user's Gmail to use: prospect's assigned advisor or fallback to current user
-    const advisorUserId = prospect.assigned_to || user.id;
-    const advisorEmail = prospect.assigned_user?.email || user.email;
+    // Determine which user's Gmail to use
+    // Priority: user parameter (assigned advisor from route) > prospect.assigned_to > fallback
+    const advisorUserId = user.id || prospect.assigned_to;
+    const advisorEmail = user.email || prospect.assigned_user?.email;
     console.log('📧 Workflow Plaquette - Using advisor:', advisorUserId, advisorEmail);
     actions.push(`Conseiller: ${advisorEmail}`);
 
@@ -296,9 +297,10 @@ async function workflowRdvValide(
     const fullOrg = await getFullOrganization(organization.id);
     actions.push('Org data loaded');
 
-    // Determine which user's Gmail to use: prospect's assigned advisor or fallback to current user
-    const advisorUserId = prospect.assigned_to || user.id;
-    const advisorEmail = prospect.assigned_user?.email || user.email;
+    // Determine which user's Gmail to use
+    // Priority: user parameter (assigned advisor from route) > prospect.assigned_to > fallback
+    const advisorUserId = user.id || prospect.assigned_to;
+    const advisorEmail = user.email || prospect.assigned_user?.email;
     console.log('📧 Workflow RDV Validé - Using advisor:', advisorUserId, advisorEmail);
     actions.push(`Conseiller: ${advisorEmail}`);
 

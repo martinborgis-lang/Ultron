@@ -190,12 +190,13 @@ export default function PipelinePage() {
   const handleProspectMove = async (
     prospectId: string,
     newStageSlug: string,
-    subtype?: 'plaquette' | 'rappel_differe'
+    subtype?: 'plaquette' | 'rappel_differe',
+    assignedTo?: string
   ) => {
     const response = await fetch(`/api/prospects/unified/${prospectId}/stage`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ stage_slug: newStageSlug, subtype }),
+      body: JSON.stringify({ stage_slug: newStageSlug, subtype, assignedTo }),
     });
 
     if (!response.ok) {
@@ -243,7 +244,8 @@ export default function PipelinePage() {
         });
       }
 
-      await handleProspectMove(pendingMove.prospectId, targetSlug, subtype);
+      // Pass assignedTo to trigger workflow with correct advisor email
+      await handleProspectMove(pendingMove.prospectId, targetSlug, subtype, assignedTo);
 
       // Create planning event if rappel_differe with date
       // The planning service automatically syncs to Google Calendar
@@ -380,8 +382,8 @@ export default function PipelinePage() {
       });
 
       // 3. Move to RDV stage (this triggers the workflow with qualification + email)
-      // The workflow will now have access to the Meet link via prospect metadata
-      await handleProspectMove(prospectId, targetStageSlug);
+      // Pass assignedTo to trigger workflow with correct advisor email
+      await handleProspectMove(prospectId, targetStageSlug, undefined, assignedTo);
 
       toast({
         title: 'RDV programme',
