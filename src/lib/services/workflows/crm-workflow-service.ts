@@ -448,6 +448,159 @@ const WAITING_STAGE_SLUGS = ['en_attente', 'contacte', 'a_rappeler'];
 // Supports both Sheet format (rdv_pris) and CRM format (rdv_valide)
 const RDV_STAGE_SLUGS = ['rdv_pris', 'rdv_valide'];
 
+// Stage slugs that trigger automatic qualification
+// Triggered when first contact is made with prospect
+const QUALIFICATION_STAGE_SLUGS = ['contacte'];
+
+/**
+ * WORKFLOW: Qualification - Analyse IA + Email de qualification
+ * Triggered when: stage = 'contacte' (first contact with prospect)
+ */
+async function workflowQualification(
+  prospectId: string,
+  organization: WorkflowOrganization,
+  user: WorkflowUser
+): Promise<WorkflowResult> {
+  const actions: string[] = [];
+  console.log('📧 Workflow Qualification - Starting for prospect:', prospectId);
+
+  try {
+    const prospect = await getCrmProspect(prospectId);
+    console.log('📧 Workflow Qualification - Prospect loaded:', prospect?.email, prospect?.first_name, prospect?.last_name);
+
+    if (!prospect.email) {
+      console.log('📧 Workflow Qualification - ERROR: No email');
+      return { workflow: 'qualification', success: false, actions, error: 'Email prospect manquant' };
+    }
+
+    // Check if already qualified (has a valid qualification other than non_qualifie)
+    const isAlreadyQualified = prospect.qualification &&
+      prospect.qualification !== 'non_qualifie' &&
+      prospect.score_ia !== null;
+
+    if (isAlreadyQualified) {
+      console.log('📧 Workflow Qualification - Already qualified:', prospect.qualification);
+      return { workflow: 'qualification', success: true, actions: [`Déjà qualifié: ${prospect.qualification}`] };
+    }
+
+    // Get full organization data
+    const fullOrg = await getFullOrganization(organization.id);
+    actions.push('Org data loaded');
+
+    // 1. Qualify prospect with AI
+    console.log('📧 Workflow Qualification - Starting AI qualification...');
+    const qualificationResult = await qualifyProspect(
+      {
+        prenom: prospect.first_name || '',
+        nom: prospect.last_name || '',
+        email: prospect.email,
+        telephone: prospect.phone,
+        age: prospect.age?.toString(),
+        situationPro: prospect.profession,
+        revenus: prospect.revenus_annuels?.toString(),
+        patrimoine: prospect.patrimoine_estime?.toString(),
+        besoins: prospect.notes,
+        notesAppel: prospect.notes,
+      },
+      fullOrg.scoring_config as ScoringConfig | null
+    );
+
+    console.log('📧 Workflow Qualification - Result:', qualificationResult.qualification, qualificationResult.score);
+    actions.push(`Qualifié: ${qualificationResult.qualification} (${qualificationResult.score})`);
+
+    // 2. Update prospect in database
+    await updateCrmProspect(prospectId, {
+      qualification: qualificationResult.qualification.toLowerCase(),
+      score_ia: qualificationResult.score,
+      analyse_ia: qualificationResult.justification,
+      derniere_qualification: new Date().toISOString(),
+    });
+    actions.push('Prospect mis à jour');
+
+    // 3. Log activity for qualification
+    await logActivity(
+      organization.id,
+      prospectId,
+      user.id,
+      'note',
+      `Prospect qualifié: ${qualificationResult.qualification}`,
+      `Score: ${qualificationResult.score}/100\nPriorité: ${qualificationResult.priorite}\n\n${qualificationResult.justification}`
+    );
+    actions.push('Activité enregistrée');
+
+    // 4. Get email credentials for sending qualification email
+    const emailCredentialsResult = await getEmailCredentials(organization.id, user.id);
+    if (!emailCredentialsResult) {
+      console.log('📧 Workflow Qualification - No email credentials, skipping email');
+      actions.push('Email non envoyé: pas de credentials');
+      return { workflow: 'qualification', success: true, actions };
+    }
+    actions.push(`Credentials: ${emailCredentialsResult.source}`);
+
+    // 5. Generate and send qualification email
+    const promptConfig = fullOrg.prompt_qualification as PromptConfig | null;
+    const email = await generateEmailWithConfig(
+      promptConfig,
+      DEFAULT_PROMPTS.qualification,
+      {
+        prenom: prospect.first_name,
+        nom: prospect.last_name,
+        email: prospect.email,
+        qualification: qualificationResult.qualification,
+        besoins: prospect.notes,
+      }
+    );
+    actions.push('Email généré');
+
+    const result = await sendEmail(emailCredentialsResult.credentials, {
+      to: prospect.email,
+      subject: email.objet,
+      body: email.corps,
+    });
+    actions.push('Email envoyé');
+
+    // 6. Update metadata to track email sent
+    await updateCrmProspect(prospectId, {
+      metadata: {
+        ...(prospect.metadata || {}),
+        mail_qualification_sent: true,
+        mail_qualification_sent_at: new Date().toISOString(),
+      },
+    });
+
+    // 7. Log email activity
+    await logActivity(
+      organization.id,
+      prospectId,
+      user.id,
+      'email',
+      'Email de qualification envoyé',
+      email.corps
+    );
+
+    // 8. Log email in email_logs
+    await logEmailSent(
+      organization.id,
+      prospect.email,
+      `${prospect.first_name} ${prospect.last_name}`.trim(),
+      'qualification',
+      email.objet,
+      email.corps,
+      result.messageId
+    );
+
+    return { workflow: 'qualification', success: true, actions };
+  } catch (error) {
+    console.error('Workflow qualification error:', error);
+    return {
+      workflow: 'qualification',
+      success: false,
+      actions,
+      error: error instanceof Error ? error.message : String(error),
+    };
+  }
+}
+
 /**
  * Main function to trigger CRM workflows based on stage change
  */
@@ -469,10 +622,18 @@ export async function triggerCrmWorkflow(
   }
 
   // Determine which workflow to trigger
+
   // Plaquette workflow: en_attente (or similar) + plaquette subtype
   if (WAITING_STAGE_SLUGS.includes(stageSlug) && subtype === 'plaquette') {
     console.log('🔄 CRM Workflow - Triggering PLAQUETTE workflow');
     return await workflowPlaquette(prospectId, organization, user);
+  }
+
+  // Qualification workflow: contacte (first contact)
+  // Only triggers if no subtype (not plaquette/rappel_differe)
+  if (QUALIFICATION_STAGE_SLUGS.includes(stageSlug) && !subtype) {
+    console.log('🔄 CRM Workflow - Triggering QUALIFICATION workflow');
+    return await workflowQualification(prospectId, organization, user);
   }
 
   // RDV workflow: rdv_pris OR rdv_valide
