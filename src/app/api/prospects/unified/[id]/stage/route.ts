@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUserAndOrganization } from '@/lib/services/get-organization';
 import { getProspectService } from '@/lib/services/factories/prospect-factory';
-import type { WaitingSubtype } from '@/types/pipeline';
+import { mapStageToSheetStatus, WaitingSubtype } from '@/types/pipeline';
+import { triggerCrmWorkflow } from '@/lib/services/workflows/crm-workflow-service';
+import type { ProspectData } from '@/lib/services/interfaces';
 
 export const dynamic = 'force-dynamic';
 
@@ -9,6 +11,100 @@ interface StageUpdateBody {
   stage?: string;
   stage_slug?: string;
   subtype?: WaitingSubtype;
+}
+
+interface WorkflowResult {
+  endpoint?: string;
+  workflow?: string;
+  status?: number;
+  success?: boolean;
+  result?: unknown;
+  error?: string;
+  actions?: string[];
+}
+
+/**
+ * Trigger workflow for Sheet mode
+ * Calls the webhook directly since Apps Script onEdit doesn't fire for API changes
+ */
+async function triggerSheetWorkflow(
+  stageSlug: string,
+  subtype: WaitingSubtype | undefined,
+  prospect: ProspectData,
+  organization: { id: string; google_sheet_id?: string },
+  userEmail: string
+): Promise<WorkflowResult | null> {
+  // Determine which webhook to call based on the new status
+  const sheetStatus = mapStageToSheetStatus(stageSlug, subtype);
+
+  let webhookEndpoint: string | null = null;
+
+  if (sheetStatus === 'À rappeler - Plaquette') {
+    // Check if mail not already sent
+    if (!prospect.mailPlaquetteEnvoye) {
+      webhookEndpoint = '/api/webhooks/plaquette';
+    }
+  } else if (sheetStatus === 'RDV Validé') {
+    // Check if mail not already sent
+    if (!prospect.mailSyntheseEnvoye) {
+      webhookEndpoint = '/api/webhooks/rdv-valide';
+    }
+  }
+
+  if (!webhookEndpoint) {
+    console.log('📧 No workflow to trigger for status:', sheetStatus);
+    return null;
+  }
+
+  console.log('📧 Triggering Sheet workflow:', webhookEndpoint, 'for status:', sheetStatus);
+
+  // Build payload matching Apps Script format
+  const payload = {
+    sheet_id: organization.google_sheet_id,
+    row_number: prospect.rowNumber,
+    conseiller_email: userEmail,
+    data: {
+      id: prospect.id,
+      date_lead: prospect.createdAt,
+      nom: prospect.lastName,
+      prenom: prospect.firstName,
+      email: prospect.email,
+      telephone: prospect.phone,
+      source: prospect.source,
+      age: prospect.age?.toString(),
+      situation_pro: prospect.situationPro,
+      revenus: prospect.revenusMensuels?.toString(),
+      patrimoine: prospect.patrimoine?.toString(),
+      besoins: prospect.besoins,
+      notes_appel: prospect.notesAppel,
+      statut: sheetStatus,
+      date_rdv: prospect.dateRdv,
+      rappel_souhaite: prospect.rappelSouhaite,
+      qualification: prospect.qualification,
+      score: prospect.scoreIa?.toString(),
+      priorite: null,
+      justification: prospect.justificationIa,
+      conseiller_email: userEmail,
+    },
+  };
+
+  try {
+    // Call webhook internally (same server)
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://ultron-murex.vercel.app';
+    const response = await fetch(`${baseUrl}${webhookEndpoint}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+
+    const result = await response.json();
+    console.log('📧 Workflow response:', response.status, result);
+
+    return { endpoint: webhookEndpoint, status: response.status, result };
+  } catch (error) {
+    console.error('📧 Workflow error:', error);
+    return { endpoint: webhookEndpoint, status: 500, error: String(error) };
+  }
 }
 
 export async function PATCH(
@@ -23,6 +119,7 @@ export async function PATCH(
       return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
     }
 
+    const { organization, user } = context;
     const body: StageUpdateBody = await request.json();
 
     // Accept both 'stage' and 'stage_slug' for flexibility
@@ -32,10 +129,38 @@ export async function PATCH(
       return NextResponse.json({ error: 'stage ou stage_slug requis' }, { status: 400 });
     }
 
-    const service = getProspectService(context.organization);
+    const service = getProspectService(organization);
+
+    // 1. Update the stage
     const prospect = await service.updateStage(id, stageSlug, body.subtype);
 
-    return NextResponse.json(prospect);
+    // 2. Trigger workflows based on mode
+    let workflowResult: WorkflowResult | null = null;
+
+    if (organization.data_mode === 'sheet') {
+      // Sheet mode: call webhook directly (since Apps Script onEdit won't fire)
+      workflowResult = await triggerSheetWorkflow(
+        stageSlug,
+        body.subtype,
+        prospect,
+        organization,
+        user.email
+      );
+    } else {
+      // CRM mode: trigger internal workflow
+      workflowResult = await triggerCrmWorkflow(
+        stageSlug,
+        body.subtype,
+        id,
+        organization,
+        user
+      );
+    }
+
+    return NextResponse.json({
+      ...prospect,
+      _workflow: workflowResult,
+    });
   } catch (error: unknown) {
     console.error('PATCH /api/prospects/unified/[id]/stage error:', error);
     const message = error instanceof Error ? error.message : 'Erreur serveur';
