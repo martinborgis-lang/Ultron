@@ -35,7 +35,7 @@ const WAITING_STAGE_SLUGS = ['en_attente', 'contacte', 'a_rappeler'];
 
 // Slugs qui déclenchent la modale "RDV Notes"
 // Supporte les deux formats (CRM et Sheet)
-const RDV_STAGE_SLUGS = ['rdv_pris', 'rdv_valide'];
+const RDV_STAGE_SLUGS = ['rdv_pris', 'rdv_valide', 'qualifie'];
 
 export function PipelineKanban({
   stages,
