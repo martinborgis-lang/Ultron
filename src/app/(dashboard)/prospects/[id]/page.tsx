@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
 import {
   Select,
   SelectContent,
@@ -32,22 +33,32 @@ import {
   ArrowLeft,
   Mail,
   Phone,
-  Building2,
-  MapPin,
   Loader2,
   Trash2,
   Save,
   AlertCircle,
+  User,
+  Briefcase,
+  Calendar,
+  Brain,
+  TrendingUp,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
-const qualificationOptions = [
-  { value: 'chaud', label: 'Chaud', color: 'bg-red-500' },
-  { value: 'tiede', label: 'Tiede', color: 'bg-orange-500' },
-  { value: 'froid', label: 'Froid', color: 'bg-blue-500' },
-  { value: 'non_qualifie', label: 'Non qualifie', color: 'bg-gray-500' },
-];
+const qualificationColors: Record<string, string> = {
+  chaud: 'bg-red-500 text-white',
+  tiede: 'bg-orange-500 text-white',
+  froid: 'bg-blue-500 text-white',
+  non_qualifie: 'bg-gray-500 text-white',
+};
+
+const qualificationLabels: Record<string, string> = {
+  chaud: 'CHAUD',
+  tiede: 'TIEDE',
+  froid: 'FROID',
+  non_qualifie: 'Non qualifie',
+};
 
 export default function ProspectDetailPage() {
   const router = useRouter();
@@ -67,8 +78,6 @@ export default function ProspectDetailPage() {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      console.log('🔍 Fetching prospect:', prospectId);
-
       // Use unified API which works for both CRM and Sheet modes
       const [prospectRes, stagesRes] = await Promise.all([
         fetch(`/api/prospects/unified/${prospectId}`),
@@ -76,15 +85,12 @@ export default function ProspectDetailPage() {
       ]);
 
       if (!prospectRes.ok) {
-        console.error('🔍 Prospect not found:', prospectRes.status);
         router.push('/prospects');
         return;
       }
 
       const prospectData = await prospectRes.json();
       const stagesData = await stagesRes.json();
-
-      console.log('🔍 Prospect data:', prospectData);
 
       // Detect Sheet mode by checking if ID starts with 'sheet-' or has rowNumber
       const sheetMode = prospectId.startsWith('sheet-') || prospectData.rowNumber !== undefined;
@@ -126,14 +132,16 @@ export default function ProspectDetailPage() {
           source_detail: null,
           assigned_to: prospectData.assignedTo || null,
           tags: [],
-          notes: prospectData.notesAppel || null,
+          notes: prospectData.besoins || null,
           lost_reason: null,
           won_date: null,
           lost_date: null,
           last_activity_at: null,
           created_at: prospectData.createdAt,
           updated_at: prospectData.updatedAt || null,
-        };
+          // Store revenusMensuels for display
+          revenus_mensuels: prospectData.revenusMensuels || null,
+        } as CrmProspect & { revenus_mensuels?: number | null };
       } else {
         // CRM mode - data is already in CRM format
         crmProspect = prospectData;
@@ -171,16 +179,26 @@ export default function ProspectDetailPage() {
   const handleSave = async () => {
     setSaving(true);
     try {
-      const response = await fetch(`/api/crm/prospects/${prospectId}`, {
+      const response = await fetch(`/api/prospects/unified/${prospectId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          firstName: formData.first_name,
+          lastName: formData.last_name,
+          email: formData.email,
+          phone: formData.phone,
+          age: formData.age,
+          situationPro: formData.profession,
+          revenusMensuels: formData.revenus_annuels ? Math.round(formData.revenus_annuels / 12) : null,
+          patrimoine: formData.patrimoine_estime,
+          besoins: formData.notes,
+          source: formData.source,
+        }),
       });
 
       if (!response.ok) throw new Error('Erreur');
 
-      const updated = await response.json();
-      setProspect(updated);
+      await fetchData();
       setEditMode(false);
     } catch (error) {
       console.error('Error saving:', error);
@@ -191,7 +209,7 @@ export default function ProspectDetailPage() {
 
   const handleDelete = async () => {
     try {
-      await fetch(`/api/crm/prospects/${prospectId}`, { method: 'DELETE' });
+      await fetch(`/api/prospects/unified/${prospectId}`, { method: 'DELETE' });
       router.push('/pipeline');
     } catch (error) {
       console.error('Error deleting:', error);
@@ -199,18 +217,13 @@ export default function ProspectDetailPage() {
   };
 
   const handleStageChange = async (newStageSlug: string) => {
-    const newStage = stages.find((s) => s.slug === newStageSlug);
     setFormData({ ...formData, stage_slug: newStageSlug });
 
-    // Save immediately
     try {
-      const response = await fetch(`/api/crm/prospects/${prospectId}`, {
+      const response = await fetch(`/api/prospects/unified/${prospectId}/stage`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          stage_slug: newStageSlug,
-          close_probability: newStage?.default_probability || formData.close_probability,
-        }),
+        body: JSON.stringify({ stage_slug: newStageSlug }),
       });
       if (response.ok) {
         fetchData();
@@ -233,6 +246,17 @@ export default function ProspectDetailPage() {
     }).format(value);
   };
 
+  // Calculate revenus mensuels from revenus annuels
+  const getRevenusMensuels = () => {
+    if ((prospect as any)?.revenus_mensuels) {
+      return (prospect as any).revenus_mensuels;
+    }
+    if (prospect?.revenus_annuels) {
+      return Math.round(prospect.revenus_annuels / 12);
+    }
+    return null;
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-96">
@@ -253,7 +277,7 @@ export default function ProspectDetailPage() {
   }
 
   const fullName = [prospect.first_name, prospect.last_name].filter(Boolean).join(' ') || 'Sans nom';
-  const forecastValue = ((formData.deal_value || 0) * (formData.close_probability || 0)) / 100;
+  const currentStage = stages.find(s => s.slug === prospect.stage_slug);
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">
@@ -264,12 +288,21 @@ export default function ProspectDetailPage() {
             <ArrowLeft className="w-5 h-5" />
           </Button>
           <div>
-            <h1 className="text-2xl font-bold">{fullName}</h1>
-            {prospect.company && (
-              <p className="text-muted-foreground flex items-center gap-1">
-                <Building2 className="w-4 h-4" />
-                {prospect.company}
-                {prospect.job_title && ` - ${prospect.job_title}`}
+            <div className="flex items-center gap-3">
+              <h1 className="text-2xl font-bold">{fullName}</h1>
+              {prospect.qualification && prospect.qualification !== 'non_qualifie' && (
+                <Badge className={qualificationColors[prospect.qualification] || 'bg-gray-500'}>
+                  {qualificationLabels[prospect.qualification] || prospect.qualification}
+                </Badge>
+              )}
+            </div>
+            {currentStage && (
+              <p className="text-muted-foreground flex items-center gap-2">
+                <div
+                  className="w-2 h-2 rounded-full"
+                  style={{ backgroundColor: currentStage.color }}
+                />
+                {currentStage.name}
               </p>
             )}
           </div>
@@ -339,24 +372,27 @@ export default function ProspectDetailPage() {
           {/* Contact Info */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Informations de contact</CardTitle>
+              <CardTitle className="text-base flex items-center gap-2">
+                <User className="w-4 h-4" />
+                Contact
+              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               {editMode ? (
                 <>
                   <div className="grid grid-cols-2 gap-2">
                     <div>
-                      <Label className="text-xs">Prenom</Label>
-                      <Input
-                        value={formData.first_name || ''}
-                        onChange={(e) => updateField('first_name', e.target.value)}
-                      />
-                    </div>
-                    <div>
                       <Label className="text-xs">Nom</Label>
                       <Input
                         value={formData.last_name || ''}
                         onChange={(e) => updateField('last_name', e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs">Prenom</Label>
+                      <Input
+                        value={formData.first_name || ''}
+                        onChange={(e) => updateField('first_name', e.target.value)}
                       />
                     </div>
                   </div>
@@ -374,27 +410,11 @@ export default function ProspectDetailPage() {
                       onChange={(e) => updateField('phone', e.target.value)}
                     />
                   </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <Label className="text-xs">Entreprise</Label>
-                      <Input
-                        value={formData.company || ''}
-                        onChange={(e) => updateField('company', e.target.value)}
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-xs">Poste</Label>
-                      <Input
-                        value={formData.job_title || ''}
-                        onChange={(e) => updateField('job_title', e.target.value)}
-                      />
-                    </div>
-                  </div>
                   <div>
-                    <Label className="text-xs">Ville</Label>
+                    <Label className="text-xs">Source</Label>
                     <Input
-                      value={formData.city || ''}
-                      onChange={(e) => updateField('city', e.target.value)}
+                      value={formData.source || ''}
+                      onChange={(e) => updateField('source', e.target.value)}
                     />
                   </div>
                 </>
@@ -416,182 +436,36 @@ export default function ProspectDetailPage() {
                       </a>
                     </div>
                   )}
-                  {prospect.city && (
-                    <div className="flex items-center gap-2 text-sm">
-                      <MapPin className="w-4 h-4 text-muted-foreground" />
-                      {prospect.city}
+                  {prospect.source && (
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">Source</span>
+                      <span>{prospect.source}</span>
                     </div>
                   )}
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Cree le</span>
+                    <span>
+                      {prospect.created_at
+                        ? format(new Date(prospect.created_at), 'dd MMM yyyy', { locale: fr })
+                        : '-'}
+                    </span>
+                  </div>
                 </>
               )}
             </CardContent>
           </Card>
 
-          {/* Pipeline */}
+          {/* Situation */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Pipeline</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label className="text-xs text-muted-foreground">Stage</Label>
-                <Select value={formData.stage_slug} onValueChange={handleStageChange}>
-                  <SelectTrigger className="mt-1">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {stages.map((stage) => (
-                      <SelectItem key={stage.slug} value={stage.slug}>
-                        <div className="flex items-center gap-2">
-                          <div
-                            className="w-2 h-2 rounded-full"
-                            style={{ backgroundColor: stage.color }}
-                          />
-                          {stage.name}
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <Label className="text-xs text-muted-foreground">Qualification</Label>
-                <Select
-                  value={formData.qualification}
-                  onValueChange={(v) => updateField('qualification', v)}
-                  disabled={!editMode}
-                >
-                  <SelectTrigger className="mt-1">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {qualificationOptions.map((q) => (
-                      <SelectItem key={q.value} value={q.value}>
-                        {q.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-xs text-muted-foreground">Valeur</Label>
-                  {editMode ? (
-                    <Input
-                      type="number"
-                      value={formData.deal_value || ''}
-                      onChange={(e) =>
-                        updateField('deal_value', e.target.value ? parseFloat(e.target.value) : null)
-                      }
-                      className="mt-1"
-                    />
-                  ) : (
-                    <p className="text-lg font-semibold text-green-400 mt-1">
-                      {formatCurrency(prospect.deal_value)}
-                    </p>
-                  )}
-                </div>
-                <div>
-                  <Label className="text-xs text-muted-foreground">Probabilite</Label>
-                  {editMode ? (
-                    <Input
-                      type="number"
-                      min="0"
-                      max="100"
-                      value={formData.close_probability || ''}
-                      onChange={(e) => updateField('close_probability', parseInt(e.target.value) || 0)}
-                      className="mt-1"
-                    />
-                  ) : (
-                    <p className="text-lg font-semibold mt-1">{prospect.close_probability}%</p>
-                  )}
-                </div>
-              </div>
-
-              <div>
-                <Label className="text-xs text-muted-foreground">Forecast pondere</Label>
-                <p className="text-lg font-semibold text-primary mt-1">
-                  {formatCurrency(forecastValue)}
-                </p>
-              </div>
-
-              <div>
-                <Label className="text-xs text-muted-foreground">Date closing prevue</Label>
-                {editMode ? (
-                  <Input
-                    type="date"
-                    value={formData.expected_close_date?.split('T')[0] || ''}
-                    onChange={(e) => updateField('expected_close_date', e.target.value)}
-                    className="mt-1"
-                  />
-                ) : (
-                  <p className="text-sm mt-1">
-                    {prospect.expected_close_date
-                      ? format(new Date(prospect.expected_close_date), 'dd MMMM yyyy', { locale: fr })
-                      : '-'}
-                  </p>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Patrimoine */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Patrimoine</CardTitle>
+              <CardTitle className="text-base flex items-center gap-2">
+                <Briefcase className="w-4 h-4" />
+                Situation
+              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               {editMode ? (
                 <>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <Label className="text-xs">Patrimoine estime</Label>
-                      <Input
-                        type="number"
-                        value={formData.patrimoine_estime || ''}
-                        onChange={(e) =>
-                          updateField(
-                            'patrimoine_estime',
-                            e.target.value ? parseFloat(e.target.value) : null
-                          )
-                        }
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-xs">Revenus annuels</Label>
-                      <Input
-                        type="number"
-                        value={formData.revenus_annuels || ''}
-                        onChange={(e) =>
-                          updateField(
-                            'revenus_annuels',
-                            e.target.value ? parseFloat(e.target.value) : null
-                          )
-                        }
-                      />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <Label className="text-xs">Situation</Label>
-                      <Input
-                        value={formData.situation_familiale || ''}
-                        onChange={(e) => updateField('situation_familiale', e.target.value)}
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-xs">Enfants</Label>
-                      <Input
-                        type="number"
-                        value={formData.nb_enfants || ''}
-                        onChange={(e) =>
-                          updateField('nb_enfants', e.target.value ? parseInt(e.target.value) : null)
-                        }
-                      />
-                    </div>
-                  </div>
                   <div className="grid grid-cols-2 gap-2">
                     <div>
                       <Label className="text-xs">Age</Label>
@@ -615,22 +489,6 @@ export default function ProspectDetailPage() {
               ) : (
                 <>
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Patrimoine estime</span>
-                    <span className="font-medium">{formatCurrency(prospect.patrimoine_estime)}</span>
-                  </div>
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Revenus annuels</span>
-                    <span className="font-medium">{formatCurrency(prospect.revenus_annuels)}</span>
-                  </div>
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Situation</span>
-                    <span>{prospect.situation_familiale || '-'}</span>
-                  </div>
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Enfants</span>
-                    <span>{prospect.nb_enfants ?? '-'}</span>
-                  </div>
-                  <div className="flex items-center justify-between text-sm">
                     <span className="text-muted-foreground">Age</span>
                     <span>{prospect.age ? `${prospect.age} ans` : '-'}</span>
                   </div>
@@ -643,10 +501,145 @@ export default function ProspectDetailPage() {
             </CardContent>
           </Card>
 
-          {/* Notes */}
+          {/* Financier */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Notes</CardTitle>
+              <CardTitle className="text-base flex items-center gap-2">
+                <TrendingUp className="w-4 h-4" />
+                Situation financiere
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {editMode ? (
+                <>
+                  <div>
+                    <Label className="text-xs">Revenus mensuels (EUR)</Label>
+                    <Input
+                      type="number"
+                      value={formData.revenus_annuels ? Math.round(formData.revenus_annuels / 12) : ''}
+                      onChange={(e) =>
+                        updateField(
+                          'revenus_annuels',
+                          e.target.value ? parseFloat(e.target.value) * 12 : null
+                        )
+                      }
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Patrimoine (EUR)</Label>
+                    <Input
+                      type="number"
+                      value={formData.patrimoine_estime || ''}
+                      onChange={(e) =>
+                        updateField(
+                          'patrimoine_estime',
+                          e.target.value ? parseFloat(e.target.value) : null
+                        )
+                      }
+                    />
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Revenus mensuels</span>
+                    <span className="font-medium">{formatCurrency(getRevenusMensuels())}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Patrimoine</span>
+                    <span className="font-medium">{formatCurrency(prospect.patrimoine_estime)}</span>
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Pipeline */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2">
+                <Calendar className="w-4 h-4" />
+                Pipeline
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label className="text-xs text-muted-foreground">Stage actuel</Label>
+                <Select
+                  value={formData.stage_slug}
+                  onValueChange={handleStageChange}
+                  disabled={isSheetMode}
+                >
+                  <SelectTrigger className="mt-1">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {stages.map((stage) => (
+                      <SelectItem key={stage.slug} value={stage.slug}>
+                        <div className="flex items-center gap-2">
+                          <div
+                            className="w-2 h-2 rounded-full"
+                            style={{ backgroundColor: stage.color }}
+                          />
+                          {stage.name}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {prospect.expected_close_date && (
+                <div>
+                  <Label className="text-xs text-muted-foreground">Date RDV</Label>
+                  <p className="text-sm mt-1">
+                    {format(new Date(prospect.expected_close_date), 'EEEE dd MMMM yyyy HH:mm', { locale: fr })}
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Classification IA */}
+          {(prospect.qualification && prospect.qualification !== 'non_qualifie') || prospect.score_ia || prospect.analyse_ia ? (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Brain className="w-4 h-4" />
+                  Classification IA
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {prospect.qualification && prospect.qualification !== 'non_qualifie' && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Qualification</span>
+                    <Badge className={qualificationColors[prospect.qualification] || 'bg-gray-500'}>
+                      {qualificationLabels[prospect.qualification] || prospect.qualification}
+                    </Badge>
+                  </div>
+                )}
+                {prospect.score_ia !== null && prospect.score_ia !== undefined && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Score</span>
+                    <span className="text-lg font-bold">{prospect.score_ia}/100</span>
+                  </div>
+                )}
+                {prospect.analyse_ia && (
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Analyse</Label>
+                    <p className="text-sm mt-1 p-3 bg-muted rounded-lg whitespace-pre-wrap">
+                      {prospect.analyse_ia}
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          ) : null}
+
+          {/* Besoins / Notes */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Besoins</CardTitle>
             </CardHeader>
             <CardContent>
               {editMode ? (
@@ -654,11 +647,11 @@ export default function ProspectDetailPage() {
                   value={formData.notes || ''}
                   onChange={(e) => updateField('notes', e.target.value)}
                   rows={4}
-                  placeholder="Ajouter des notes..."
+                  placeholder="Besoins exprimes par le prospect..."
                 />
               ) : (
                 <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-                  {prospect.notes || 'Aucune note'}
+                  {prospect.notes || 'Aucun besoin renseigne'}
                 </p>
               )}
             </CardContent>
@@ -667,7 +660,7 @@ export default function ProspectDetailPage() {
 
         {/* Right Column - Timeline & Tasks */}
         <div className="lg:col-span-2 space-y-6">
-          {/* Tasks */}
+          {/* Tasks / Planning */}
           <Card>
             <CardContent className="pt-6">
               <ProspectTasks tasks={tasks} prospectId={prospectId} onTasksChanged={fetchData} />
