@@ -453,8 +453,14 @@ const RDV_STAGE_SLUGS = ['rdv_pris', 'rdv_valide'];
 const QUALIFICATION_STAGE_SLUGS = ['contacte'];
 
 /**
- * WORKFLOW: Qualification - Analyse IA + Email de qualification
+ * WORKFLOW: Qualification - Analyse IA du prospect (sans email)
  * Triggered when: stage = 'contacte' (first contact with prospect)
+ *
+ * Actions:
+ * - Analyse le prospect avec Claude AI
+ * - Calcule score (0-100) et qualification (CHAUD/TIEDE/FROID)
+ * - Met à jour la base de données
+ * - Enregistre l'activité
  */
 async function workflowQualification(
   prospectId: string,
@@ -462,16 +468,11 @@ async function workflowQualification(
   user: WorkflowUser
 ): Promise<WorkflowResult> {
   const actions: string[] = [];
-  console.log('📧 Workflow Qualification - Starting for prospect:', prospectId);
+  console.log('🎯 Workflow Qualification - Starting for prospect:', prospectId);
 
   try {
     const prospect = await getCrmProspect(prospectId);
-    console.log('📧 Workflow Qualification - Prospect loaded:', prospect?.email, prospect?.first_name, prospect?.last_name);
-
-    if (!prospect.email) {
-      console.log('📧 Workflow Qualification - ERROR: No email');
-      return { workflow: 'qualification', success: false, actions, error: 'Email prospect manquant' };
-    }
+    console.log('🎯 Workflow Qualification - Prospect loaded:', prospect?.first_name, prospect?.last_name);
 
     // Check if already qualified (has a valid qualification other than non_qualifie)
     const isAlreadyQualified = prospect.qualification &&
@@ -479,21 +480,21 @@ async function workflowQualification(
       prospect.score_ia !== null;
 
     if (isAlreadyQualified) {
-      console.log('📧 Workflow Qualification - Already qualified:', prospect.qualification);
-      return { workflow: 'qualification', success: true, actions: [`Déjà qualifié: ${prospect.qualification}`] };
+      console.log('🎯 Workflow Qualification - Already qualified:', prospect.qualification, prospect.score_ia);
+      return { workflow: 'qualification', success: true, actions: [`Déjà qualifié: ${prospect.qualification} (${prospect.score_ia})`] };
     }
 
-    // Get full organization data
+    // Get full organization data for scoring config
     const fullOrg = await getFullOrganization(organization.id);
-    actions.push('Org data loaded');
+    actions.push('Config scoring chargée');
 
     // 1. Qualify prospect with AI
-    console.log('📧 Workflow Qualification - Starting AI qualification...');
+    console.log('🎯 Workflow Qualification - Starting AI analysis...');
     const qualificationResult = await qualifyProspect(
       {
         prenom: prospect.first_name || '',
         nom: prospect.last_name || '',
-        email: prospect.email,
+        email: prospect.email || '',
         telephone: prospect.phone,
         age: prospect.age?.toString(),
         situationPro: prospect.profession,
@@ -505,8 +506,8 @@ async function workflowQualification(
       fullOrg.scoring_config as ScoringConfig | null
     );
 
-    console.log('📧 Workflow Qualification - Result:', qualificationResult.qualification, qualificationResult.score);
-    actions.push(`Qualifié: ${qualificationResult.qualification} (${qualificationResult.score})`);
+    console.log('🎯 Workflow Qualification - Result:', qualificationResult.qualification, qualificationResult.score);
+    actions.push(`${qualificationResult.qualification} - Score: ${qualificationResult.score}/100`);
 
     // 2. Update prospect in database
     await updateCrmProspect(prospectId, {
@@ -523,71 +524,10 @@ async function workflowQualification(
       prospectId,
       user.id,
       'note',
-      `Prospect qualifié: ${qualificationResult.qualification}`,
-      `Score: ${qualificationResult.score}/100\nPriorité: ${qualificationResult.priorite}\n\n${qualificationResult.justification}`
+      `Qualification IA: ${qualificationResult.qualification} (${qualificationResult.score}/100)`,
+      `Priorité: ${qualificationResult.priorite}\n\n${qualificationResult.justification}`
     );
     actions.push('Activité enregistrée');
-
-    // 4. Get email credentials for sending qualification email
-    const emailCredentialsResult = await getEmailCredentials(organization.id, user.id);
-    if (!emailCredentialsResult) {
-      console.log('📧 Workflow Qualification - No email credentials, skipping email');
-      actions.push('Email non envoyé: pas de credentials');
-      return { workflow: 'qualification', success: true, actions };
-    }
-    actions.push(`Credentials: ${emailCredentialsResult.source}`);
-
-    // 5. Generate and send qualification email
-    const promptConfig = fullOrg.prompt_qualification as PromptConfig | null;
-    const email = await generateEmailWithConfig(
-      promptConfig,
-      DEFAULT_PROMPTS.qualification,
-      {
-        prenom: prospect.first_name,
-        nom: prospect.last_name,
-        email: prospect.email,
-        qualification: qualificationResult.qualification,
-        besoins: prospect.notes,
-      }
-    );
-    actions.push('Email généré');
-
-    const result = await sendEmail(emailCredentialsResult.credentials, {
-      to: prospect.email,
-      subject: email.objet,
-      body: email.corps,
-    });
-    actions.push('Email envoyé');
-
-    // 6. Update metadata to track email sent
-    await updateCrmProspect(prospectId, {
-      metadata: {
-        ...(prospect.metadata || {}),
-        mail_qualification_sent: true,
-        mail_qualification_sent_at: new Date().toISOString(),
-      },
-    });
-
-    // 7. Log email activity
-    await logActivity(
-      organization.id,
-      prospectId,
-      user.id,
-      'email',
-      'Email de qualification envoyé',
-      email.corps
-    );
-
-    // 8. Log email in email_logs
-    await logEmailSent(
-      organization.id,
-      prospect.email,
-      `${prospect.first_name} ${prospect.last_name}`.trim(),
-      'qualification',
-      email.objet,
-      email.corps,
-      result.messageId
-    );
 
     return { workflow: 'qualification', success: true, actions };
   } catch (error) {
