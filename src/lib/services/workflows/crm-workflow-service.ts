@@ -1,6 +1,6 @@
 import { createAdminClient } from '@/lib/supabase-admin';
 import { qualifyProspect, generateEmailWithConfig, DEFAULT_PROMPTS, PromptConfig, ScoringConfig } from '@/lib/anthropic';
-import { sendEmail, sendEmailWithBufferAttachment, getEmailCredentials } from '@/lib/gmail';
+import { sendEmail, sendEmailWithBufferAttachment, getEmailCredentials, EmailCredentialsResult } from '@/lib/gmail';
 import { scheduleRappelEmail } from '@/lib/qstash';
 import { getValidCredentials, downloadFileFromDrive, GoogleCredentials } from '@/lib/google';
 import type { WaitingSubtype } from '@/types/pipeline';
@@ -10,6 +10,7 @@ interface WorkflowResult {
   success: boolean;
   actions: string[];
   error?: string;
+  warning?: string; // Warning about fallback used
 }
 
 interface WorkflowOrganization {
@@ -171,12 +172,32 @@ async function workflowPlaquette(
     actions.push(`Conseiller: ${advisorEmail}`);
 
     // Get email credentials - try assigned advisor first
-    let emailCredentialsResult = await getEmailCredentials(organization.id, advisorUserId);
+    let credentialsResponse = await getEmailCredentials(organization.id, advisorUserId);
+    let emailCredentialsResult: EmailCredentialsResult | null = credentialsResponse.result;
+    let warning: string | undefined;
+
     console.log('📧 Workflow Plaquette - Credentials result:', emailCredentialsResult?.source, emailCredentialsResult?.userId);
 
+    // Handle invalid_grant error - fallback to organization
+    if (credentialsResponse.error?.error === 'invalid_grant') {
+      console.log('⚠️ Workflow Plaquette - Token invalide, fallback sur organisation');
+      warning = credentialsResponse.error.message;
+      actions.push(`⚠️ Token expiré: ${credentialsResponse.error.userEmail}`);
+
+      // Try to get organization credentials as fallback
+      const orgCredentials = await getEmailCredentials(organization.id);
+      emailCredentialsResult = orgCredentials.result;
+
+      if (emailCredentialsResult) {
+        console.log('📧 Workflow Plaquette - Using org credentials as fallback');
+        actions.push('Fallback: credentials organisation');
+      }
+    }
+
     if (!emailCredentialsResult) {
-      console.log('📧 Workflow Plaquette - No credentials found for advisor, cannot send email');
-      return { workflow: 'plaquette', success: false, actions, error: `Pas de credentials email pour ${advisorEmail}` };
+      console.log('📧 Workflow Plaquette - No credentials found, cannot send email');
+      const errorMsg = credentialsResponse.error?.message || `Pas de credentials email pour ${advisorEmail}`;
+      return { workflow: 'plaquette', success: false, actions, error: errorMsg };
     }
     actions.push(`Credentials: ${emailCredentialsResult.source} (${emailCredentialsResult.userId || 'org'})`);
 
@@ -259,7 +280,7 @@ async function workflowPlaquette(
       !!attachment
     );
 
-    return { workflow: 'plaquette', success: true, actions };
+    return { workflow: 'plaquette', success: true, actions, warning };
   } catch (error) {
     console.error('Workflow plaquette error:', error);
     return {
@@ -345,13 +366,33 @@ async function workflowRdvValide(
       }
     }
 
-    // 2. Get email credentials
-    const emailCredentialsResult = await getEmailCredentials(organization.id, advisorUserId);
+    // 2. Get email credentials - try assigned advisor first
+    let credentialsResponse = await getEmailCredentials(organization.id, advisorUserId);
+    let emailCredentialsResult: EmailCredentialsResult | null = credentialsResponse.result;
+    let warning: string | undefined;
+
     console.log('📧 Workflow RDV Validé - Credentials result:', emailCredentialsResult?.source, emailCredentialsResult?.userId);
 
+    // Handle invalid_grant error - fallback to organization
+    if (credentialsResponse.error?.error === 'invalid_grant') {
+      console.log('⚠️ Workflow RDV Validé - Token invalide, fallback sur organisation');
+      warning = credentialsResponse.error.message;
+      actions.push(`⚠️ Token expiré: ${credentialsResponse.error.userEmail}`);
+
+      // Try to get organization credentials as fallback
+      const orgCredentials = await getEmailCredentials(organization.id);
+      emailCredentialsResult = orgCredentials.result;
+
+      if (emailCredentialsResult) {
+        console.log('📧 Workflow RDV Validé - Using org credentials as fallback');
+        actions.push('Fallback: credentials organisation');
+      }
+    }
+
     if (!emailCredentialsResult) {
-      console.log('📧 Workflow RDV Validé - No credentials found for advisor, cannot send email');
-      return { workflow: 'rdv_valide', success: false, actions, error: `Pas de credentials email pour ${advisorEmail}` };
+      console.log('📧 Workflow RDV Validé - No credentials found, cannot send email');
+      const errorMsg = credentialsResponse.error?.message || `Pas de credentials email pour ${advisorEmail}`;
+      return { workflow: 'rdv_valide', success: false, actions, error: errorMsg };
     }
     actions.push(`Credentials: ${emailCredentialsResult.source} (${emailCredentialsResult.userId || 'org'})`);
 
@@ -477,7 +518,7 @@ async function workflowRdvValide(
       result.messageId
     );
 
-    return { workflow: 'rdv_valide', success: true, actions };
+    return { workflow: 'rdv_valide', success: true, actions, warning };
   } catch (error) {
     console.error('Workflow rdv_valide error:', error);
     return {

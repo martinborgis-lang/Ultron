@@ -6,43 +6,80 @@ export interface EmailCredentialsResult {
   credentials: GoogleCredentials;
   source: 'user' | 'organization';
   userId?: string;
+  userEmail?: string;
+}
+
+export interface EmailCredentialsError {
+  error: 'invalid_grant' | 'no_credentials' | 'unknown';
+  userId?: string;
+  userEmail?: string;
+  message: string;
 }
 
 /**
  * Get the appropriate Gmail credentials for sending emails.
  * Priority: 1. User's gmail_credentials 2. Organization's google_credentials
+ * Returns error info if user's token is invalid (needs reconnection)
  */
 export async function getEmailCredentials(
   organizationId: string,
   userId?: string
-): Promise<EmailCredentialsResult | null> {
+): Promise<{ result: EmailCredentialsResult | null; error?: EmailCredentialsError }> {
   const supabase = createAdminClient();
 
   // If userId is provided, try to get user's Gmail credentials first
   if (userId) {
     const { data: user } = await supabase
       .from('users')
-      .select('id, gmail_credentials')
+      .select('id, email, gmail_credentials')
       .eq('id', userId)
       .eq('organization_id', organizationId)
       .single();
 
     if (user?.gmail_credentials) {
-      const validCredentials = await getValidCredentials(user.gmail_credentials as GoogleCredentials);
+      try {
+        const validCredentials = await getValidCredentials(user.gmail_credentials as GoogleCredentials);
 
-      // Update credentials if refreshed
-      if (validCredentials !== user.gmail_credentials) {
-        await supabase
-          .from('users')
-          .update({ gmail_credentials: validCredentials })
-          .eq('id', userId);
+        // Update credentials if refreshed
+        if (validCredentials !== user.gmail_credentials) {
+          await supabase
+            .from('users')
+            .update({ gmail_credentials: validCredentials })
+            .eq('id', userId);
+        }
+
+        return {
+          result: {
+            credentials: validCredentials,
+            source: 'user',
+            userId: user.id,
+            userEmail: user.email,
+          },
+        };
+      } catch (error: unknown) {
+        // Check if it's an invalid_grant error (token expired/revoked)
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        if (errorMessage.includes('invalid_grant')) {
+          console.log(`⚠️ Token invalide pour ${user.email} - le conseiller doit reconnecter son Gmail`);
+
+          // Clear invalid credentials
+          await supabase
+            .from('users')
+            .update({ gmail_credentials: null })
+            .eq('id', userId);
+
+          return {
+            result: null,
+            error: {
+              error: 'invalid_grant',
+              userId: user.id,
+              userEmail: user.email,
+              message: `Le conseiller ${user.email} doit reconnecter son compte Gmail dans Paramètres > Équipe`,
+            },
+          };
+        }
+        throw error; // Re-throw other errors
       }
-
-      return {
-        credentials: validCredentials,
-        source: 'user',
-        userId: user.id,
-      };
     }
   }
 
@@ -54,33 +91,50 @@ export async function getEmailCredentials(
     .single();
 
   if (org?.google_credentials) {
-    const validCredentials = await getValidCredentials(org.google_credentials as GoogleCredentials);
+    try {
+      const validCredentials = await getValidCredentials(org.google_credentials as GoogleCredentials);
 
-    // Update credentials if refreshed
-    if (validCredentials !== org.google_credentials) {
-      await supabase
-        .from('organizations')
-        .update({ google_credentials: validCredentials })
-        .eq('id', organizationId);
+      // Update credentials if refreshed
+      if (validCredentials !== org.google_credentials) {
+        await supabase
+          .from('organizations')
+          .update({ google_credentials: validCredentials })
+          .eq('id', organizationId);
+      }
+
+      return {
+        result: {
+          credentials: validCredentials,
+          source: 'organization',
+        },
+      };
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      if (errorMessage.includes('invalid_grant')) {
+        return {
+          result: null,
+          error: {
+            error: 'invalid_grant',
+            message: `Les credentials de l'organisation sont invalides. Reconnectez Google dans Paramètres.`,
+          },
+        };
+      }
+      throw error;
     }
-
-    return {
-      credentials: validCredentials,
-      source: 'organization',
-    };
   }
 
-  return null;
+  return { result: null };
 }
 
 /**
  * Get Gmail credentials by looking up the user by email address.
  * Priority: 1. User's gmail_credentials (by email) 2. Organization's google_credentials
+ * Returns error info if user's token is invalid (needs reconnection)
  */
 export async function getEmailCredentialsByEmail(
   organizationId: string,
   userEmail?: string
-): Promise<EmailCredentialsResult | null> {
+): Promise<{ result: EmailCredentialsResult | null; error?: EmailCredentialsError }> {
   const supabase = createAdminClient();
 
   console.log('=== RECHERCHE CONSEILLER PAR EMAIL ===');
@@ -101,22 +155,49 @@ export async function getEmailCredentialsByEmail(
     console.log('Gmail credentials presents:', !!user?.gmail_credentials);
 
     if (user?.gmail_credentials) {
-      const validCredentials = await getValidCredentials(user.gmail_credentials as GoogleCredentials);
+      try {
+        const validCredentials = await getValidCredentials(user.gmail_credentials as GoogleCredentials);
 
-      // Update credentials if refreshed
-      if (validCredentials !== user.gmail_credentials) {
-        await supabase
-          .from('users')
-          .update({ gmail_credentials: validCredentials })
-          .eq('id', user.id);
+        // Update credentials if refreshed
+        if (validCredentials !== user.gmail_credentials) {
+          await supabase
+            .from('users')
+            .update({ gmail_credentials: validCredentials })
+            .eq('id', user.id);
+        }
+
+        console.log('✅ Utilisation Gmail conseiller:', user.email);
+        return {
+          result: {
+            credentials: validCredentials,
+            source: 'user',
+            userId: user.id,
+            userEmail: user.email,
+          },
+        };
+      } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        if (errorMessage.includes('invalid_grant')) {
+          console.log(`⚠️ Token invalide pour ${user.email} - le conseiller doit reconnecter son Gmail`);
+
+          // Clear invalid credentials
+          await supabase
+            .from('users')
+            .update({ gmail_credentials: null })
+            .eq('id', user.id);
+
+          return {
+            result: null,
+            error: {
+              error: 'invalid_grant',
+              userId: user.id,
+              userEmail: user.email,
+              message: `Le conseiller ${user.email} doit reconnecter son compte Gmail dans Paramètres > Équipe`,
+            },
+          };
+        }
+        throw error;
       }
-
-      console.log('✅ Utilisation Gmail conseiller:', user.email);
-      return {
-        credentials: validCredentials,
-        source: 'user',
-        userId: user.id,
-      };
     } else if (user) {
       console.log('⚠️ Conseiller trouve mais sans Gmail connecte, fallback sur organisation');
     } else {
@@ -134,24 +215,40 @@ export async function getEmailCredentialsByEmail(
     .single();
 
   if (org?.google_credentials) {
-    const validCredentials = await getValidCredentials(org.google_credentials as GoogleCredentials);
+    try {
+      const validCredentials = await getValidCredentials(org.google_credentials as GoogleCredentials);
 
-    // Update credentials if refreshed
-    if (validCredentials !== org.google_credentials) {
-      await supabase
-        .from('organizations')
-        .update({ google_credentials: validCredentials })
-        .eq('id', organizationId);
+      // Update credentials if refreshed
+      if (validCredentials !== org.google_credentials) {
+        await supabase
+          .from('organizations')
+          .update({ google_credentials: validCredentials })
+          .eq('id', organizationId);
+      }
+
+      console.log('📧 Utilisation Gmail organisation');
+      return {
+        result: {
+          credentials: validCredentials,
+          source: 'organization',
+        },
+      };
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      if (errorMessage.includes('invalid_grant')) {
+        return {
+          result: null,
+          error: {
+            error: 'invalid_grant',
+            message: `Les credentials de l'organisation sont invalides. Reconnectez Google dans Paramètres.`,
+          },
+        };
+      }
+      throw error;
     }
-
-    console.log('📧 Utilisation Gmail organisation');
-    return {
-      credentials: validCredentials,
-      source: 'organization',
-    };
   }
 
-  return null;
+  return { result: null };
 }
 
 export interface EmailOptions {

@@ -120,12 +120,19 @@ export async function POST(request: NextRequest) {
 
     // Get email credentials (advisor's Gmail by email, or fallback to org)
     const conseillerEmail = payload.conseiller_email || payload.data?.conseiller_email;
-    const emailCredentialsResult = await getEmailCredentialsByEmail(org.id, conseillerEmail);
+    const credentialsResponse = await getEmailCredentialsByEmail(org.id, conseillerEmail);
+
+    // Handle invalid_grant - fallback to org credentials
+    let emailCredentialsResult = credentialsResponse.result;
+    if (credentialsResponse.error?.error === 'invalid_grant') {
+      console.log('⚠️ Token invalide, fallback sur organisation:', credentialsResponse.error.message);
+      const orgCredentials = await getEmailCredentialsByEmail(org.id);
+      emailCredentialsResult = orgCredentials.result;
+    }
+
     if (!emailCredentialsResult) {
-      return NextResponse.json(
-        { error: 'No email credentials available' },
-        { status: 400 }
-      );
+      const errorMsg = credentialsResponse.error?.message || 'No email credentials available';
+      return NextResponse.json({ error: errorMsg }, { status: 400 });
     }
     const emailCredentials = emailCredentialsResult.credentials;
     console.log('Using email credentials from:', emailCredentialsResult.source, emailCredentialsResult.userId || 'org');
