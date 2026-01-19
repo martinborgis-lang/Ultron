@@ -32,12 +32,15 @@ export default function PlanningPage() {
 
   useEffect(() => {
     fetchEvents();
-  }, [filter]);
+  }, [filter, view]);
 
   const fetchEvents = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/planning?filter=${filter}`);
+      // En vue calendrier, on charge tous les événements pour avoir une vue globale
+      // En vue liste, on applique le filtre sélectionné
+      const activeFilter = view === 'calendar' ? 'all' : filter;
+      const res = await fetch(`/api/planning?filter=${activeFilter}`);
       if (res.ok) {
         const data = await res.json();
         setEvents(data);
