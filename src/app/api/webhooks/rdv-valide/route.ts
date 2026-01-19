@@ -264,6 +264,7 @@ export async function POST(request: NextRequest) {
                   year: 'numeric',
                   hour: '2-digit',
                   minute: '2-digit',
+                  timeZone: 'Europe/Paris', // Force Paris timezone
                 }),
                 qualification: prospect.qualificationIA,
                 besoins: prospect.besoins,

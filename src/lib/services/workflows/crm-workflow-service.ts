@@ -334,7 +334,7 @@ async function workflowRdvValide(
     // 3. Generate and send synthese email
     const promptConfig = fullOrg.prompt_synthese as PromptConfig | null;
 
-    // Format date RDV
+    // Format date RDV with Paris timezone (server runs in UTC)
     let dateRdvFormatted = '';
     if (prospect.expected_close_date) {
       const rdvDate = new Date(prospect.expected_close_date);
@@ -345,6 +345,7 @@ async function workflowRdvValide(
         year: 'numeric',
         hour: '2-digit',
         minute: '2-digit',
+        timeZone: 'Europe/Paris', // Force Paris timezone
       });
     }
 

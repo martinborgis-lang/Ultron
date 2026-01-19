@@ -25,7 +25,13 @@ function getDefaultRdvDate(): string {
   const tomorrow = new Date();
   tomorrow.setDate(tomorrow.getDate() + 1);
   tomorrow.setHours(10, 0, 0, 0);
-  return tomorrow.toISOString().slice(0, 16);
+  // Format as local datetime for datetime-local input (YYYY-MM-DDTHH:mm)
+  const year = tomorrow.getFullYear();
+  const month = String(tomorrow.getMonth() + 1).padStart(2, '0');
+  const day = String(tomorrow.getDate()).padStart(2, '0');
+  const hours = String(tomorrow.getHours()).padStart(2, '0');
+  const minutes = String(tomorrow.getMinutes()).padStart(2, '0');
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
 }
 
 export function RdvNotesModal({
@@ -46,7 +52,21 @@ export function RdvNotesModal({
   }, [open]);
 
   const handleConfirm = () => {
-    onConfirm(notes, new Date(rdvDate));
+    // Parse the datetime-local value and create a proper Date
+    // The input gives us "YYYY-MM-DDTHH:mm" in local time
+    // We parse it manually to ensure correct interpretation
+    const [datePart, timePart] = rdvDate.split('T');
+    const [year, month, day] = datePart.split('-').map(Number);
+    const [hours, minutes] = timePart.split(':').map(Number);
+
+    // Create date using local time constructor
+    const localDate = new Date(year, month - 1, day, hours, minutes, 0, 0);
+
+    console.log('RDV Modal - Input:', rdvDate);
+    console.log('RDV Modal - Parsed as local:', localDate.toString());
+    console.log('RDV Modal - ISO (UTC):', localDate.toISOString());
+
+    onConfirm(notes, localDate);
     onOpenChange(false);
   };
 
