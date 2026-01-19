@@ -63,7 +63,7 @@ export interface Prospect {
   id: number;
   nom: string;
   prenom: string;
-  qualification: 'CHAUD' | 'TIEDE' | 'FROID';
+  qualification: 'CHAUD' | 'TIEDE' | 'FROID' | 'NON_QUALIFIE' | '';
   score: number;
   statut: string;
 }
