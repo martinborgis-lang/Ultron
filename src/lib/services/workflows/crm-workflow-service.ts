@@ -441,105 +441,13 @@ async function workflowRdvValide(
   }
 }
 
-// Stage slugs that trigger the "En attente" workflow with plaquette
+// Stage slugs that trigger the "Plaquette" workflow
+// Supports both CRM and Sheet stage names
 const WAITING_STAGE_SLUGS = ['en_attente', 'contacte', 'a_rappeler'];
 
-// Stage slugs that trigger the "RDV Validé" workflow
+// Stage slugs that trigger the "RDV Validé" workflow (with qualification)
 // Supports both Sheet format (rdv_pris) and CRM format (rdv_valide)
 const RDV_STAGE_SLUGS = ['rdv_pris', 'rdv_valide'];
-
-// Stage slugs that trigger automatic qualification
-// Triggered when first contact is made with prospect
-const QUALIFICATION_STAGE_SLUGS = ['contacte'];
-
-/**
- * WORKFLOW: Qualification - Analyse IA du prospect (sans email)
- * Triggered when: stage = 'contacte' (first contact with prospect)
- *
- * Actions:
- * - Analyse le prospect avec Claude AI
- * - Calcule score (0-100) et qualification (CHAUD/TIEDE/FROID)
- * - Met à jour la base de données
- * - Enregistre l'activité
- */
-async function workflowQualification(
-  prospectId: string,
-  organization: WorkflowOrganization,
-  user: WorkflowUser
-): Promise<WorkflowResult> {
-  const actions: string[] = [];
-  console.log('🎯 Workflow Qualification - Starting for prospect:', prospectId);
-
-  try {
-    const prospect = await getCrmProspect(prospectId);
-    console.log('🎯 Workflow Qualification - Prospect loaded:', prospect?.first_name, prospect?.last_name);
-
-    // Check if already qualified (has a valid qualification other than non_qualifie)
-    const isAlreadyQualified = prospect.qualification &&
-      prospect.qualification !== 'non_qualifie' &&
-      prospect.score_ia !== null;
-
-    if (isAlreadyQualified) {
-      console.log('🎯 Workflow Qualification - Already qualified:', prospect.qualification, prospect.score_ia);
-      return { workflow: 'qualification', success: true, actions: [`Déjà qualifié: ${prospect.qualification} (${prospect.score_ia})`] };
-    }
-
-    // Get full organization data for scoring config
-    const fullOrg = await getFullOrganization(organization.id);
-    actions.push('Config scoring chargée');
-
-    // 1. Qualify prospect with AI
-    console.log('🎯 Workflow Qualification - Starting AI analysis...');
-    const qualificationResult = await qualifyProspect(
-      {
-        prenom: prospect.first_name || '',
-        nom: prospect.last_name || '',
-        email: prospect.email || '',
-        telephone: prospect.phone,
-        age: prospect.age?.toString(),
-        situationPro: prospect.profession,
-        revenus: prospect.revenus_annuels?.toString(),
-        patrimoine: prospect.patrimoine_estime?.toString(),
-        besoins: prospect.notes,
-        notesAppel: prospect.notes,
-      },
-      fullOrg.scoring_config as ScoringConfig | null
-    );
-
-    console.log('🎯 Workflow Qualification - Result:', qualificationResult.qualification, qualificationResult.score);
-    actions.push(`${qualificationResult.qualification} - Score: ${qualificationResult.score}/100`);
-
-    // 2. Update prospect in database
-    await updateCrmProspect(prospectId, {
-      qualification: qualificationResult.qualification.toLowerCase(),
-      score_ia: qualificationResult.score,
-      analyse_ia: qualificationResult.justification,
-      derniere_qualification: new Date().toISOString(),
-    });
-    actions.push('Prospect mis à jour');
-
-    // 3. Log activity for qualification
-    await logActivity(
-      organization.id,
-      prospectId,
-      user.id,
-      'note',
-      `Qualification IA: ${qualificationResult.qualification} (${qualificationResult.score}/100)`,
-      `Priorité: ${qualificationResult.priorite}\n\n${qualificationResult.justification}`
-    );
-    actions.push('Activité enregistrée');
-
-    return { workflow: 'qualification', success: true, actions };
-  } catch (error) {
-    console.error('Workflow qualification error:', error);
-    return {
-      workflow: 'qualification',
-      success: false,
-      actions,
-      error: error instanceof Error ? error.message : String(error),
-    };
-  }
-}
 
 /**
  * Main function to trigger CRM workflows based on stage change
@@ -564,19 +472,14 @@ export async function triggerCrmWorkflow(
   // Determine which workflow to trigger
 
   // Plaquette workflow: en_attente (or similar) + plaquette subtype
+  // Sends email with PDF plaquette attachment
   if (WAITING_STAGE_SLUGS.includes(stageSlug) && subtype === 'plaquette') {
     console.log('🔄 CRM Workflow - Triggering PLAQUETTE workflow');
     return await workflowPlaquette(prospectId, organization, user);
   }
 
-  // Qualification workflow: contacte (first contact)
-  // Only triggers if no subtype (not plaquette/rappel_differe)
-  if (QUALIFICATION_STAGE_SLUGS.includes(stageSlug) && !subtype) {
-    console.log('🔄 CRM Workflow - Triggering QUALIFICATION workflow');
-    return await workflowQualification(prospectId, organization, user);
-  }
-
   // RDV workflow: rdv_pris OR rdv_valide
+  // Does: Qualification IA + Email récap + Rappel 24h
   if (RDV_STAGE_SLUGS.includes(stageSlug)) {
     console.log('🔄 CRM Workflow - Triggering RDV_VALIDE workflow');
     return await workflowRdvValide(prospectId, organization, user);
