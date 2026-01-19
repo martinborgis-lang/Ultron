@@ -7,8 +7,7 @@ import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Bot, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 
 export function RegisterForm() {
   const router = useRouter();
@@ -100,93 +99,130 @@ export function RegisterForm() {
   };
 
   return (
-    <Card className="shadow-xl border-0">
-      <CardHeader className="text-center space-y-4">
-        <div className="flex justify-center">
-          <div className="flex items-center gap-2 text-indigo-600">
-            <Bot className="h-8 w-8" />
-            <span className="text-2xl font-bold">ULTRON</span>
-          </div>
-        </div>
-        <div>
-          <CardTitle className="text-2xl">Creer un compte</CardTitle>
-          <CardDescription>
-            Inscrivez-vous pour commencer a automatiser votre prospection
-          </CardDescription>
-        </div>
-      </CardHeader>
-      <form onSubmit={handleSubmit}>
-        <CardContent className="space-y-4">
-          {error && (
-            <div className="bg-red-50 text-red-600 text-sm p-3 rounded-lg">
-              {error}
+    <div className="relative">
+      {/* Glassmorphism card */}
+      <div className="bg-white/10 backdrop-blur-xl rounded-2xl border border-white/20 shadow-2xl shadow-black/20 overflow-hidden">
+        {/* Header */}
+        <div className="text-center pt-8 pb-6 px-8">
+          <div className="flex justify-center mb-6">
+            <div className="flex items-center gap-2">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-500 flex items-center justify-center">
+                <span className="text-white font-bold text-lg">U</span>
+              </div>
+              <span className="text-2xl font-bold text-white">ULTRON</span>
             </div>
-          )}
-          <div className="space-y-2">
-            <Label htmlFor="fullName">Nom complet</Label>
-            <Input
-              id="fullName"
-              type="text"
-              placeholder="Jean Dupont"
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
-              required
-            />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="companyName">Nom de l&apos;entreprise</Label>
-            <Input
-              id="companyName"
-              type="text"
-              placeholder="Cabinet Patrimoine"
-              value={companyName}
-              onChange={(e) => setCompanyName(e.target.value)}
-              required
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              placeholder="vous@exemple.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="password">Mot de passe</Label>
-            <Input
-              id="password"
-              type="password"
-              placeholder="Minimum 6 caracteres"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              minLength={6}
-              required
-            />
-          </div>
-        </CardContent>
-        <CardFooter className="flex flex-col gap-4">
-          <Button type="submit" className="w-full bg-indigo-600 hover:bg-indigo-700" disabled={loading}>
-            {loading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Creation...
-              </>
-            ) : (
-              'Creer mon compte'
+          <h1 className="text-2xl font-bold text-white mb-2">Creer un compte</h1>
+          <p className="text-white/60">Inscrivez-vous pour commencer a automatiser votre prospection</p>
+        </div>
+
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="px-8 pb-8">
+          <div className="space-y-5">
+            {error && (
+              <div className="bg-red-500/20 border border-red-500/30 text-red-200 text-sm p-3 rounded-lg backdrop-blur-sm">
+                {error}
+              </div>
             )}
-          </Button>
-          <p className="text-sm text-muted-foreground text-center">
-            Deja un compte ?{' '}
-            <Link href="/login" className="text-indigo-600 hover:underline font-medium">
-              Se connecter
-            </Link>
-          </p>
-        </CardFooter>
-      </form>
-    </Card>
+
+            <div className="space-y-2">
+              <Label htmlFor="fullName" className="text-white/80">
+                Nom complet
+              </Label>
+              <Input
+                id="fullName"
+                type="text"
+                placeholder="Jean Dupont"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                required
+                className="bg-white/10 border-white/20 text-white placeholder:text-white/40 focus:border-indigo-400 focus:ring-indigo-400/20"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="companyName" className="text-white/80">
+                Nom de l&apos;entreprise
+              </Label>
+              <Input
+                id="companyName"
+                type="text"
+                placeholder="Cabinet Patrimoine"
+                value={companyName}
+                onChange={(e) => setCompanyName(e.target.value)}
+                required
+                className="bg-white/10 border-white/20 text-white placeholder:text-white/40 focus:border-indigo-400 focus:ring-indigo-400/20"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="email" className="text-white/80">
+                Email
+              </Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="vous@exemple.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                className="bg-white/10 border-white/20 text-white placeholder:text-white/40 focus:border-indigo-400 focus:ring-indigo-400/20"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="password" className="text-white/80">
+                Mot de passe
+              </Label>
+              <Input
+                id="password"
+                type="password"
+                placeholder="Minimum 6 caracteres"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                minLength={6}
+                required
+                className="bg-white/10 border-white/20 text-white placeholder:text-white/40 focus:border-indigo-400 focus:ring-indigo-400/20"
+              />
+            </div>
+
+            <Button
+              type="submit"
+              className="w-full bg-gradient-to-r from-indigo-500 to-violet-500 hover:from-indigo-600 hover:to-violet-600 text-white py-6 rounded-xl shadow-lg shadow-indigo-500/25 transition-all hover:shadow-xl hover:shadow-indigo-500/40"
+              disabled={loading}
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Creation...
+                </>
+              ) : (
+                'Creer mon compte'
+              )}
+            </Button>
+
+            <p className="text-sm text-white/50 text-center pt-2">
+              Deja un compte ?{' '}
+              <Link
+                href="/login"
+                className="text-indigo-400 hover:text-indigo-300 font-medium transition-colors"
+              >
+                Se connecter
+              </Link>
+            </p>
+          </div>
+        </form>
+      </div>
+
+      {/* Back to home link */}
+      <div className="text-center mt-6">
+        <Link
+          href="/"
+          className="text-sm text-white/40 hover:text-white/60 transition-colors"
+        >
+          Retour a l'accueil
+        </Link>
+      </div>
+    </div>
   );
 }
