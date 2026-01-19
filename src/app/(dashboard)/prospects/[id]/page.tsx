@@ -102,56 +102,50 @@ export default function ProspectDetailPage() {
       const sheetMode = prospectId.startsWith('sheet-') || prospectData.rowNumber !== undefined;
       setIsSheetMode(sheetMode);
 
-      // Convert unified format to CRM format for compatibility
-      let crmProspect: CrmProspect;
-      if (sheetMode) {
-        // Sheet mode - convert ProspectData to CrmProspect format
-        crmProspect = {
-          id: prospectData.id,
-          organization_id: '',
-          first_name: prospectData.firstName,
-          last_name: prospectData.lastName,
-          email: prospectData.email,
-          phone: prospectData.phone || null,
-          company: null,
-          job_title: null,
-          address: null,
-          city: null,
-          postal_code: null,
-          country: 'France',
-          patrimoine_estime: prospectData.patrimoine || null,
-          revenus_annuels: prospectData.revenusMensuels ? prospectData.revenusMensuels * 12 : null,
-          situation_familiale: null,
-          nb_enfants: null,
-          age: prospectData.age || null,
-          profession: prospectData.situationPro || null,
-          stage_id: null,
-          stage_slug: prospectData.stage,
-          deal_value: null,
-          close_probability: 50,
-          expected_close_date: prospectData.dateRdv || null,
-          qualification: prospectData.qualification?.toLowerCase() || 'non_qualifie',
-          score_ia: prospectData.scoreIa || null,
-          analyse_ia: prospectData.justificationIa || null,
-          derniere_qualification: null,
-          source: prospectData.source || null,
-          source_detail: null,
-          assigned_to: prospectData.assignedTo || null,
-          tags: [],
-          notes: prospectData.besoins || null,
-          lost_reason: null,
-          won_date: null,
-          lost_date: null,
-          last_activity_at: null,
-          created_at: prospectData.createdAt,
-          updated_at: prospectData.updatedAt || null,
-          // Store revenusMensuels for display
-          revenus_mensuels: prospectData.revenusMensuels || null,
-        } as CrmProspect & { revenus_mensuels?: number | null };
-      } else {
-        // CRM mode - data is already in CRM format
-        crmProspect = prospectData;
-      }
+      // Convert unified ProspectData format to CrmProspect format for display
+      // The unified API always returns ProspectData format (camelCase)
+      const crmProspect: CrmProspect & { revenus_mensuels?: number | null } = {
+        id: prospectData.id,
+        organization_id: '',
+        first_name: prospectData.firstName || '',
+        last_name: prospectData.lastName || '',
+        email: prospectData.email || '',
+        phone: prospectData.phone || null,
+        company: null,
+        job_title: null,
+        address: null,
+        city: null,
+        postal_code: null,
+        country: 'France',
+        patrimoine_estime: prospectData.patrimoine || null,
+        revenus_annuels: prospectData.revenusMensuels ? prospectData.revenusMensuels * 12 : null,
+        situation_familiale: null,
+        nb_enfants: null,
+        age: prospectData.age || null,
+        profession: prospectData.situationPro || null,
+        stage_id: null,
+        stage_slug: prospectData.stage || 'nouveau',
+        deal_value: null,
+        close_probability: 50,
+        expected_close_date: prospectData.dateRdv || null,
+        qualification: prospectData.qualification?.toLowerCase() || 'non_qualifie',
+        score_ia: prospectData.scoreIa || null,
+        analyse_ia: prospectData.justificationIa || null,
+        derniere_qualification: null,
+        source: prospectData.source || null,
+        source_detail: null,
+        assigned_to: prospectData.assignedTo || null,
+        tags: [],
+        notes: prospectData.besoins || prospectData.notesAppel || null,
+        lost_reason: null,
+        won_date: null,
+        lost_date: null,
+        last_activity_at: null,
+        created_at: prospectData.createdAt,
+        updated_at: prospectData.updatedAt || null,
+        // Store revenusMensuels for display
+        revenus_mensuels: prospectData.revenusMensuels || null,
+      };
 
       setProspect(crmProspect);
       setFormData(crmProspect);
