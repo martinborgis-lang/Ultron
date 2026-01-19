@@ -135,17 +135,21 @@ async function workflowPlaquette(
   user: WorkflowUser
 ): Promise<WorkflowResult> {
   const actions: string[] = [];
+  console.log('📧 Workflow Plaquette - Starting for prospect:', prospectId);
 
   try {
     const prospect = await getCrmProspect(prospectId);
+    console.log('📧 Workflow Plaquette - Prospect loaded:', prospect?.email, prospect?.first_name, prospect?.last_name);
 
     if (!prospect.email) {
+      console.log('📧 Workflow Plaquette - ERROR: No email');
       return { workflow: 'plaquette', success: false, actions, error: 'Email prospect manquant' };
     }
 
     // Check if already sent using metadata field or a new column
     // For now, we'll track this in metadata
     if (prospect.metadata?.mail_plaquette_sent) {
+      console.log('📧 Workflow Plaquette - Already sent, skipping');
       return { workflow: 'plaquette', success: true, actions: ['Déjà envoyé'] };
     }
 
@@ -265,16 +269,20 @@ async function workflowRdvValide(
   user: WorkflowUser
 ): Promise<WorkflowResult> {
   const actions: string[] = [];
+  console.log('📧 Workflow RDV Validé - Starting for prospect:', prospectId);
 
   try {
     const prospect = await getCrmProspect(prospectId);
+    console.log('📧 Workflow RDV Validé - Prospect loaded:', prospect?.email, prospect?.first_name, prospect?.last_name);
 
     if (!prospect.email) {
+      console.log('📧 Workflow RDV Validé - ERROR: No email');
       return { workflow: 'rdv_valide', success: false, actions, error: 'Email prospect manquant' };
     }
 
     // Check if already sent
     if (prospect.metadata?.mail_synthese_sent) {
+      console.log('📧 Workflow RDV Validé - Already sent, skipping');
       return { workflow: 'rdv_valide', success: true, actions: ['Déjà envoyé'] };
     }
 
@@ -433,6 +441,13 @@ async function workflowRdvValide(
   }
 }
 
+// Stage slugs that trigger the "En attente" workflow with plaquette
+const WAITING_STAGE_SLUGS = ['en_attente', 'contacte', 'a_rappeler'];
+
+// Stage slugs that trigger the "RDV Validé" workflow
+// Supports both Sheet format (rdv_pris) and CRM format (rdv_valide)
+const RDV_STAGE_SLUGS = ['rdv_pris', 'rdv_valide'];
+
 /**
  * Main function to trigger CRM workflows based on stage change
  */
@@ -443,7 +458,9 @@ export async function triggerCrmWorkflow(
   organization: WorkflowOrganization,
   user: WorkflowUser
 ): Promise<WorkflowResult | null> {
-  console.log('🔄 CRM Workflow - Stage:', stageSlug, 'Subtype:', subtype);
+  console.log('🔄 CRM Workflow - Stage:', stageSlug, 'Subtype:', subtype, 'ProspectId:', prospectId);
+  console.log('🔄 CRM Workflow - Organization:', organization.id, 'Mode:', organization.data_mode);
+  console.log('🔄 CRM Workflow - User:', user.id, user.email);
 
   // Only trigger for CRM mode
   if (organization.data_mode !== 'crm') {
@@ -452,11 +469,15 @@ export async function triggerCrmWorkflow(
   }
 
   // Determine which workflow to trigger
-  if (stageSlug === 'en_attente' && subtype === 'plaquette') {
+  // Plaquette workflow: en_attente (or similar) + plaquette subtype
+  if (WAITING_STAGE_SLUGS.includes(stageSlug) && subtype === 'plaquette') {
+    console.log('🔄 CRM Workflow - Triggering PLAQUETTE workflow');
     return await workflowPlaquette(prospectId, organization, user);
   }
 
-  if (stageSlug === 'rdv_pris') {
+  // RDV workflow: rdv_pris OR rdv_valide
+  if (RDV_STAGE_SLUGS.includes(stageSlug)) {
+    console.log('🔄 CRM Workflow - Triggering RDV_VALIDE workflow');
     return await workflowRdvValide(prospectId, organization, user);
   }
 

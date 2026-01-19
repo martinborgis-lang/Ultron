@@ -15,7 +15,8 @@
       "Bash(npm run lint)",
       "Bash(git rm:*)",
       "Bash(ls:*)",
-      "Bash(node create-icons.js:*)"
+      "Bash(node create-icons.js:*)",
+      "Bash(git diff:*)"
     ]
   }
 }
