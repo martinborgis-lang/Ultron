@@ -9,16 +9,33 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Calendar, FileText } from 'lucide-react';
+import { Calendar, FileText, User } from 'lucide-react';
+
+interface TeamMember {
+  id: string;
+  email: string;
+  full_name: string | null;
+  gmail_connected: boolean;
+}
 
 interface RdvNotesModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   prospectName: string;
-  onConfirm: (notes: string, rdvDate: Date) => void;
+  currentAssignedTo?: string;
+  teamMembers?: TeamMember[];
+  currentUserId?: string;
+  onConfirm: (notes: string, rdvDate: Date, assignedTo?: string) => void;
 }
 
 function getDefaultRdvDate(): string {
@@ -38,18 +55,24 @@ export function RdvNotesModal({
   open,
   onOpenChange,
   prospectName,
+  currentAssignedTo,
+  teamMembers = [],
+  currentUserId,
   onConfirm,
 }: RdvNotesModalProps) {
   const [notes, setNotes] = useState('');
   const [rdvDate, setRdvDate] = useState(getDefaultRdvDate());
+  const [assignedTo, setAssignedTo] = useState<string>('');
 
   // Reset state when modal opens
   useEffect(() => {
     if (open) {
       setNotes('');
       setRdvDate(getDefaultRdvDate());
+      // Default to current assigned or current user
+      setAssignedTo(currentAssignedTo || currentUserId || '');
     }
-  }, [open]);
+  }, [open, currentAssignedTo, currentUserId]);
 
   const handleConfirm = () => {
     // Parse the datetime-local value and create a proper Date
@@ -66,7 +89,7 @@ export function RdvNotesModal({
     console.log('RDV Modal - Parsed as local:', localDate.toString());
     console.log('RDV Modal - ISO (UTC):', localDate.toISOString());
 
-    onConfirm(notes, localDate);
+    onConfirm(notes, localDate, assignedTo || undefined);
     onOpenChange(false);
   };
 
@@ -87,6 +110,39 @@ export function RdvNotesModal({
         </DialogHeader>
 
         <div className="py-4 space-y-4">
+          {/* Advisor Selection */}
+          {teamMembers.length > 0 && (
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <User className="h-4 w-4 text-muted-foreground" />
+                <Label className="font-medium">Conseiller en charge</Label>
+              </div>
+              <Select value={assignedTo} onValueChange={setAssignedTo}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selectionner un conseiller" />
+                </SelectTrigger>
+                <SelectContent>
+                  {teamMembers.map((member) => (
+                    <SelectItem key={member.id} value={member.id}>
+                      <div className="flex items-center gap-2">
+                        <span>{member.full_name || member.email}</span>
+                        {member.id === currentUserId && (
+                          <span className="text-xs text-muted-foreground">(moi)</span>
+                        )}
+                        {!member.gmail_connected && (
+                          <span className="text-xs text-amber-500">(Gmail non connecte)</span>
+                        )}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Les emails seront envoyes depuis le Gmail de ce conseiller.
+              </p>
+            </div>
+          )}
+
           {/* Notes d'appel */}
           <div className="space-y-2">
             <div className="flex items-center gap-2">

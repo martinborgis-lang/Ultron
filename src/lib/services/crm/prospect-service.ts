@@ -28,6 +28,7 @@ export class CrmProspectService implements IProspectService {
 
       dateRdv: row.expected_close_date,
 
+      assignedTo: row.assigned_to,
       createdAt: row.created_at,
       updatedAt: row.updated_at,
     };
@@ -95,6 +96,7 @@ export class CrmProspectService implements IProspectService {
       score_ia: data.scoreIa,
       analyse_ia: data.justificationIa,
       expected_close_date: data.dateRdv,
+      assigned_to: data.assignedTo,
     };
 
     const { data: result, error } = await this.supabase
@@ -130,6 +132,7 @@ export class CrmProspectService implements IProspectService {
     if (data.scoreIa !== undefined) dbData.score_ia = data.scoreIa;
     if (data.justificationIa !== undefined) dbData.analyse_ia = data.justificationIa;
     if (data.dateRdv !== undefined) dbData.expected_close_date = data.dateRdv;
+    if (data.assignedTo !== undefined) dbData.assigned_to = data.assignedTo;
 
     // Handle meetLink - store in metadata
     if ((data as any).meetLink !== undefined) {

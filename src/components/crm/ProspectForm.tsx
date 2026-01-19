@@ -19,8 +19,16 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2 } from 'lucide-react';
+import { Loader2, User } from 'lucide-react';
 import { PipelineStage } from '@/types/crm';
+
+interface TeamMember {
+  id: string;
+  email: string;
+  full_name: string | null;
+  role: string;
+  gmail_connected: boolean;
+}
 
 interface ProspectFormProps {
   open: boolean;
@@ -31,6 +39,8 @@ interface ProspectFormProps {
 
 export function ProspectForm({ open, onOpenChange, onSuccess, stages }: ProspectFormProps) {
   const [loading, setLoading] = useState(false);
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+  const [currentUserId, setCurrentUserId] = useState<string>('');
   const { toast } = useToast();
 
   // Filtrer les stages actifs (pas gagne/perdu)
@@ -60,9 +70,42 @@ export function ProspectForm({ open, onOpenChange, onSuccess, stages }: Prospect
 
     // Stage par defaut
     stage_slug: defaultStage?.slug || 'nouveau',
+
+    // Conseiller assigne
+    assigned_to: '',
   });
 
   const [formData, setFormData] = useState(getInitialFormData);
+
+  // Fetch team members and current user when form opens
+  useEffect(() => {
+    if (open) {
+      // Fetch team members
+      fetch('/api/team')
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.members) {
+            setTeamMembers(data.members);
+          }
+        })
+        .catch((err) => console.error('Error fetching team:', err));
+
+      // Fetch current user
+      fetch('/api/user/me')
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.id) {
+            setCurrentUserId(data.id);
+            // Set default assigned_to to current user
+            setFormData((prev) => ({
+              ...prev,
+              assigned_to: data.id,
+            }));
+          }
+        })
+        .catch((err) => console.error('Error fetching current user:', err));
+    }
+  }, [open]);
 
   // Reset le stage quand les stages changent ou quand le form s'ouvre
   useEffect(() => {
@@ -92,6 +135,7 @@ export function ProspectForm({ open, onOpenChange, onSuccess, stages }: Prospect
         patrimoine: formData.patrimoine ? parseFloat(formData.patrimoine) : undefined,
         besoins: formData.besoins,
         stage: formData.stage_slug || 'nouveau',
+        assignedTo: formData.assigned_to || undefined,
       };
 
       console.log('ProspectForm - Creating prospect:', unifiedData);
@@ -196,31 +240,60 @@ export function ProspectForm({ open, onOpenChange, onSuccess, stages }: Prospect
             </div>
           </div>
 
-          {/* Section Source */}
+          {/* Section Source & Attribution */}
           <div className="space-y-4">
             <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">
-              Origine
+              Origine & Attribution
             </h3>
-            <div className="space-y-2">
-              <Label htmlFor="source">Source du lead</Label>
-              <Select
-                value={formData.source}
-                onValueChange={(value) => updateField('source', value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selectionner une source" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="manuel">Ajout manuel</SelectItem>
-                  <SelectItem value="site_web">Site web</SelectItem>
-                  <SelectItem value="recommandation">Recommandation</SelectItem>
-                  <SelectItem value="linkedin">LinkedIn</SelectItem>
-                  <SelectItem value="facebook">Facebook</SelectItem>
-                  <SelectItem value="evenement">Evenement</SelectItem>
-                  <SelectItem value="partenaire">Partenaire</SelectItem>
-                  <SelectItem value="autre">Autre</SelectItem>
-                </SelectContent>
-              </Select>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="source">Source du lead</Label>
+                <Select
+                  value={formData.source}
+                  onValueChange={(value) => updateField('source', value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selectionner une source" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="manuel">Ajout manuel</SelectItem>
+                    <SelectItem value="site_web">Site web</SelectItem>
+                    <SelectItem value="recommandation">Recommandation</SelectItem>
+                    <SelectItem value="linkedin">LinkedIn</SelectItem>
+                    <SelectItem value="facebook">Facebook</SelectItem>
+                    <SelectItem value="evenement">Evenement</SelectItem>
+                    <SelectItem value="partenaire">Partenaire</SelectItem>
+                    <SelectItem value="autre">Autre</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="assigned_to">Conseiller</Label>
+                <Select
+                  value={formData.assigned_to}
+                  onValueChange={(value) => updateField('assigned_to', value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selectionner un conseiller" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {teamMembers.map((member) => (
+                      <SelectItem key={member.id} value={member.id}>
+                        <div className="flex items-center gap-2">
+                          <User className="w-4 h-4 text-muted-foreground" />
+                          <span>{member.full_name || member.email}</span>
+                          {member.id === currentUserId && (
+                            <span className="text-xs text-muted-foreground">(moi)</span>
+                          )}
+                          {!member.gmail_connected && (
+                            <span className="text-xs text-amber-500">(Gmail non connecte)</span>
+                          )}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </div>
 

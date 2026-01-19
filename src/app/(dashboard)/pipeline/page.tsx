@@ -78,6 +78,13 @@ function prospectDataToCrmProspect(prospect: ProspectData): CrmProspect {
   };
 }
 
+interface TeamMember {
+  id: string;
+  email: string;
+  full_name: string | null;
+  gmail_connected: boolean;
+}
+
 export default function PipelinePage() {
   const router = useRouter();
   const { toast } = useToast();
@@ -87,11 +94,16 @@ export default function PipelinePage() {
   const [search, setSearch] = useState('');
   const [showForm, setShowForm] = useState(false);
 
+  // Team members for advisor selection
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+  const [currentUserId, setCurrentUserId] = useState<string>('');
+
   // State for waiting modal
   const [showWaitingModal, setShowWaitingModal] = useState(false);
   const [pendingMove, setPendingMove] = useState<{
     prospectId: string;
     prospectName: string;
+    currentAssignedTo?: string;
   } | null>(null);
 
   // State for RDV modal
@@ -100,6 +112,7 @@ export default function PipelinePage() {
     prospectId: string;
     prospectName: string;
     targetStageSlug: string;
+    currentAssignedTo?: string;
   } | null>(null);
 
   // Ref to prevent double fetch on mount
@@ -135,6 +148,26 @@ export default function PipelinePage() {
     if (hasFetched.current) return;
     hasFetched.current = true;
     fetchData();
+
+    // Fetch team members
+    fetch('/api/team')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.members) {
+          setTeamMembers(data.members);
+        }
+      })
+      .catch((err) => console.error('Error fetching team:', err));
+
+    // Fetch current user
+    fetch('/api/user/me')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.id) {
+          setCurrentUserId(data.id);
+        }
+      })
+      .catch((err) => console.error('Error fetching current user:', err));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -173,14 +206,17 @@ export default function PipelinePage() {
 
   // Called when dropping on "en_attente" - show modal first
   const handleWaitingDrop = (prospectId: string, prospectName: string) => {
-    setPendingMove({ prospectId, prospectName });
+    // Find current assigned_to for this prospect
+    const prospect = prospects.find(p => p.id === prospectId);
+    setPendingMove({ prospectId, prospectName, currentAssignedTo: prospect?.assigned_to || undefined });
     setShowWaitingModal(true);
   };
 
   // Called when user confirms the waiting reason
   const handleWaitingConfirm = async (
     subtype: 'plaquette' | 'rappel_differe',
-    rappelDate?: Date
+    rappelDate?: Date,
+    assignedTo?: string
   ) => {
     if (!pendingMove) return;
 
@@ -193,11 +229,20 @@ export default function PipelinePage() {
     // Optimistic update BEFORE API call
     setProspects(prev => prev.map(p =>
       p.id === pendingMove.prospectId
-        ? { ...p, stage_slug: targetSlug }
+        ? { ...p, stage_slug: targetSlug, assigned_to: assignedTo || p.assigned_to }
         : p
     ));
 
     try {
+      // Update assigned_to if changed
+      if (assignedTo) {
+        await fetch(`/api/prospects/unified/${pendingMove.prospectId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ assignedTo }),
+        });
+      }
+
       await handleProspectMove(pendingMove.prospectId, targetSlug, subtype);
 
       // Create planning event if rappel_differe with date
@@ -270,12 +315,14 @@ export default function PipelinePage() {
 
   // Called when dropping on RDV stage - show modal for notes
   const handleRdvDrop = (prospectId: string, prospectName: string, targetStageSlug: string) => {
-    setPendingRdvMove({ prospectId, prospectName, targetStageSlug });
+    // Find current assigned_to for this prospect
+    const prospect = prospects.find(p => p.id === prospectId);
+    setPendingRdvMove({ prospectId, prospectName, targetStageSlug, currentAssignedTo: prospect?.assigned_to || undefined });
     setShowRdvModal(true);
   };
 
   // Called when user confirms the RDV with notes
-  const handleRdvConfirm = async (notes: string, rdvDate: Date) => {
+  const handleRdvConfirm = async (notes: string, rdvDate: Date, assignedTo?: string) => {
     if (!pendingRdvMove) return;
 
     const { prospectId, prospectName, targetStageSlug } = pendingRdvMove;
@@ -283,7 +330,7 @@ export default function PipelinePage() {
     // Optimistic update
     setProspects(prev => prev.map(p =>
       p.id === prospectId
-        ? { ...p, stage_slug: targetStageSlug, notes, expected_close_date: rdvDate.toISOString() }
+        ? { ...p, stage_slug: targetStageSlug, notes, expected_close_date: rdvDate.toISOString(), assigned_to: assignedTo || p.assigned_to }
         : p
     ));
 
@@ -320,7 +367,7 @@ export default function PipelinePage() {
         console.log('Planning event not created (probably sheet mode):', err);
       }
 
-      // 2. Update prospect with notes, RDV date and Meet link
+      // 2. Update prospect with notes, RDV date, Meet link and assigned advisor
       await fetch(`/api/prospects/unified/${prospectId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -328,6 +375,7 @@ export default function PipelinePage() {
           notesAppel: notes,
           dateRdv: rdvDate.toISOString(),
           meetLink: meetLink, // Store Meet link on prospect for email
+          assignedTo: assignedTo, // Update assigned advisor
         }),
       });
 
@@ -438,6 +486,9 @@ export default function PipelinePage() {
           if (!open) setPendingMove(null);
         }}
         prospectName={pendingMove?.prospectName || ''}
+        currentAssignedTo={pendingMove?.currentAssignedTo}
+        teamMembers={teamMembers}
+        currentUserId={currentUserId}
         onConfirm={handleWaitingConfirm}
       />
 
@@ -449,6 +500,9 @@ export default function PipelinePage() {
           if (!open) setPendingRdvMove(null);
         }}
         prospectName={pendingRdvMove?.prospectName || ''}
+        currentAssignedTo={pendingRdvMove?.currentAssignedTo}
+        teamMembers={teamMembers}
+        currentUserId={currentUserId}
         onConfirm={handleRdvConfirm}
       />
     </div>

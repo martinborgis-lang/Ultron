@@ -9,16 +9,33 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { FileText, Calendar } from 'lucide-react';
+import { FileText, Calendar, User } from 'lucide-react';
+
+interface TeamMember {
+  id: string;
+  email: string;
+  full_name: string | null;
+  gmail_connected: boolean;
+}
 
 interface WaitingReasonModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   prospectName: string;
-  onConfirm: (subtype: 'plaquette' | 'rappel_differe', rappelDate?: Date) => void;
+  currentAssignedTo?: string;
+  teamMembers?: TeamMember[];
+  currentUserId?: string;
+  onConfirm: (subtype: 'plaquette' | 'rappel_differe', rappelDate?: Date, assignedTo?: string) => void;
 }
 
 function getDefaultRappelDate(): string {
@@ -33,24 +50,30 @@ export function WaitingReasonModal({
   open,
   onOpenChange,
   prospectName,
+  currentAssignedTo,
+  teamMembers = [],
+  currentUserId,
   onConfirm,
 }: WaitingReasonModalProps) {
   const [selectedReason, setSelectedReason] = useState<'plaquette' | 'rappel_differe'>('plaquette');
   const [rappelDate, setRappelDate] = useState(getDefaultRappelDate());
+  const [assignedTo, setAssignedTo] = useState<string>('');
 
   // Reset state when modal opens
   useEffect(() => {
     if (open) {
       setSelectedReason('plaquette');
       setRappelDate(getDefaultRappelDate());
+      // Default to current assigned or current user
+      setAssignedTo(currentAssignedTo || currentUserId || '');
     }
-  }, [open]);
+  }, [open, currentAssignedTo, currentUserId]);
 
   const handleConfirm = () => {
     if (selectedReason === 'rappel_differe') {
-      onConfirm(selectedReason, new Date(rappelDate));
+      onConfirm(selectedReason, new Date(rappelDate), assignedTo || undefined);
     } else {
-      onConfirm(selectedReason);
+      onConfirm(selectedReason, undefined, assignedTo || undefined);
     }
     onOpenChange(false);
   };
@@ -69,7 +92,40 @@ export function WaitingReasonModal({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="py-4">
+        <div className="py-4 space-y-4">
+          {/* Advisor Selection */}
+          {teamMembers.length > 0 && (
+            <div className="space-y-2">
+              <Label className="text-sm font-medium flex items-center gap-2">
+                <User className="w-4 h-4" />
+                Conseiller en charge
+              </Label>
+              <Select value={assignedTo} onValueChange={setAssignedTo}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selectionner un conseiller" />
+                </SelectTrigger>
+                <SelectContent>
+                  {teamMembers.map((member) => (
+                    <SelectItem key={member.id} value={member.id}>
+                      <div className="flex items-center gap-2">
+                        <span>{member.full_name || member.email}</span>
+                        {member.id === currentUserId && (
+                          <span className="text-xs text-muted-foreground">(moi)</span>
+                        )}
+                        {!member.gmail_connected && (
+                          <span className="text-xs text-amber-500">(Gmail non connecte)</span>
+                        )}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Les emails seront envoyes depuis le Gmail de ce conseiller.
+              </p>
+            </div>
+          )}
+
           <RadioGroup
             value={selectedReason}
             onValueChange={(value) => setSelectedReason(value as 'plaquette' | 'rappel_differe')}
