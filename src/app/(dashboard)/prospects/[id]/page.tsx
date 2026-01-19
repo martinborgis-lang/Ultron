@@ -46,6 +46,7 @@ import {
   Paperclip,
   ChevronDown,
   ChevronUp,
+  Sparkles,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -54,14 +55,14 @@ const qualificationColors: Record<string, string> = {
   chaud: 'bg-red-500 text-white',
   tiede: 'bg-orange-500 text-white',
   froid: 'bg-blue-500 text-white',
-  non_qualifie: 'bg-gray-500 text-white',
+  non_qualifie: 'bg-emerald-500 text-white animate-pulse',
 };
 
 const qualificationLabels: Record<string, string> = {
   chaud: 'CHAUD',
   tiede: 'TIEDE',
   froid: 'FROID',
-  non_qualifie: 'Non qualifie',
+  non_qualifie: 'Nouveau',
 };
 
 export default function ProspectDetailPage() {
@@ -307,11 +308,12 @@ export default function ProspectDetailPage() {
           <div>
             <div className="flex items-center gap-3">
               <h1 className="text-2xl font-bold">{fullName}</h1>
-              {prospect.qualification && prospect.qualification !== 'non_qualifie' && (
-                <Badge className={qualificationColors[prospect.qualification] || 'bg-gray-500'}>
-                  {qualificationLabels[prospect.qualification] || prospect.qualification}
-                </Badge>
-              )}
+              <Badge className={`flex items-center gap-1 ${qualificationColors[prospect.qualification || 'non_qualifie'] || qualificationColors.non_qualifie}`}>
+                {(!prospect.qualification || prospect.qualification === 'non_qualifie') && (
+                  <Sparkles className="w-3 h-3" />
+                )}
+                {qualificationLabels[prospect.qualification || 'non_qualifie'] || qualificationLabels.non_qualifie}
+              </Badge>
             </div>
             {currentStage && (
               <p className="text-muted-foreground flex items-center gap-2">
@@ -618,40 +620,39 @@ export default function ProspectDetailPage() {
           </Card>
 
           {/* Classification IA */}
-          {(prospect.qualification && prospect.qualification !== 'non_qualifie') || prospect.score_ia || prospect.analyse_ia ? (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base flex items-center gap-2">
-                  <Brain className="w-4 h-4" />
-                  Classification IA
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {prospect.qualification && prospect.qualification !== 'non_qualifie' && (
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Qualification</span>
-                    <Badge className={qualificationColors[prospect.qualification] || 'bg-gray-500'}>
-                      {qualificationLabels[prospect.qualification] || prospect.qualification}
-                    </Badge>
-                  </div>
-                )}
-                {prospect.score_ia !== null && prospect.score_ia !== undefined && (
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Score</span>
-                    <span className="text-lg font-bold">{prospect.score_ia}/100</span>
-                  </div>
-                )}
-                {prospect.analyse_ia && (
-                  <div>
-                    <Label className="text-xs text-muted-foreground">Analyse</Label>
-                    <p className="text-sm mt-1 p-3 bg-muted rounded-lg whitespace-pre-wrap">
-                      {prospect.analyse_ia}
-                    </p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          ) : null}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2">
+                <Brain className="w-4 h-4" />
+                Classification IA
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Qualification</span>
+                <Badge className={`flex items-center gap-1 ${qualificationColors[prospect.qualification || 'non_qualifie'] || qualificationColors.non_qualifie}`}>
+                  {(!prospect.qualification || prospect.qualification === 'non_qualifie') && (
+                    <Sparkles className="w-3 h-3" />
+                  )}
+                  {qualificationLabels[prospect.qualification || 'non_qualifie'] || qualificationLabels.non_qualifie}
+                </Badge>
+              </div>
+              {prospect.score_ia !== null && prospect.score_ia !== undefined && (
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Score</span>
+                  <span className="text-lg font-bold">{prospect.score_ia}/100</span>
+                </div>
+              )}
+              {prospect.analyse_ia && (
+                <div>
+                  <Label className="text-xs text-muted-foreground">Analyse</Label>
+                  <p className="text-sm mt-1 p-3 bg-muted rounded-lg whitespace-pre-wrap">
+                    {prospect.analyse_ia}
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
           {/* Besoins / Notes */}
           <Card>

@@ -5,7 +5,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { CrmProspect } from '@/types/crm';
-import { User, Building2, Phone, Mail, Euro } from 'lucide-react';
+import { User, Building2, Phone, Mail, Euro, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface ProspectCardProps {
@@ -18,14 +18,14 @@ const qualificationColors: Record<string, string> = {
   chaud: 'bg-red-500/20 text-red-400 border-red-500/30',
   tiede: 'bg-orange-500/20 text-orange-400 border-orange-500/30',
   froid: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
-  non_qualifie: 'bg-gray-500/20 text-gray-400 border-gray-500/30',
+  non_qualifie: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30 animate-pulse',
 };
 
 const qualificationLabels: Record<string, string> = {
   chaud: 'Chaud',
   tiede: 'Tiede',
   froid: 'Froid',
-  non_qualifie: 'Non qualifie',
+  non_qualifie: 'Nouveau',
 };
 
 export function ProspectCard({ prospect, onClick, isDragging }: ProspectCardProps) {
@@ -67,8 +67,11 @@ export function ProspectCard({ prospect, onClick, isDragging }: ProspectCardProp
         </div>
         <Badge
           variant="outline"
-          className={cn('text-[10px] px-1.5 py-0', qualificationColors[prospect.qualification] || qualificationColors.non_qualifie)}
+          className={cn('text-[10px] px-1.5 py-0 flex items-center gap-1', qualificationColors[prospect.qualification] || qualificationColors.non_qualifie)}
         >
+          {(!prospect.qualification || prospect.qualification === 'non_qualifie') && (
+            <Sparkles className="w-3 h-3" />
+          )}
           {qualificationLabels[prospect.qualification] || qualificationLabels.non_qualifie}
         </Badge>
       </div>
