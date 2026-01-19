@@ -134,8 +134,9 @@ export class CrmProspectService implements IProspectService {
     if (data.dateRdv !== undefined) dbData.expected_close_date = data.dateRdv;
     if (data.assignedTo !== undefined) dbData.assigned_to = data.assignedTo;
 
-    // Handle meetLink - store in metadata
-    if ((data as any).meetLink !== undefined) {
+    // Handle meetLink and dateRdv - store in metadata
+    // dateRdv is also stored in metadata as rdv_datetime to preserve the full datetime (since expected_close_date might be DATE type)
+    if ((data as any).meetLink !== undefined || data.dateRdv !== undefined) {
       // We need to merge with existing metadata
       const { data: existingProspect } = await this.supabase
         .from('crm_prospects')
@@ -145,8 +146,16 @@ export class CrmProspectService implements IProspectService {
 
       dbData.metadata = {
         ...(existingProspect?.metadata || {}),
-        meet_link: (data as any).meetLink,
       };
+
+      if ((data as any).meetLink !== undefined) {
+        dbData.metadata.meet_link = (data as any).meetLink;
+      }
+
+      if (data.dateRdv !== undefined) {
+        // Store full ISO datetime in metadata for accurate time retrieval
+        dbData.metadata.rdv_datetime = data.dateRdv;
+      }
     }
 
     const { data: result, error } = await this.supabase

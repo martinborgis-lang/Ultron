@@ -161,12 +161,18 @@ async function workflowPlaquette(
       return { workflow: 'plaquette', success: false, actions, error: 'Plaquette non configurée' };
     }
 
-    // Get email credentials
-    const emailCredentialsResult = await getEmailCredentials(organization.id, user.id);
+    // Determine which user's Gmail to use: prospect's assigned advisor or fallback to current user
+    const advisorUserId = prospect.assigned_to || user.id;
+    const advisorEmail = prospect.assigned_user?.email || user.email;
+    console.log('📧 Workflow Plaquette - Using advisor:', advisorUserId, advisorEmail);
+    actions.push(`Conseiller: ${advisorEmail}`);
+
+    // Get email credentials (from assigned advisor or current user)
+    const emailCredentialsResult = await getEmailCredentials(organization.id, advisorUserId);
     if (!emailCredentialsResult) {
-      return { workflow: 'plaquette', success: false, actions, error: 'Pas de credentials email' };
+      return { workflow: 'plaquette', success: false, actions, error: `Pas de credentials email pour ${advisorEmail}` };
     }
-    actions.push(`Credentials: ${emailCredentialsResult.source}`);
+    actions.push(`Credentials: ${emailCredentialsResult.source} (${advisorEmail})`);
 
     // Generate email content
     const promptConfig = fullOrg.prompt_plaquette as PromptConfig | null;
@@ -229,7 +235,7 @@ async function workflowPlaquette(
     await logActivity(
       organization.id,
       prospectId,
-      user.id,
+      advisorUserId,
       'email',
       'Email plaquette envoyé',
       email.corps
@@ -290,6 +296,12 @@ async function workflowRdvValide(
     const fullOrg = await getFullOrganization(organization.id);
     actions.push('Org data loaded');
 
+    // Determine which user's Gmail to use: prospect's assigned advisor or fallback to current user
+    const advisorUserId = prospect.assigned_to || user.id;
+    const advisorEmail = prospect.assigned_user?.email || user.email;
+    console.log('📧 Workflow RDV Validé - Using advisor:', advisorUserId, advisorEmail);
+    actions.push(`Conseiller: ${advisorEmail}`);
+
     // 1. Qualify prospect if not already done
     if (!prospect.qualification || prospect.qualification === 'non_qualifie') {
       try {
@@ -324,20 +336,30 @@ async function workflowRdvValide(
       }
     }
 
-    // 2. Get email credentials
-    const emailCredentialsResult = await getEmailCredentials(organization.id, user.id);
+    // 2. Get email credentials (from assigned advisor or current user)
+    const emailCredentialsResult = await getEmailCredentials(organization.id, advisorUserId);
     if (!emailCredentialsResult) {
-      return { workflow: 'rdv_valide', success: false, actions, error: 'Pas de credentials email' };
+      return { workflow: 'rdv_valide', success: false, actions, error: `Pas de credentials email pour ${advisorEmail}` };
     }
-    actions.push(`Credentials: ${emailCredentialsResult.source}`);
+    actions.push(`Credentials: ${emailCredentialsResult.source} (${advisorEmail})`);
 
     // 3. Generate and send synthese email
     const promptConfig = fullOrg.prompt_synthese as PromptConfig | null;
 
     // Format date RDV with Paris timezone (server runs in UTC)
+    // Use metadata.rdv_datetime if available (full ISO datetime), fallback to expected_close_date
     let dateRdvFormatted = '';
-    if (prospect.expected_close_date) {
-      const rdvDate = new Date(prospect.expected_close_date);
+    const rdvDateSource = prospect.metadata?.rdv_datetime || prospect.expected_close_date;
+
+    if (rdvDateSource) {
+      console.log('📧 Workflow RDV - Raw date source:', rdvDateSource);
+      console.log('📧 Workflow RDV - Source type:', prospect.metadata?.rdv_datetime ? 'metadata.rdv_datetime' : 'expected_close_date');
+
+      const rdvDate = new Date(rdvDateSource as string);
+      console.log('📧 Workflow RDV - Parsed as Date:', rdvDate.toString());
+      console.log('📧 Workflow RDV - ISO:', rdvDate.toISOString());
+      console.log('📧 Workflow RDV - UTC hours:', rdvDate.getUTCHours());
+
       dateRdvFormatted = rdvDate.toLocaleString('fr-FR', {
         weekday: 'long',
         day: 'numeric',
@@ -347,6 +369,7 @@ async function workflowRdvValide(
         minute: '2-digit',
         timeZone: 'Europe/Paris', // Force Paris timezone
       });
+      console.log('📧 Workflow RDV - Formatted for Paris:', dateRdvFormatted);
     }
 
     // Get the Meet link from prospect metadata (set by pipeline when creating planning event)
@@ -392,16 +415,17 @@ async function workflowRdvValide(
     });
 
     // 5. Schedule 24h reminder if RDV date is set
-    if (prospect.expected_close_date) {
-      const rdvDate = new Date(prospect.expected_close_date);
+    // Use metadata.rdv_datetime for accurate time
+    if (rdvDateSource) {
+      const rdvDate = new Date(rdvDateSource as string);
       const reminderDate = new Date(rdvDate.getTime() - 24 * 60 * 60 * 1000);
 
       if (reminderDate > new Date()) {
         try {
           await scheduleRappelEmail(reminderDate, {
             organizationId: organization.id,
-            conseillerId: user.id,
-            conseillerEmail: user.email,
+            conseillerId: advisorUserId,
+            conseillerEmail: advisorEmail,
             prospectData: {
               email: prospect.email,
               nom: prospect.last_name || '',
@@ -412,7 +436,7 @@ async function workflowRdvValide(
               besoins: prospect.notes,
             },
           });
-          actions.push(`Rappel programmé: ${reminderDate.toISOString()}`);
+          actions.push(`Rappel programmé: ${reminderDate.toISOString()} (${advisorEmail})`);
         } catch (e) {
           console.error('Erreur programmation rappel:', e);
           actions.push('Rappel non programmé');
@@ -424,7 +448,7 @@ async function workflowRdvValide(
     await logActivity(
       organization.id,
       prospectId,
-      user.id,
+      advisorUserId,
       'email',
       'Email synthèse RDV envoyé',
       emailBody
