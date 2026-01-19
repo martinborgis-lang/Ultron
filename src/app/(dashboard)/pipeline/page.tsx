@@ -288,60 +288,58 @@ export default function PipelinePage() {
     ));
 
     try {
-      // 1. Update prospect with notes and RDV date BEFORE moving stage
+      // 1. Create planning event FIRST with Google Meet (to get the Meet link)
+      const endDate = new Date(rdvDate.getTime() + 60 * 60 * 1000); // 1h duration
+      let meetLink: string | undefined;
+
+      try {
+        const planningRes = await fetch('/api/planning', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: 'meeting',
+            title: `🤝 RDV avec ${prospectName}`,
+            description: `Notes de l'appel:\n${notes}`,
+            prospectId: prospectId,
+            startDate: rdvDate.toISOString(),
+            endDate: endDate.toISOString(),
+            priority: 'high',
+            addGoogleMeet: true, // Creates Google Meet link
+          }),
+        });
+
+        if (planningRes.ok) {
+          const planningData = await planningRes.json();
+          meetLink = planningData.meetLink;
+          if (meetLink) {
+            console.log('Google Meet link created:', meetLink);
+          }
+        }
+      } catch (err) {
+        // Silently fail for sheet mode (planning managed via Google Calendar)
+        console.log('Planning event not created (probably sheet mode):', err);
+      }
+
+      // 2. Update prospect with notes, RDV date and Meet link
       await fetch(`/api/prospects/unified/${prospectId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           notesAppel: notes,
           dateRdv: rdvDate.toISOString(),
+          meetLink: meetLink, // Store Meet link on prospect for email
         }),
       });
 
-      // 2. Move to RDV stage (this triggers the workflow with qualification + email)
+      // 3. Move to RDV stage (this triggers the workflow with qualification + email)
+      // The workflow will now have access to the Meet link via prospect metadata
       await handleProspectMove(prospectId, targetStageSlug);
-
-      // 3. Create planning event in Ultron (for CRM mode)
-      const endDate = new Date(rdvDate.getTime() + 60 * 60 * 1000); // 1h duration
-      try {
-        await fetch('/api/planning', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            type: 'meeting',
-            title: `RDV avec ${prospectName}`,
-            description: `Notes de l'appel:\n${notes}`,
-            prospectId: prospectId,
-            startDate: rdvDate.toISOString(),
-            endDate: endDate.toISOString(),
-            priority: 'high',
-          }),
-        });
-      } catch (err) {
-        // Silently fail for sheet mode (planning managed via Google Calendar)
-        console.log('Planning event not created (probably sheet mode):', err);
-      }
-
-      // 4. Create Google Calendar event for the RDV
-      try {
-        await fetch('/api/calendar/events', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            summary: `🤝 RDV avec ${prospectName}`,
-            description: `Rendez-vous avec le prospect ${prospectName}.\n\nNotes de l'appel:\n${notes}\n\nProspect ID: ${prospectId}`,
-            startDateTime: rdvDate.toISOString(),
-            endDateTime: endDate.toISOString(),
-            addGoogleMeet: true,
-          }),
-        });
-      } catch (err) {
-        console.error('Error creating Google Calendar event:', err);
-      }
 
       toast({
         title: 'RDV programme',
-        description: `Le prospect sera qualifie et recevra un email de confirmation.`,
+        description: meetLink
+          ? `Le prospect recevra un email avec le lien Google Meet.`
+          : `Le prospect sera qualifie et recevra un email de confirmation.`,
       });
 
       await fetchData(search);

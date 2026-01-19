@@ -90,6 +90,8 @@ export interface PlanningEvent {
 
   priority: 'low' | 'medium' | 'high' | 'urgent';
   externalId?: string;
+  meetLink?: string; // Google Meet link
+  calendarLink?: string; // Google Calendar event link
   createdAt: string;
 }
 

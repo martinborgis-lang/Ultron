@@ -55,7 +55,8 @@ export async function POST(request: NextRequest) {
     const service = getPlanningService(organization, user.id);
     const body = await request.json();
 
-    const event = await service.create({
+    // Cast to any to allow additional properties for Google Meet
+    const eventData: any = {
       type: body.type || 'task',
       title: body.title,
       description: body.description,
@@ -65,7 +66,11 @@ export async function POST(request: NextRequest) {
       allDay: body.all_day || body.allDay || false,
       priority: body.priority || 'medium',
       prospectId: body.prospect_id || body.prospectId,
-    });
+      addGoogleMeet: body.addGoogleMeet || body.add_google_meet || false,
+      attendeeEmail: body.attendeeEmail || body.attendee_email,
+    };
+
+    const event = await service.create(eventData);
 
     return NextResponse.json(event, { status: 201 });
   } catch (error) {

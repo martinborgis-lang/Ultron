@@ -34,6 +34,8 @@ export class CrmPlanningService implements IPlanningService {
       assignedTo: row.assigned_to,
       priority: row.priority || 'medium',
       externalId: row.external_id,
+      meetLink: row.metadata?.meet_link,
+      calendarLink: row.metadata?.calendar_html_link,
       createdAt: row.created_at,
     };
   }
@@ -110,17 +112,23 @@ export class CrmPlanningService implements IPlanningService {
     return this.mapDbToEvent(data);
   }
 
-  async create(event: Partial<PlanningEvent>): Promise<PlanningEvent> {
-    // Si prospect_id fourni, recuperer le nom
+  async create(event: Partial<PlanningEvent> & { addGoogleMeet?: boolean; attendeeEmail?: string }): Promise<PlanningEvent & { meetLink?: string }> {
+    // Si prospect_id fourni, recuperer le nom et l'email
     let prospectName = event.prospectName;
-    if (event.prospectId && !prospectName) {
+    let prospectEmail = event.attendeeEmail;
+    if (event.prospectId && (!prospectName || !prospectEmail)) {
       const { data: prospect } = await this.supabase
         .from('crm_prospects')
-        .select('first_name, last_name')
+        .select('first_name, last_name, email')
         .eq('id', event.prospectId)
         .single();
       if (prospect) {
-        prospectName = `${prospect.first_name} ${prospect.last_name}`;
+        if (!prospectName) {
+          prospectName = `${prospect.first_name} ${prospect.last_name}`;
+        }
+        if (!prospectEmail) {
+          prospectEmail = prospect.email;
+        }
       }
     }
 
@@ -139,7 +147,7 @@ export class CrmPlanningService implements IPlanningService {
       endDate = endDateTime.toISOString();
     }
 
-    console.log('📅 Planning create - dates:', { startDate, endDate, dueDate: event.dueDate });
+    console.log('📅 Planning create - dates:', { startDate, endDate, dueDate: event.dueDate, addGoogleMeet: event.addGoogleMeet });
 
     const { data, error } = await this.supabase
       .from('crm_events')
@@ -178,36 +186,54 @@ export class CrmPlanningService implements IPlanningService {
       endDate: data.end_date,
     });
 
+    let meetLink: string | undefined;
+
     try {
       const credentials = await getCalendarCredentials(this.userId, this.organizationId);
       console.log('📅 Calendar credentials found:', !!credentials);
 
       if (credentials && data.start_date && data.end_date) {
-        console.log('📅 Creating calendar event...');
+        console.log('📅 Creating calendar event with Meet:', event.addGoogleMeet);
         const calendarEvent = await createCalendarEvent(credentials, {
           summary: event.title || 'Événement Ultron',
           description: event.description || (prospectName ? `Prospect: ${prospectName}` : undefined),
           startDateTime: data.start_date,
           endDateTime: data.end_date,
           allDay: event.allDay,
+          addGoogleMeet: event.addGoogleMeet,
+          attendees: prospectEmail ? [prospectEmail] : undefined,
         });
 
-        // Store the external_id for future sync
+        meetLink = calendarEvent.hangoutLink;
+
+        // Store the external_id and meet_link for future sync
+        const updateFields: Record<string, unknown> = {
+          external_id: calendarEvent.id,
+          external_source: 'google_calendar',
+        };
+
+        // Store meet link in metadata
+        if (meetLink) {
+          updateFields.metadata = {
+            ...(data.metadata || {}),
+            meet_link: meetLink,
+            calendar_html_link: calendarEvent.htmlLink,
+          };
+        }
+
         await this.supabase
           .from('crm_events')
-          .update({
-            external_id: calendarEvent.id,
-            external_source: 'google_calendar',
-          })
+          .update(updateFields)
           .eq('id', data.id);
 
-        console.log('✅ Event synced to Google Calendar:', calendarEvent.id);
+        console.log('✅ Event synced to Google Calendar:', calendarEvent.id, 'Meet link:', meetLink);
       }
     } catch (calendarError) {
       console.error('⚠️ Failed to sync to Google Calendar (non-blocking):', calendarError);
     }
 
-    return this.mapDbToEvent(data);
+    const result = this.mapDbToEvent(data);
+    return { ...result, meetLink };
   }
 
   async update(id: string, data: Partial<PlanningEvent>): Promise<PlanningEvent> {

@@ -348,6 +348,9 @@ async function workflowRdvValide(
       });
     }
 
+    // Get the Meet link from prospect metadata (set by pipeline when creating planning event)
+    const meetLink = prospect.metadata?.meet_link as string | undefined;
+
     const email = await generateEmailWithConfig(
       promptConfig,
       DEFAULT_PROMPTS.synthese,
@@ -361,12 +364,20 @@ async function workflowRdvValide(
         date_rdv: dateRdvFormatted,
       }
     );
+
+    // If we have a Meet link, append it to the email body
+    let emailBody = email.corps;
+    if (meetLink) {
+      emailBody += `\n\n---\n🎥 Lien de la visioconférence Google Meet:\n${meetLink}`;
+      actions.push('Meet link ajouté');
+    }
+
     actions.push('Email synthèse généré');
 
     const result = await sendEmail(emailCredentialsResult.credentials, {
       to: prospect.email,
       subject: email.objet,
-      body: email.corps,
+      body: emailBody, // Use modified body with Meet link
     });
     actions.push('Email synthèse envoyé');
 
@@ -415,7 +426,7 @@ async function workflowRdvValide(
       user.id,
       'email',
       'Email synthèse RDV envoyé',
-      email.corps
+      emailBody
     );
 
     // Log email
@@ -425,7 +436,7 @@ async function workflowRdvValide(
       `${prospect.first_name} ${prospect.last_name}`.trim(),
       'synthese',
       email.objet,
-      email.corps,
+      emailBody,
       result.messageId
     );
 

@@ -131,6 +131,21 @@ export class CrmProspectService implements IProspectService {
     if (data.justificationIa !== undefined) dbData.analyse_ia = data.justificationIa;
     if (data.dateRdv !== undefined) dbData.expected_close_date = data.dateRdv;
 
+    // Handle meetLink - store in metadata
+    if ((data as any).meetLink !== undefined) {
+      // We need to merge with existing metadata
+      const { data: existingProspect } = await this.supabase
+        .from('crm_prospects')
+        .select('metadata')
+        .eq('id', id)
+        .single();
+
+      dbData.metadata = {
+        ...(existingProspect?.metadata || {}),
+        meet_link: (data as any).meetLink,
+      };
+    }
+
     const { data: result, error } = await this.supabase
       .from('crm_prospects')
       .update(dbData)
