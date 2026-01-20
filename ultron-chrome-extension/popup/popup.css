@@ -131,13 +131,11 @@ button.small:hover {
   color: #888;
 }
 
-#open-panel-btn {
-  margin-top: 8px;
-  background: #22c55e;
-}
-
-#open-panel-btn:hover {
-  background: #16a34a;
+.hint {
+  font-size: 11px;
+  color: #6366f1;
+  margin-top: 6px;
+  font-style: italic;
 }
 
 .prospects {

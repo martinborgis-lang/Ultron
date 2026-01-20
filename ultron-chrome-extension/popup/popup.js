@@ -15,10 +15,10 @@ const logoutBtn = document.getElementById('logout-btn');
 const loginError = document.getElementById('login-error');
 const userEmailSpan = document.getElementById('user-email');
 const meetStatus = document.getElementById('meet-status');
+const meetHint = document.getElementById('meet-hint');
 const prospectsList = document.getElementById('prospects-list');
 const autoPanelCheckbox = document.getElementById('auto-panel');
 const transcriptionCheckbox = document.getElementById('transcription-enabled');
-const openPanelBtn = document.getElementById('open-panel-btn');
 
 // Initialization
 document.addEventListener('DOMContentLoaded', async () => {
@@ -45,7 +45,6 @@ loginBtn.addEventListener('click', handleLogin);
 logoutBtn.addEventListener('click', handleLogout);
 autoPanelCheckbox.addEventListener('change', saveSettings);
 transcriptionCheckbox.addEventListener('change', saveSettings);
-openPanelBtn.addEventListener('click', handleOpenPanel);
 
 async function handleLogin() {
   const email = emailInput.value.trim();
@@ -131,34 +130,15 @@ async function checkMeetStatus() {
       meetStatus.textContent = 'Sur Google Meet';
       meetStatus.classList.add('active');
       meetStatus.classList.remove('inactive');
-      // Show open panel button when on Google Meet
-      openPanelBtn.classList.remove('hidden');
+      meetHint.classList.remove('hidden');
     } else {
       meetStatus.textContent = 'Pas sur Google Meet';
       meetStatus.classList.add('inactive');
       meetStatus.classList.remove('active');
-      openPanelBtn.classList.add('hidden');
+      meetHint.classList.add('hidden');
     }
   } catch (error) {
     console.error('Error checking meet status:', error);
-  }
-}
-
-async function handleOpenPanel() {
-  try {
-    // Open the side panel instead of the injected panel
-    chrome.runtime.sendMessage({
-      type: 'OPEN_SIDE_PANEL',
-    }, (response) => {
-      if (response && response.success) {
-        window.close();
-      } else {
-        console.log('Could not open side panel:', response?.error);
-        alert('Impossible d\'ouvrir le panneau lateral. Verifiez que vous etes sur Chrome 114+.');
-      }
-    });
-  } catch (error) {
-    console.error('Error opening panel:', error);
   }
 }
 
@@ -199,7 +179,7 @@ async function loadProspects() {
             <div class="name">${p.prenom || p.firstName || ''} ${p.nom || p.lastName || ''}</div>
             <div class="date">${p.date_rdv || 'Date non definie'}</div>
           </div>
-          <button class="prep-btn">Preparer</button>
+          <button class="prep-btn">Ouvrir</button>
         `;
 
         // Add event listener properly

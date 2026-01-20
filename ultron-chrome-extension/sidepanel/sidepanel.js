@@ -3,6 +3,7 @@ const ULTRON_API_URL = 'https://ultron-murex.vercel.app';
 // State
 let userToken = null;
 let currentProspect = null;
+let currentAnalysis = null;
 let prospects = [];
 
 // DOM Elements
@@ -11,10 +12,7 @@ const mainContent = document.getElementById('main-content');
 const prospectSelect = document.getElementById('prospect-select');
 const refreshBtn = document.getElementById('refresh-prospects');
 const prospectInfo = document.getElementById('prospect-info');
-const suggestionsSection = document.getElementById('suggestions-section');
-const suggestionsLoading = document.getElementById('suggestions-loading');
-const suggestionsContent = document.getElementById('suggestions-content');
-const historySection = document.getElementById('history-section');
+const tabsSection = document.getElementById('tabs-section');
 
 // Initialize
 document.addEventListener('DOMContentLoaded', async () => {
@@ -34,6 +32,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     prospectSelect.value = stored.selectedProspectId;
     await loadProspectDetails(stored.selectedProspectId);
   }
+
+  // Setup tabs
+  setupTabs();
 });
 
 // Event listeners
@@ -54,7 +55,6 @@ refreshBtn.addEventListener('click', async () => {
 });
 
 document.getElementById('open-popup-btn')?.addEventListener('click', () => {
-  // Can't directly open popup, but can show instructions
   alert('Cliquez sur l\'icone Ultron dans la barre d\'outils Chrome pour vous connecter.');
 });
 
@@ -76,6 +76,27 @@ chrome.storage.onChanged.addListener((changes, namespace) => {
     }
   }
 });
+
+function setupTabs() {
+  const tabs = document.querySelectorAll('.tab');
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      // Remove active from all tabs
+      tabs.forEach(t => t.classList.remove('active'));
+      // Add active to clicked tab
+      tab.classList.add('active');
+
+      // Hide all tab contents
+      document.querySelectorAll('.tab-content').forEach(content => {
+        content.classList.remove('active');
+      });
+
+      // Show selected tab content
+      const tabId = tab.dataset.tab;
+      document.getElementById(`tab-${tabId}`).classList.add('active');
+    });
+  });
+}
 
 function showLoginRequired() {
   loginRequired.classList.remove('hidden');
@@ -123,37 +144,48 @@ async function loadProspectDetails(prospectId) {
   try {
     // Show loading state
     prospectInfo.classList.remove('hidden');
-    suggestionsSection.classList.remove('hidden');
-    suggestionsLoading.classList.remove('hidden');
-    suggestionsContent.classList.add('hidden');
-    historySection.classList.add('hidden');
+    tabsSection.classList.remove('hidden');
+    showAllLoading();
 
-    // Get prospect details from extension API
-    const response = await fetch(`${ULTRON_API_URL}/api/extension/prospect/${prospectId}`, {
+    // Get prospect details from meeting prepare API (more complete data)
+    const response = await fetch(`${ULTRON_API_URL}/api/meeting/prepare/${prospectId}`, {
       headers: {
         'Authorization': `Bearer ${userToken}`,
       },
     });
 
     if (!response.ok) {
-      throw new Error('Failed to load prospect');
+      // Fallback to extension API
+      const fallbackResponse = await fetch(`${ULTRON_API_URL}/api/extension/prospect/${prospectId}`, {
+        headers: {
+          'Authorization': `Bearer ${userToken}`,
+        },
+      });
+      const fallbackData = await fallbackResponse.json();
+      if (fallbackData.prospect) {
+        currentProspect = fallbackData.prospect;
+        displayProspectInfo(currentProspect);
+        await loadDetailedAnalysis(currentProspect, []);
+      }
+      return;
     }
 
     const data = await response.json();
     currentProspect = data.prospect;
+    const interactions = data.interactions || [];
 
     // Display prospect info
     displayProspectInfo(currentProspect);
 
-    // Load AI suggestions
-    await loadAISuggestions(currentProspect);
+    // Display history
+    displayHistory(interactions);
 
-    // Load preparation data (includes history)
-    await loadPreparationData(prospectId);
+    // Load detailed AI analysis
+    await loadDetailedAnalysis(currentProspect, interactions);
 
   } catch (error) {
     console.error('Error loading prospect details:', error);
-    prospectInfo.innerHTML = '<p class="loading">Erreur de chargement</p>';
+    prospectInfo.innerHTML = '<div class="prospect-card"><p class="loading">Erreur de chargement</p></div>';
   }
 }
 
@@ -168,96 +200,124 @@ function displayProspectInfo(prospect) {
   badge.textContent = prospect.qualification || 'N/A';
   badge.className = `badge ${qualification}`;
 
+  const scoreBadge = document.getElementById('prospect-score');
+  const score = prospect.score || prospect.score_ia || 0;
+  scoreBadge.textContent = `${score}%`;
+
   document.getElementById('prospect-email').textContent = prospect.email || 'N/A';
   document.getElementById('prospect-phone').textContent = prospect.telephone || prospect.phone || 'N/A';
+  document.getElementById('prospect-rdv').textContent = prospect.date_rdv || 'Non planifie';
+  document.getElementById('prospect-profession').textContent = prospect.situation_pro || prospect.profession || 'N/A';
   document.getElementById('prospect-revenus').textContent = formatCurrency(prospect.revenus || prospect.revenus_annuels);
   document.getElementById('prospect-patrimoine').textContent = formatCurrency(prospect.patrimoine || prospect.patrimoine_estime);
-  document.getElementById('prospect-profession').textContent = prospect.situation_pro || prospect.profession || 'N/A';
+  document.getElementById('prospect-age').textContent = prospect.age || 'N/A';
+  document.getElementById('prospect-source').textContent = prospect.source || 'N/A';
   document.getElementById('prospect-besoins').textContent = prospect.besoins || prospect.notes || 'Non renseigne';
   document.getElementById('prospect-notes').textContent = prospect.notes_appel || prospect.notes || 'Aucune note';
 
+  // Justification IA
+  const justificationSection = document.getElementById('prospect-justification');
+  const justificationText = prospect.justification || prospect.analyse_ia;
+  if (justificationText) {
+    document.getElementById('prospect-justification-text').textContent = justificationText;
+    justificationSection.classList.remove('hidden');
+  } else {
+    justificationSection.classList.add('hidden');
+  }
+
   prospectInfo.classList.remove('hidden');
+  tabsSection.classList.remove('hidden');
 }
 
-async function loadAISuggestions(prospect) {
+async function loadDetailedAnalysis(prospect, interactions) {
   try {
-    suggestionsLoading.classList.remove('hidden');
-    suggestionsContent.classList.add('hidden');
+    showAllLoading();
 
-    const response = await fetch(`${ULTRON_API_URL}/api/extension/analyze`, {
+    const response = await fetch(`${ULTRON_API_URL}/api/meeting/analyze-prep`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${userToken}`,
       },
-      body: JSON.stringify({ prospect }),
+      body: JSON.stringify({ prospect, interactions }),
     });
 
     if (!response.ok) {
-      throw new Error('Failed to get AI suggestions');
+      throw new Error('Failed to get AI analysis');
     }
 
     const data = await response.json();
+    currentAnalysis = data.analysis;
 
-    if (data.analysis) {
-      displaySuggestions(data.analysis);
+    if (currentAnalysis) {
+      displayAnalysis(currentAnalysis);
     }
 
   } catch (error) {
-    console.error('Error loading AI suggestions:', error);
-    suggestionsLoading.textContent = 'Erreur lors de l\'analyse';
+    console.error('Error loading AI analysis:', error);
+    // Show error in all tabs
+    document.getElementById('questions-loading').textContent = 'Erreur d\'analyse';
+    document.getElementById('arguments-loading').textContent = 'Erreur d\'analyse';
+    document.getElementById('attention-loading').textContent = 'Erreur d\'analyse';
   }
 }
 
-function displaySuggestions(analysis) {
+function showAllLoading() {
+  document.getElementById('questions-loading').classList.remove('hidden');
+  document.getElementById('questions-content').classList.add('hidden');
+  document.getElementById('arguments-loading').classList.remove('hidden');
+  document.getElementById('arguments-content').classList.add('hidden');
+  document.getElementById('attention-loading').classList.remove('hidden');
+  document.getElementById('attention-content').classList.add('hidden');
+}
+
+function displayAnalysis(analysis) {
+  // Questions tab
   const questionsList = document.getElementById('questions-list');
-  const argumentsList = document.getElementById('arguments-list');
-  const objectionsList = document.getElementById('objections-list');
-
   questionsList.innerHTML = (analysis.questionsSuggerees || [])
-    .map(q => `<li>${q}</li>`)
+    .map(q => `<li><span>${q}</span></li>`)
     .join('') || '<li>Aucune suggestion</li>';
+  document.getElementById('questions-loading').classList.add('hidden');
+  document.getElementById('questions-content').classList.remove('hidden');
 
+  // Arguments tab
+  const argumentsList = document.getElementById('arguments-list');
   argumentsList.innerHTML = (analysis.argumentsCles || [])
     .map(a => `<li>${a}</li>`)
     .join('') || '<li>Aucun argument</li>';
 
+  // Profil comportemental
+  const profilSection = document.getElementById('profil-section');
+  if (analysis.profilPsycho) {
+    document.getElementById('profil-text').textContent = analysis.profilPsycho;
+    profilSection.classList.remove('hidden');
+  } else {
+    profilSection.classList.add('hidden');
+  }
+  document.getElementById('arguments-loading').classList.add('hidden');
+  document.getElementById('arguments-content').classList.remove('hidden');
+
+  // Attention tab
+  const attentionList = document.getElementById('attention-list');
+  attentionList.innerHTML = (analysis.pointsAttention || [])
+    .map(p => `<li>${p}</li>`)
+    .join('') || '<li>Aucun point d\'attention</li>';
+
+  const objectionsList = document.getElementById('objections-list');
   objectionsList.innerHTML = (analysis.objectionsProba || [])
     .map(o => `<li>${o}</li>`)
     .join('') || '<li>Aucune objection</li>';
-
-  suggestionsLoading.classList.add('hidden');
-  suggestionsContent.classList.remove('hidden');
-}
-
-async function loadPreparationData(prospectId) {
-  try {
-    const response = await fetch(`${ULTRON_API_URL}/api/meeting/prepare/${prospectId}`, {
-      headers: {
-        'Authorization': `Bearer ${userToken}`,
-      },
-    });
-
-    if (!response.ok) {
-      // Not critical if this fails
-      console.warn('Could not load preparation data');
-      return;
-    }
-
-    const data = await response.json();
-
-    // Display interactions history
-    if (data.interactions && data.interactions.length > 0) {
-      displayHistory(data.interactions);
-    }
-
-  } catch (error) {
-    console.error('Error loading preparation data:', error);
-  }
+  document.getElementById('attention-loading').classList.add('hidden');
+  document.getElementById('attention-content').classList.remove('hidden');
 }
 
 function displayHistory(interactions) {
   const historyList = document.getElementById('history-list');
+
+  if (!interactions || interactions.length === 0) {
+    historyList.innerHTML = '<p class="loading">Aucune interaction enregistree</p>';
+    return;
+  }
 
   historyList.innerHTML = interactions.map(i => `
     <div class="history-item">
@@ -266,15 +326,13 @@ function displayHistory(interactions) {
       <div class="date">${i.date}</div>
     </div>
   `).join('');
-
-  historySection.classList.remove('hidden');
 }
 
 function hideProspectInfo() {
   prospectInfo.classList.add('hidden');
-  suggestionsSection.classList.add('hidden');
-  historySection.classList.add('hidden');
+  tabsSection.classList.add('hidden');
   currentProspect = null;
+  currentAnalysis = null;
 }
 
 function formatCurrency(value) {

@@ -21,62 +21,108 @@
     <div id="main-content" class="hidden">
       <!-- Prospect Selection -->
       <div id="prospect-section" class="section">
-        <h2>Prospect</h2>
+        <h2>Prochain RDV</h2>
         <div id="prospect-selector">
           <select id="prospect-select">
             <option value="">Selectionner un prospect...</option>
           </select>
           <button id="refresh-prospects" title="Rafraichir">&#8635;</button>
         </div>
-        <div id="prospect-info" class="hidden">
-          <div class="prospect-card">
-            <div class="prospect-header">
-              <span id="prospect-name" class="prospect-name"></span>
+      </div>
+
+      <!-- Prospect Info Card -->
+      <div id="prospect-info" class="section hidden">
+        <div class="prospect-card">
+          <div class="prospect-header">
+            <span id="prospect-name" class="prospect-name"></span>
+            <div class="badges">
               <span id="prospect-badge" class="badge"></span>
+              <span id="prospect-score" class="badge score"></span>
             </div>
-            <div class="prospect-details">
-              <div><strong>Email:</strong> <span id="prospect-email"></span></div>
-              <div><strong>Tel:</strong> <span id="prospect-phone"></span></div>
-              <div><strong>Revenus:</strong> <span id="prospect-revenus"></span></div>
-              <div><strong>Patrimoine:</strong> <span id="prospect-patrimoine"></span></div>
-              <div><strong>Profession:</strong> <span id="prospect-profession"></span></div>
-            </div>
-            <div class="prospect-needs">
-              <strong>Besoins:</strong>
-              <p id="prospect-besoins"></p>
-            </div>
-            <div class="prospect-notes">
-              <strong>Notes:</strong>
-              <p id="prospect-notes"></p>
-            </div>
+          </div>
+          <div class="prospect-details">
+            <div><strong>Email:</strong> <span id="prospect-email"></span></div>
+            <div><strong>Tel:</strong> <span id="prospect-phone"></span></div>
+            <div><strong>RDV:</strong> <span id="prospect-rdv"></span></div>
+            <div><strong>Profession:</strong> <span id="prospect-profession"></span></div>
+            <div><strong>Revenus:</strong> <span id="prospect-revenus"></span></div>
+            <div><strong>Patrimoine:</strong> <span id="prospect-patrimoine"></span></div>
+            <div><strong>Age:</strong> <span id="prospect-age"></span></div>
+            <div><strong>Source:</strong> <span id="prospect-source"></span></div>
+          </div>
+          <div class="prospect-needs">
+            <strong>Besoins exprimes:</strong>
+            <p id="prospect-besoins"></p>
+          </div>
+          <div class="prospect-notes">
+            <strong>Notes de l'appel:</strong>
+            <p id="prospect-notes"></p>
+          </div>
+          <div id="prospect-justification" class="prospect-ia hidden">
+            <strong>Analyse IA precedente:</strong>
+            <p id="prospect-justification-text"></p>
           </div>
         </div>
       </div>
 
-      <!-- AI Suggestions -->
-      <div id="suggestions-section" class="section hidden">
-        <h2>Suggestions IA</h2>
-        <div id="suggestions-loading" class="loading">Analyse en cours...</div>
-        <div id="suggestions-content" class="hidden">
-          <div class="suggestion-group">
-            <h3>Questions a poser</h3>
-            <ul id="questions-list"></ul>
-          </div>
-          <div class="suggestion-group">
-            <h3>Arguments cles</h3>
-            <ul id="arguments-list"></ul>
-          </div>
-          <div class="suggestion-group">
-            <h3>Objections probables</h3>
-            <ul id="objections-list"></ul>
+      <!-- Tabs Navigation -->
+      <div id="tabs-section" class="section hidden">
+        <div class="tabs">
+          <button class="tab active" data-tab="questions">Questions</button>
+          <button class="tab" data-tab="arguments">Arguments</button>
+          <button class="tab" data-tab="attention">Attention</button>
+          <button class="tab" data-tab="historique">Historique</button>
+        </div>
+
+        <!-- Questions Tab -->
+        <div id="tab-questions" class="tab-content active">
+          <div id="questions-loading" class="loading">Analyse IA en cours...</div>
+          <div id="questions-content" class="hidden">
+            <div class="suggestion-group">
+              <h3>Questions a poser</h3>
+              <ol id="questions-list" class="numbered-list"></ol>
+            </div>
           </div>
         </div>
-      </div>
 
-      <!-- Interactions History -->
-      <div id="history-section" class="section hidden">
-        <h2>Historique</h2>
-        <div id="history-list"></div>
+        <!-- Arguments Tab -->
+        <div id="tab-arguments" class="tab-content hidden">
+          <div id="arguments-loading" class="loading">Analyse IA en cours...</div>
+          <div id="arguments-content" class="hidden">
+            <div class="suggestion-group">
+              <h3>Arguments cles</h3>
+              <ul id="arguments-list"></ul>
+            </div>
+            <div id="profil-section" class="suggestion-group hidden">
+              <h3>Profil comportemental</h3>
+              <p id="profil-text" class="profil-text"></p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Points d'attention Tab -->
+        <div id="tab-attention" class="tab-content hidden">
+          <div id="attention-loading" class="loading">Analyse IA en cours...</div>
+          <div id="attention-content" class="hidden">
+            <div class="suggestion-group warning">
+              <h3>Points d'attention</h3>
+              <ul id="attention-list"></ul>
+            </div>
+            <div class="suggestion-group danger">
+              <h3>Objections probables</h3>
+              <ul id="objections-list"></ul>
+            </div>
+          </div>
+        </div>
+
+        <!-- Historique Tab -->
+        <div id="tab-historique" class="tab-content hidden">
+          <div id="history-content">
+            <div id="history-list" class="history-list">
+              <p class="loading">Aucune interaction</p>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>

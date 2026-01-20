@@ -39,10 +39,10 @@ let dragOffset = { x: 0, y: 0 };
 
 // Initialization
 (async function init() {
-  console.log('Ultron Meeting Assistant v2.1: Initializing...');
+  console.log('Ultron Meeting Assistant v2.2: Initializing...');
 
   // Get token
-  const stored = await chrome.storage.local.get(['userToken', 'autoPanel', 'transcriptionEnabled']);
+  const stored = await chrome.storage.local.get(['userToken']);
   userToken = stored.userToken;
 
   if (!userToken) {
@@ -50,13 +50,9 @@ let dragOffset = { x: 0, y: 0 };
     return;
   }
 
-  // Wait for page to load
-  setTimeout(() => {
-    if (stored.autoPanel !== false) {
-      createPanel();
-    }
-    detectProspect();
-  }, 3000);
+  // Note: The floating panel is disabled - we now use the Chrome Side Panel instead
+  // The side panel auto-opens via background.js when on Google Meet
+  console.log('Ultron: Ready for transcription (Side Panel mode)');
 })();
 
 function createPanel() {

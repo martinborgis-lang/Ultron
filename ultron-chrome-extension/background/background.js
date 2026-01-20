@@ -1,19 +1,19 @@
 // Background service worker for Ultron Meeting Assistant
 
 chrome.runtime.onInstalled.addListener(() => {
-  console.log('Ultron Meeting Assistant v2.1 installed');
+  console.log('Ultron Meeting Assistant v2.2.0 installed');
 
-  // Enable side panel for Google Meet
+  // Enable side panel
   chrome.sidePanel.setOptions({
     enabled: true,
   });
-});
 
-// Open side panel when clicking extension icon on Google Meet
-chrome.action.onClicked.addListener((tab) => {
-  if (tab.url && tab.url.includes('meet.google.com')) {
-    chrome.sidePanel.open({ tabId: tab.id });
-  }
+  // Set default for auto-open
+  chrome.storage.local.get(['autoOpenSidePanel'], (result) => {
+    if (result.autoOpenSidePanel === undefined) {
+      chrome.storage.local.set({ autoOpenSidePanel: true });
+    }
+  });
 });
 
 // Handle messages for opening side panel
@@ -48,13 +48,20 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 });
 
-// Listen for tab updates to detect Google Meet
-chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+// Listen for tab updates to detect Google Meet and auto-open side panel
+chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
   if (changeInfo.status === 'complete' && tab.url?.includes('meet.google.com')) {
-    // Notify content script
-    chrome.tabs.sendMessage(tabId, { type: 'MEET_DETECTED' }).catch(() => {
-      // Content script not yet loaded, this is normal
-    });
+    // Check if user is logged in and auto-open is enabled
+    const stored = await chrome.storage.local.get(['userToken', 'autoOpenSidePanel']);
+
+    if (stored.userToken && stored.autoOpenSidePanel !== false) {
+      // Small delay to ensure page is fully loaded
+      setTimeout(() => {
+        chrome.sidePanel.open({ tabId: tabId }).catch((err) => {
+          console.log('Could not auto-open side panel:', err.message);
+        });
+      }, 2000);
+    }
   }
 });
 
