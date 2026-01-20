@@ -1,13 +1,29 @@
+/**
+ * Ultron Meeting Assistant - Content Script
+ * Real-time transcription with Deepgram + AI coaching
+ */
+
 const ULTRON_API_URL = 'https://ultron-murex.vercel.app';
 
+// State
 let panelElement = null;
 let isTranscribing = false;
-let recognition = null;
 let currentProspect = null;
 let userToken = null;
-let transcriptionBuffer = [];
-let realtimeAnalysisTimeout = null;
 let isPanelLarge = false;
+let meetingStartTime = null;
+
+// Deepgram & Audio
+let deepgramClient = null;
+let audioCapture = null;
+let mediaStream = null;
+let mediaRecorder = null;
+
+// Transcript state
+let transcriptSegments = [];
+let conversationHistory = [];
+let lastSpeaker = 'unknown';
+let realtimeAnalysisTimeout = null;
 
 // Dragging state
 let isDragging = false;
@@ -15,7 +31,7 @@ let dragOffset = { x: 0, y: 0 };
 
 // Initialization
 (async function init() {
-  console.log('Ultron Meeting Assistant: Initializing...');
+  console.log('Ultron Meeting Assistant v2.0: Initializing...');
 
   // Get token
   const stored = await chrome.storage.local.get(['userToken', 'autoPanel', 'transcriptionEnabled']);
@@ -31,8 +47,6 @@ let dragOffset = { x: 0, y: 0 };
     if (stored.autoPanel !== false) {
       createPanel();
     }
-
-    // Try to detect prospect from URL or title
     detectProspect();
   }, 3000);
 })();
@@ -58,10 +72,18 @@ function createPanel() {
       </div>
       <div id="ultron-transcription" class="hidden">
         <div class="ultron-section-header">
-          <span>Transcription en direct</span>
-          <button id="ultron-toggle-transcription">Activer</button>
+          <span>Transcription Deepgram</span>
+          <div class="ultron-transcription-controls">
+            <span id="ultron-connection-status" class="ultron-status-dot"></span>
+            <button id="ultron-toggle-transcription">Demarrer</button>
+          </div>
         </div>
         <div id="ultron-transcription-text"></div>
+        <div id="ultron-transcription-actions" class="hidden">
+          <button id="ultron-save-transcript" class="ultron-btn-primary">
+            Sauvegarder et generer PDF
+          </button>
+        </div>
       </div>
       <div id="ultron-realtime-suggestions" class="hidden">
         <div class="ultron-section-header">
@@ -70,7 +92,7 @@ function createPanel() {
         </div>
         <div id="ultron-realtime-content">
           <div class="ultron-realtime-placeholder">
-            Activez la transcription pour recevoir des suggestions en temps reel
+            Demarrez la transcription pour recevoir des suggestions en temps reel
           </div>
         </div>
       </div>
@@ -85,8 +107,16 @@ function createPanel() {
 
   // Event listeners
   document.getElementById('ultron-close').addEventListener('click', () => {
-    panelElement.remove();
-    panelElement = null;
+    if (isTranscribing) {
+      if (confirm('La transcription est en cours. Voulez-vous vraiment fermer?')) {
+        stopTranscription();
+        panelElement.remove();
+        panelElement = null;
+      }
+    } else {
+      panelElement.remove();
+      panelElement = null;
+    }
   });
 
   document.getElementById('ultron-minimize').addEventListener('click', () => {
@@ -95,6 +125,7 @@ function createPanel() {
 
   document.getElementById('ultron-resize').addEventListener('click', togglePanelSize);
   document.getElementById('ultron-toggle-transcription').addEventListener('click', toggleTranscription);
+  document.getElementById('ultron-save-transcript')?.addEventListener('click', saveTranscript);
 
   // Make panel draggable
   setupDraggable();
@@ -120,7 +151,6 @@ function setupDraggable() {
     const x = e.clientX - dragOffset.x;
     const y = e.clientY - dragOffset.y;
 
-    // Keep panel within viewport
     const maxX = window.innerWidth - panelElement.offsetWidth;
     const maxY = window.innerHeight - panelElement.offsetHeight;
 
@@ -152,12 +182,10 @@ function togglePanelSize() {
 }
 
 async function detectProspect() {
-  // Try to find prospect from meeting participants or ask user to select
   const meetingTitle = document.querySelector('[data-meeting-title]')?.textContent ||
                        document.title.replace(' - Google Meet', '').trim();
 
   if (meetingTitle) {
-    // Search for prospect with this name
     try {
       const response = await fetch(`${ULTRON_API_URL}/api/extension/search-prospect?q=${encodeURIComponent(meetingTitle)}`, {
         headers: { 'Authorization': `Bearer ${userToken}` },
@@ -186,21 +214,17 @@ function displayProspectInfo(prospect) {
   container.innerHTML = `
     <div class="ultron-prospect-card">
       <div class="ultron-prospect-header">
-        <span class="ultron-prospect-name">${prospect.prenom} ${prospect.nom}</span>
-        <span class="ultron-badge ${prospect.qualification?.toLowerCase()}">${prospect.qualification || 'N/A'}</span>
+        <span class="ultron-prospect-name">${prospect.prenom || prospect.firstName || ''} ${prospect.nom || prospect.lastName || ''}</span>
+        <span class="ultron-badge ${(prospect.qualification || '').toLowerCase()}">${prospect.qualification || 'N/A'}</span>
       </div>
       <div class="ultron-prospect-details">
         <div>Email: ${prospect.email || 'N/A'}</div>
-        <div>Tel: ${prospect.telephone || 'N/A'}</div>
-        <div>Situation: ${prospect.situation_pro || 'N/A'}</div>
-        <div>Revenus: ${prospect.revenus || 'N/A'}</div>
-        <div>Patrimoine: ${prospect.patrimoine || 'N/A'}</div>
+        <div>Tel: ${prospect.telephone || prospect.phone || 'N/A'}</div>
+        <div>Revenus: ${prospect.revenus || prospect.revenus_annuels || 'N/A'}</div>
+        <div>Patrimoine: ${prospect.patrimoine || prospect.patrimoine_estime || 'N/A'}</div>
       </div>
       <div class="ultron-prospect-needs">
-        <strong>Besoins:</strong> ${prospect.besoins || 'Non renseigne'}
-      </div>
-      <div class="ultron-prospect-notes">
-        <strong>Notes:</strong> ${prospect.notes_appel || 'Aucune note'}
+        <strong>Besoins:</strong> ${prospect.besoins || prospect.notes || 'Non renseigne'}
       </div>
       <button id="ultron-change-prospect" class="ultron-btn-secondary">Changer de prospect</button>
     </div>
@@ -244,12 +268,11 @@ async function searchProspects(e) {
     if (data.prospects && data.prospects.length > 0) {
       resultsContainer.innerHTML = data.prospects.map(p => `
         <div class="ultron-search-item" data-id="${p.id}">
-          <span>${p.prenom} ${p.nom}</span>
-          <span class="ultron-badge ${p.qualification?.toLowerCase()}">${p.qualification || 'N/A'}</span>
+          <span>${p.prenom || p.firstName || ''} ${p.nom || p.lastName || ''}</span>
+          <span class="ultron-badge ${(p.qualification || '').toLowerCase()}">${p.qualification || 'N/A'}</span>
         </div>
       `).join('');
 
-      // Add event listeners
       resultsContainer.querySelectorAll('.ultron-search-item').forEach(item => {
         item.addEventListener('click', () => selectProspect(item.dataset.id));
       });
@@ -322,124 +345,287 @@ async function loadAISuggestions(prospect) {
   }
 }
 
+// ========================
+// DEEPGRAM TRANSCRIPTION
+// ========================
+
 function toggleTranscription() {
   const btn = document.getElementById('ultron-toggle-transcription');
 
   if (isTranscribing) {
     stopTranscription();
-    btn.textContent = 'Activer';
+    btn.textContent = 'Demarrer';
     btn.classList.remove('active');
   } else {
-    startTranscription();
+    startDeepgramTranscription();
     btn.textContent = 'Arreter';
     btn.classList.add('active');
   }
 }
 
-function startTranscription() {
-  if (!('webkitSpeechRecognition' in window)) {
-    alert('La transcription n\'est pas supportee dans ce navigateur');
-    return;
+async function startDeepgramTranscription() {
+  const statusEl = document.getElementById('ultron-connection-status');
+  const aiStatusEl = document.getElementById('ultron-ai-status');
+
+  try {
+    statusEl.className = 'ultron-status-dot connecting';
+    aiStatusEl.textContent = 'Connexion...';
+
+    // Initialize Deepgram client
+    deepgramClient = new window.UltronDeepgramClient();
+
+    await deepgramClient.connect(userToken, {
+      onTranscript: handleTranscript,
+      onError: handleTranscriptionError,
+      onStatusChange: (status) => {
+        statusEl.className = `ultron-status-dot ${status}`;
+        if (status === 'connected') {
+          aiStatusEl.textContent = 'En ecoute...';
+          aiStatusEl.className = 'ultron-ai-status listening';
+        }
+      },
+    });
+
+    // Start tab audio capture
+    await startAudioCapture();
+
+    isTranscribing = true;
+    meetingStartTime = Date.now();
+    transcriptSegments = [];
+    conversationHistory = [];
+
+    // Show save button
+    document.getElementById('ultron-transcription-actions')?.classList.remove('hidden');
+
+    console.log('Ultron: Deepgram transcription started');
+
+  } catch (error) {
+    console.error('Ultron: Failed to start Deepgram transcription', error);
+    statusEl.className = 'ultron-status-dot error';
+    aiStatusEl.textContent = 'Erreur: ' + error.message;
+    aiStatusEl.className = 'ultron-ai-status error';
+
+    // Fall back to Web Speech API if Deepgram fails
+    if (error.message.includes('capture') || error.message.includes('permission')) {
+      alert('Impossible de capturer l\'audio de l\'onglet. Verifiez les permissions de l\'extension.');
+    }
   }
+}
 
-  recognition = new webkitSpeechRecognition();
-  recognition.continuous = true;
-  recognition.interimResults = true;
-  recognition.lang = 'fr-FR';
+async function startAudioCapture() {
+  return new Promise((resolve, reject) => {
+    // Request tab capture stream ID from background
+    chrome.runtime.sendMessage({ type: 'GET_TAB_MEDIA_STREAM_ID' }, async (response) => {
+      if (chrome.runtime.lastError) {
+        reject(new Error(chrome.runtime.lastError.message));
+        return;
+      }
 
-  recognition.onresult = (event) => {
-    let interimTranscript = '';
-    let finalTranscript = '';
+      if (response.error) {
+        reject(new Error(response.error));
+        return;
+      }
 
-    for (let i = event.resultIndex; i < event.results.length; i++) {
-      const transcript = event.results[i][0].transcript;
-      if (event.results[i].isFinal) {
-        finalTranscript += transcript + ' ';
-        transcriptionBuffer.push({
-          text: transcript,
-          timestamp: new Date().toISOString(),
+      try {
+        // Get media stream using the stream ID
+        mediaStream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            mandatory: {
+              chromeMediaSource: 'tab',
+              chromeMediaSourceId: response.streamId,
+            },
+          },
+          video: false,
         });
 
-        // Trigger real-time analysis after accumulating some text
-        scheduleRealtimeAnalysis();
-      } else {
-        interimTranscript += transcript;
+        // Create MediaRecorder to send chunks to Deepgram
+        mediaRecorder = new MediaRecorder(mediaStream, {
+          mimeType: 'audio/webm;codecs=opus',
+        });
+
+        mediaRecorder.ondataavailable = async (event) => {
+          if (event.data.size > 0 && deepgramClient && deepgramClient.isActive()) {
+            const arrayBuffer = await event.data.arrayBuffer();
+            deepgramClient.sendAudio(arrayBuffer);
+          }
+        };
+
+        // Record in 250ms chunks for real-time streaming
+        mediaRecorder.start(250);
+
+        console.log('Ultron: Audio capture started');
+        resolve();
+
+      } catch (error) {
+        reject(error);
       }
-    }
+    });
+  });
+}
 
-    const container = document.getElementById('ultron-transcription-text');
-    container.innerHTML = `
-      <div class="ultron-transcript-final">${transcriptionBuffer.map(t => t.text).join(' ')}</div>
-      <div class="ultron-transcript-interim">${interimTranscript}</div>
+function handleTranscript(result) {
+  const { transcript, isFinal, confidence } = result;
+
+  if (!transcript || transcript.trim() === '') return;
+
+  const currentTime = (Date.now() - meetingStartTime) / 1000;
+
+  // Determine speaker based on audio analysis or simple heuristic
+  // In production, you'd use speaker diarization
+  const speaker = detectSpeaker(transcript);
+
+  if (isFinal) {
+    // Add to transcript segments
+    transcriptSegments.push({
+      timestamp: currentTime,
+      speaker: speaker,
+      text: transcript,
+      confidence: confidence,
+    });
+
+    // Add to conversation history for AI analysis
+    conversationHistory.push(`[${speaker === 'advisor' ? 'Conseiller' : 'Prospect'}]: ${transcript}`);
+
+    // Schedule real-time AI analysis
+    scheduleRealtimeAnalysis();
+  }
+
+  // Update display
+  updateTranscriptDisplay(transcript, isFinal);
+}
+
+function detectSpeaker(transcript) {
+  // Simple heuristic: alternate speakers or detect based on content
+  // In production, use speaker diarization from Deepgram
+  // For now, we'll use simple content-based detection
+
+  const prospectIndicators = [
+    'je voudrais', 'j\'aimerais', 'est-ce que', 'combien', 'pourquoi',
+    'je ne sais pas', 'je dois reflechir', 'c\'est trop cher', 'pas maintenant'
+  ];
+
+  const advisorIndicators = [
+    'je vous propose', 'permettez-moi', 'comme je disais', 'nos clients',
+    'notre solution', 'je comprends', 'excellente question'
+  ];
+
+  const lowerTranscript = transcript.toLowerCase();
+
+  const isProspect = prospectIndicators.some(ind => lowerTranscript.includes(ind));
+  const isAdvisor = advisorIndicators.some(ind => lowerTranscript.includes(ind));
+
+  if (isProspect && !isAdvisor) {
+    lastSpeaker = 'prospect';
+  } else if (isAdvisor && !isProspect) {
+    lastSpeaker = 'advisor';
+  }
+  // If neither or both, keep the last speaker
+
+  return lastSpeaker;
+}
+
+function updateTranscriptDisplay(currentTranscript, isFinal) {
+  const container = document.getElementById('ultron-transcription-text');
+
+  const segmentsHtml = transcriptSegments.map(seg => {
+    const speakerLabel = seg.speaker === 'advisor' ? 'Conseiller' : 'Prospect';
+    const speakerClass = seg.speaker === 'advisor' ? 'advisor' : 'prospect';
+    const time = formatTime(seg.timestamp);
+    return `
+      <div class="ultron-transcript-segment ${speakerClass}">
+        <span class="ultron-transcript-time">${time}</span>
+        <span class="ultron-transcript-speaker">${speakerLabel}:</span>
+        <span class="ultron-transcript-text">${seg.text}</span>
+      </div>
     `;
-    container.scrollTop = container.scrollHeight;
-  };
+  }).join('');
 
-  recognition.onerror = (event) => {
-    console.error('Ultron: Transcription error', event.error);
-    if (event.error === 'not-allowed') {
-      alert('Microphone non autorise. Veuillez autoriser l\'acces au microphone.');
-    }
-  };
+  const interimHtml = !isFinal ? `
+    <div class="ultron-transcript-interim">
+      ${currentTranscript}
+    </div>
+  ` : '';
 
-  recognition.onend = () => {
-    if (isTranscribing) {
-      recognition.start(); // Auto-restart
-    }
-  };
+  container.innerHTML = segmentsHtml + interimHtml;
+  container.scrollTop = container.scrollHeight;
+}
 
-  recognition.start();
-  isTranscribing = true;
+function formatTime(seconds) {
+  const mins = Math.floor(seconds / 60);
+  const secs = Math.floor(seconds % 60);
+  return `${mins}:${secs.toString().padStart(2, '0')}`;
+}
 
-  // Show status
-  const statusEl = document.getElementById('ultron-ai-status');
-  statusEl.textContent = 'En ecoute...';
-  statusEl.className = 'ultron-ai-status listening';
+function handleTranscriptionError(error) {
+  console.error('Ultron: Transcription error', error);
+  const aiStatusEl = document.getElementById('ultron-ai-status');
+  aiStatusEl.textContent = 'Erreur transcription';
+  aiStatusEl.className = 'ultron-ai-status error';
 }
 
 function stopTranscription() {
-  if (recognition) {
-    recognition.stop();
-    recognition = null;
+  // Stop media recorder
+  if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+    mediaRecorder.stop();
   }
+
+  // Stop media stream
+  if (mediaStream) {
+    mediaStream.getTracks().forEach(track => track.stop());
+    mediaStream = null;
+  }
+
+  // Disconnect Deepgram
+  if (deepgramClient) {
+    deepgramClient.disconnect();
+    deepgramClient = null;
+  }
+
   isTranscribing = false;
 
-  // Clear status
-  const statusEl = document.getElementById('ultron-ai-status');
-  statusEl.textContent = '';
-  statusEl.className = 'ultron-ai-status';
-
-  // Clear timeout
+  // Clear timeouts
   if (realtimeAnalysisTimeout) {
     clearTimeout(realtimeAnalysisTimeout);
     realtimeAnalysisTimeout = null;
   }
+
+  // Update UI
+  const statusEl = document.getElementById('ultron-connection-status');
+  const aiStatusEl = document.getElementById('ultron-ai-status');
+  statusEl.className = 'ultron-status-dot';
+  aiStatusEl.textContent = '';
+  aiStatusEl.className = 'ultron-ai-status';
+
+  console.log('Ultron: Transcription stopped');
 }
 
+// ========================
+// REAL-TIME AI ANALYSIS
+// ========================
+
 function scheduleRealtimeAnalysis() {
-  // Debounce real-time analysis - wait 3 seconds after last speech
   if (realtimeAnalysisTimeout) {
     clearTimeout(realtimeAnalysisTimeout);
   }
 
   realtimeAnalysisTimeout = setTimeout(() => {
-    if (transcriptionBuffer.length >= 2) {
+    if (conversationHistory.length >= 2) {
       runRealtimeAnalysis();
     }
   }, 3000);
 }
 
 async function runRealtimeAnalysis() {
-  if (!currentProspect || transcriptionBuffer.length === 0) return;
+  if (!currentProspect || conversationHistory.length === 0) return;
 
-  const statusEl = document.getElementById('ultron-ai-status');
-  statusEl.textContent = 'Analyse...';
-  statusEl.className = 'ultron-ai-status analyzing';
+  const aiStatusEl = document.getElementById('ultron-ai-status');
+  aiStatusEl.textContent = 'Analyse...';
+  aiStatusEl.className = 'ultron-ai-status analyzing';
 
-  const recentTranscript = transcriptionBuffer.slice(-10).map(t => t.text).join(' ');
+  const recentTranscript = conversationHistory.slice(-10).join('\n');
 
   try {
-    const response = await fetch(`${ULTRON_API_URL}/api/extension/analyze-realtime`, {
+    const response = await fetch(`${ULTRON_API_URL}/api/meeting/analyze`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -448,6 +634,7 @@ async function runRealtimeAnalysis() {
       body: JSON.stringify({
         prospect: currentProspect,
         transcript: recentTranscript,
+        conversationHistory: conversationHistory.slice(-5),
       }),
     });
 
@@ -457,12 +644,13 @@ async function runRealtimeAnalysis() {
       displayRealtimeSuggestions(data.analysis);
     }
 
-    statusEl.textContent = 'En ecoute...';
-    statusEl.className = 'ultron-ai-status listening';
+    aiStatusEl.textContent = 'En ecoute...';
+    aiStatusEl.className = 'ultron-ai-status listening';
+
   } catch (error) {
     console.error('Ultron: Realtime analysis error', error);
-    statusEl.textContent = 'Erreur';
-    statusEl.className = 'ultron-ai-status error';
+    aiStatusEl.textContent = 'Erreur';
+    aiStatusEl.className = 'ultron-ai-status error';
   }
 }
 
@@ -515,7 +703,63 @@ function displayRealtimeSuggestions(analysis) {
   container.innerHTML = html;
 }
 
-// Utilities
+// ========================
+// SAVE TRANSCRIPT
+// ========================
+
+async function saveTranscript() {
+  if (transcriptSegments.length === 0) {
+    alert('Aucune transcription a sauvegarder');
+    return;
+  }
+
+  const btn = document.getElementById('ultron-save-transcript');
+  btn.disabled = true;
+  btn.textContent = 'Sauvegarde en cours...';
+
+  const durationSeconds = meetingStartTime ? Math.floor((Date.now() - meetingStartTime) / 1000) : 0;
+
+  try {
+    const response = await fetch(`${ULTRON_API_URL}/api/meeting/save`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${userToken}`,
+      },
+      body: JSON.stringify({
+        prospect_id: currentProspect?.id,
+        google_meet_link: window.location.href,
+        transcript_segments: transcriptSegments,
+        duration_seconds: durationSeconds,
+      }),
+    });
+
+    const data = await response.json();
+
+    if (response.ok) {
+      alert(`Transcript sauvegarde avec succes!\n\nResume: ${data.ai_summary?.substring(0, 200)}...`);
+
+      if (data.pdf_url) {
+        // Open PDF in new tab
+        window.open(data.pdf_url, '_blank');
+      }
+    } else {
+      throw new Error(data.error || 'Erreur de sauvegarde');
+    }
+
+  } catch (error) {
+    console.error('Ultron: Save error', error);
+    alert('Erreur lors de la sauvegarde: ' + error.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Sauvegarder et generer PDF';
+  }
+}
+
+// ========================
+// UTILITIES
+// ========================
+
 function debounce(func, wait) {
   let timeout;
   return function executedFunction(...args) {

@@ -413,6 +413,136 @@
   padding: 16px;
 }
 
+/* Transcription controls */
+.ultron-transcription-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Connection status dot */
+.ultron-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #333;
+}
+
+.ultron-status-dot.connecting {
+  background: #f59e0b;
+  animation: blink 0.5s infinite;
+}
+
+.ultron-status-dot.connected {
+  background: #22c55e;
+}
+
+.ultron-status-dot.error {
+  background: #ef4444;
+}
+
+.ultron-status-dot.disconnected {
+  background: #666;
+}
+
+.ultron-status-dot.reconnecting {
+  background: #f59e0b;
+  animation: blink 0.5s infinite;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+/* Transcript segments */
+.ultron-transcript-segment {
+  padding: 8px;
+  margin-bottom: 6px;
+  border-radius: 4px;
+  background: #252525;
+}
+
+.ultron-transcript-segment.advisor {
+  border-left: 3px solid #6366f1;
+}
+
+.ultron-transcript-segment.prospect {
+  border-left: 3px solid #10b981;
+}
+
+.ultron-transcript-time {
+  font-size: 10px;
+  color: #666;
+  margin-right: 8px;
+  font-family: monospace;
+}
+
+.ultron-transcript-speaker {
+  font-size: 11px;
+  font-weight: 600;
+  color: #888;
+  margin-right: 4px;
+}
+
+.ultron-transcript-segment.advisor .ultron-transcript-speaker {
+  color: #6366f1;
+}
+
+.ultron-transcript-segment.prospect .ultron-transcript-speaker {
+  color: #10b981;
+}
+
+.ultron-transcript-text {
+  font-size: 12px;
+  color: #fff;
+}
+
+/* Transcription actions */
+#ultron-transcription-actions {
+  margin-top: 12px;
+}
+
+.ultron-btn-primary {
+  width: 100%;
+  padding: 10px;
+  background: #6366f1;
+  border: none;
+  border-radius: 6px;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.ultron-btn-primary:hover {
+  background: #5355d1;
+}
+
+.ultron-btn-primary:disabled {
+  background: #444;
+  cursor: not-allowed;
+}
+
+/* Scrollbar styling */
+#ultron-transcription-text::-webkit-scrollbar {
+  width: 6px;
+}
+
+#ultron-transcription-text::-webkit-scrollbar-track {
+  background: #1a1a1a;
+}
+
+#ultron-transcription-text::-webkit-scrollbar-thumb {
+  background: #333;
+  border-radius: 3px;
+}
+
+#ultron-transcription-text::-webkit-scrollbar-thumb:hover {
+  background: #444;
+}
+
 .hidden {
   display: none !important;
 }
