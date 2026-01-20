@@ -233,7 +233,8 @@ export class CrmProspectService implements IProspectService {
     };
 
     prospects.forEach((p) => {
-      const qual = p.qualification || 'NON_QUALIFIE';
+      // Normalize qualification to uppercase for comparison
+      const qual = (p.qualification || 'non_qualifie').toUpperCase();
       if (byQualification[qual] !== undefined) byQualification[qual]++;
       else byQualification['NON_QUALIFIE']++;
 
