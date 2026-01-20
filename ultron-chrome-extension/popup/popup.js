@@ -164,6 +164,18 @@ async function handleOpenPanel() {
   }
 }
 
+function openPreparePopup(prospectId) {
+  // Open in a small popup window instead of full tab
+  chrome.windows.create({
+    url: `${ULTRON_API_URL}/meeting/prepare/${prospectId}`,
+    type: 'popup',
+    width: 450,
+    height: 700,
+    left: 100,
+    top: 100,
+  });
+}
+
 async function loadProspects() {
   try {
     const response = await fetch(`${ULTRON_API_URL}/api/extension/prospects`, {
@@ -186,7 +198,7 @@ async function loadProspects() {
         div.className = 'prospect-item';
         div.innerHTML = `
           <div>
-            <div class="name">${p.prenom} ${p.nom}</div>
+            <div class="name">${p.prenom || p.firstName || ''} ${p.nom || p.lastName || ''}</div>
             <div class="date">${p.date_rdv || 'Date non definie'}</div>
           </div>
           <button class="prep-btn">Preparer</button>
@@ -194,8 +206,28 @@ async function loadProspects() {
 
         // Add event listener properly
         const btn = div.querySelector('.prep-btn');
-        btn.addEventListener('click', () => {
-          chrome.tabs.create({ url: `${ULTRON_API_URL}/meeting/prepare/${p.id}` });
+        btn.addEventListener('click', async () => {
+          // Check if on Google Meet
+          const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+
+          if (tab && tab.url && tab.url.includes('meet.google.com')) {
+            // On Google Meet - send message to content script to select this prospect
+            chrome.tabs.sendMessage(tab.id, {
+              type: 'SELECT_PROSPECT',
+              prospectId: p.id,
+            }, (response) => {
+              if (chrome.runtime.lastError) {
+                // Content script not available - open popup window instead
+                openPreparePopup(p.id);
+              } else {
+                // Success - close popup
+                window.close();
+              }
+            });
+          } else {
+            // Not on Google Meet - open in popup window
+            openPreparePopup(p.id);
+          }
         });
 
         prospectsList.appendChild(div);

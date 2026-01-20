@@ -770,13 +770,26 @@ function debounce(func, wait) {
 
 // Listen for messages from popup
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  // Handle async operations
+  handleMessage(message, sendResponse);
+  return true; // Keep channel open for async response
+});
+
+async function handleMessage(message, sendResponse) {
+  // Ensure we have the token
+  if (!userToken) {
+    const stored = await chrome.storage.local.get(['userToken']);
+    userToken = stored.userToken;
+  }
+
   if (message.type === 'SETTINGS_UPDATED') {
-    if (message.autoPanel && !panelElement) {
+    if (message.autoPanel && !panelElement && userToken) {
       createPanel();
       if (!currentProspect) {
         detectProspect();
       }
     }
+    sendResponse({ success: true });
   }
 
   // Handle login from popup - open panel automatically
@@ -791,12 +804,31 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   // Handle request to open panel manually
   if (message.type === 'OPEN_PANEL') {
-    if (!panelElement && userToken) {
+    if (!userToken) {
+      sendResponse({ success: false, error: 'Not logged in' });
+      return;
+    }
+    if (!panelElement) {
       createPanel();
       detectProspect();
-    } else if (panelElement) {
+    } else {
       panelElement.classList.remove('minimized');
     }
     sendResponse({ success: true });
   }
-});
+
+  // Handle prospect selection from popup
+  if (message.type === 'SELECT_PROSPECT') {
+    if (!userToken) {
+      sendResponse({ success: false, error: 'Not logged in' });
+      return;
+    }
+    if (!panelElement) {
+      createPanel();
+    }
+    panelElement.classList.remove('minimized');
+    // Load the selected prospect
+    selectProspect(message.prospectId);
+    sendResponse({ success: true });
+  }
+}
