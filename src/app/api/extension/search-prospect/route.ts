@@ -69,84 +69,28 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Get organization with Google credentials
+    // Get organization with data_mode
     const { data: org, error: orgError } = await adminClient
       .from('organizations')
-      .select('google_sheet_id, google_credentials')
+      .select('id, data_mode, google_sheet_id, google_credentials')
       .eq('id', user.organization_id)
       .single();
 
-    if (orgError || !org?.google_credentials || !org?.google_sheet_id) {
+    if (orgError || !org) {
       return NextResponse.json(
-        { error: 'Google Sheet non configure' },
-        { status: 400, headers: corsHeaders() }
+        { error: 'Organisation non trouvee' },
+        { status: 404, headers: corsHeaders() }
       );
     }
 
-    // Get valid credentials
-    const validCredentials = await getValidCredentials(org.google_credentials);
-
-    // Update credentials if refreshed
-    if (validCredentials.access_token !== org.google_credentials.access_token) {
-      await adminClient
-        .from('organizations')
-        .update({ google_credentials: validCredentials })
-        .eq('id', user.organization_id);
+    // BI-MODE: Route based on data_mode
+    if (org.data_mode === 'crm') {
+      // CRM MODE - Query Supabase
+      return await searchProspectsCRM(adminClient, org.id, query);
+    } else {
+      // SHEET MODE - Query Google Sheets
+      return await searchProspectsSheet(adminClient, org, query);
     }
-
-    // Fetch prospects from Google Sheet
-    const rows = await readGoogleSheet(validCredentials, org.google_sheet_id, 'A:Y');
-    const allProspects = parseProspectsFromSheet(rows);
-
-    // Search by name
-    const matchedProspects = allProspects
-      .filter(p => {
-        const fullName = `${p.prenom} ${p.nom}`.toLowerCase();
-        const reverseName = `${p.nom} ${p.prenom}`.toLowerCase();
-        return fullName.includes(query) || reverseName.includes(query);
-      })
-      .map(p => ({
-        id: p.id,
-        nom: p.nom,
-        prenom: p.prenom,
-        email: p.email,
-        telephone: p.telephone,
-        qualification: p.qualificationIA,
-        date_rdv: p.dateRdv,
-      }))
-      .slice(0, 5); // Limit to 5 results
-
-    // If only one result, also return it as "prospect" for direct match
-    if (matchedProspects.length === 1) {
-      const fullProspect = allProspects.find(p => p.id === matchedProspects[0].id);
-      if (fullProspect) {
-        return NextResponse.json(
-          {
-            prospect: {
-              id: fullProspect.id,
-              nom: fullProspect.nom,
-              prenom: fullProspect.prenom,
-              email: fullProspect.email,
-              telephone: fullProspect.telephone,
-              situation_pro: fullProspect.situationPro,
-              revenus: fullProspect.revenus,
-              patrimoine: fullProspect.patrimoine,
-              besoins: fullProspect.besoins,
-              notes_appel: fullProspect.notesAppel,
-              qualification: fullProspect.qualificationIA,
-              date_rdv: fullProspect.dateRdv,
-            },
-            prospects: matchedProspects,
-          },
-          { headers: corsHeaders() }
-        );
-      }
-    }
-
-    return NextResponse.json(
-      { prospects: matchedProspects },
-      { headers: corsHeaders() }
-    );
   } catch (error) {
     console.error('Extension search error:', error);
     return NextResponse.json(
@@ -154,4 +98,156 @@ export async function GET(request: NextRequest) {
       { status: 500, headers: corsHeaders() }
     );
   }
+}
+
+// Search in CRM mode (Supabase)
+async function searchProspectsCRM(adminClient: ReturnType<typeof createAdminClient>, orgId: string, query: string) {
+  const { data: prospects, error } = await adminClient
+    .from('crm_prospects')
+    .select('id, first_name, last_name, email, phone, qualification, score_ia, patrimoine_estime, revenus_annuels, notes, profession')
+    .eq('organization_id', orgId)
+    .or(`first_name.ilike.%${query}%,last_name.ilike.%${query}%,email.ilike.%${query}%`)
+    .limit(5);
+
+  if (error) {
+    console.error('CRM search error:', error);
+    return NextResponse.json(
+      { error: 'Erreur recherche CRM' },
+      { status: 500, headers: corsHeaders() }
+    );
+  }
+
+  const matchedProspects = (prospects || []).map(p => ({
+    id: p.id,
+    nom: p.last_name,
+    prenom: p.first_name,
+    firstName: p.first_name,
+    lastName: p.last_name,
+    email: p.email,
+    telephone: p.phone,
+    phone: p.phone,
+    qualification: p.qualification,
+    scoreIa: p.score_ia,
+  }));
+
+  // If only one result, return full details
+  if (matchedProspects.length === 1) {
+    const p = prospects![0];
+    return NextResponse.json(
+      {
+        prospect: {
+          id: p.id,
+          nom: p.last_name,
+          prenom: p.first_name,
+          firstName: p.first_name,
+          lastName: p.last_name,
+          email: p.email,
+          telephone: p.phone,
+          phone: p.phone,
+          situation_pro: p.profession,
+          revenus: p.revenus_annuels,
+          revenus_annuels: p.revenus_annuels,
+          patrimoine: p.patrimoine_estime,
+          patrimoine_estime: p.patrimoine_estime,
+          besoins: p.notes,
+          notes: p.notes,
+          qualification: p.qualification,
+          score_ia: p.score_ia,
+        },
+        prospects: matchedProspects,
+      },
+      { headers: corsHeaders() }
+    );
+  }
+
+  return NextResponse.json(
+    { prospects: matchedProspects },
+    { headers: corsHeaders() }
+  );
+}
+
+// Search in Sheet mode (Google Sheets)
+async function searchProspectsSheet(
+  adminClient: ReturnType<typeof createAdminClient>,
+  org: { id: string; google_sheet_id: string | null; google_credentials: any },
+  query: string
+) {
+  if (!org.google_credentials || !org.google_sheet_id) {
+    return NextResponse.json(
+      { error: 'Google Sheet non configure' },
+      { status: 400, headers: corsHeaders() }
+    );
+  }
+
+  // Get valid credentials
+  const validCredentials = await getValidCredentials(org.google_credentials);
+
+  // Update credentials if refreshed
+  if (validCredentials.access_token !== org.google_credentials.access_token) {
+    await adminClient
+      .from('organizations')
+      .update({ google_credentials: validCredentials })
+      .eq('id', org.id);
+  }
+
+  // Fetch prospects from Google Sheet
+  const rows = await readGoogleSheet(validCredentials, org.google_sheet_id, 'A:Y');
+  const allProspects = parseProspectsFromSheet(rows);
+
+  // Search by name
+  const matchedProspects = allProspects
+    .filter(p => {
+      const fullName = `${p.prenom} ${p.nom}`.toLowerCase();
+      const reverseName = `${p.nom} ${p.prenom}`.toLowerCase();
+      return fullName.includes(query) || reverseName.includes(query);
+    })
+    .map(p => ({
+      id: p.id,
+      nom: p.nom,
+      prenom: p.prenom,
+      firstName: p.prenom,
+      lastName: p.nom,
+      email: p.email,
+      telephone: p.telephone,
+      phone: p.telephone,
+      qualification: p.qualificationIA,
+      date_rdv: p.dateRdv,
+    }))
+    .slice(0, 5);
+
+  // If only one result, also return it as "prospect" for direct match
+  if (matchedProspects.length === 1) {
+    const fullProspect = allProspects.find(p => p.id === matchedProspects[0].id);
+    if (fullProspect) {
+      return NextResponse.json(
+        {
+          prospect: {
+            id: fullProspect.id,
+            nom: fullProspect.nom,
+            prenom: fullProspect.prenom,
+            firstName: fullProspect.prenom,
+            lastName: fullProspect.nom,
+            email: fullProspect.email,
+            telephone: fullProspect.telephone,
+            phone: fullProspect.telephone,
+            situation_pro: fullProspect.situationPro,
+            revenus: fullProspect.revenus,
+            patrimoine: fullProspect.patrimoine,
+            besoins: fullProspect.besoins,
+            notes_appel: fullProspect.notesAppel,
+            notes: fullProspect.notesAppel,
+            qualification: fullProspect.qualificationIA,
+            date_rdv: fullProspect.dateRdv,
+          },
+          prospects: matchedProspects,
+        },
+        { headers: corsHeaders() }
+      );
+    }
+  }
+
+  return NextResponse.json(
+    { prospects: matchedProspects },
+    { headers: corsHeaders() }
+  );
 }

@@ -66,15 +66,25 @@ Tu dois TOUJOURS repondre en JSON valide avec la structure exacte suivante :
 
 Sois concis et pertinent. Maximum 3-4 elements par categorie.`;
 
+    // Support both Sheet and CRM field names
+    const firstName = prospect.prenom || prospect.firstName || prospect.first_name || '';
+    const lastName = prospect.nom || prospect.lastName || prospect.last_name || '';
+    const situationPro = prospect.situation_pro || prospect.profession || 'Non renseignee';
+    const revenus = prospect.revenus || prospect.revenus_annuels || 'Non renseignes';
+    const patrimoine = prospect.patrimoine || prospect.patrimoine_estime || 'Non renseigne';
+    const besoins = prospect.besoins || prospect.notes || 'Non renseignes';
+    const notesAppel = prospect.notes_appel || prospect.notes || 'Aucune note';
+    const qualification = prospect.qualification || 'Non qualifie';
+
     const userPrompt = `Analyse ce prospect pour preparer un rendez-vous :
 
-Nom: ${prospect.prenom} ${prospect.nom}
-Situation professionnelle: ${prospect.situation_pro || 'Non renseignee'}
-Revenus: ${prospect.revenus || 'Non renseignes'}
-Patrimoine: ${prospect.patrimoine || 'Non renseigne'}
-Besoins exprimes: ${prospect.besoins || 'Non renseignes'}
-Notes de l'appel precedent: ${prospect.notes_appel || 'Aucune note'}
-Qualification: ${prospect.qualification || 'Non qualifie'}
+Nom: ${firstName} ${lastName}
+Situation professionnelle: ${situationPro}
+Revenus: ${revenus}
+Patrimoine: ${patrimoine}
+Besoins exprimes: ${besoins}
+Notes de l'appel precedent: ${notesAppel}
+Qualification: ${qualification}
 
 Fournis des suggestions pour ce rendez-vous.`;
 
