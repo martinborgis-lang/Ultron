@@ -15,18 +15,21 @@ export function getDeepgramApiKey(): string {
 
 /**
  * Generate WebSocket URL for Deepgram streaming
+ * Note: Don't specify encoding/sample_rate for browser audio (WebM/Opus)
+ * Deepgram will auto-detect the format
  */
 export function getDeepgramWebSocketUrl(config: Partial<DeepgramConfig> = {}): string {
   const finalConfig = { ...DEFAULT_DEEPGRAM_CONFIG, ...config };
 
+  // For browser-based streaming, let Deepgram auto-detect encoding
+  // WebM/Opus from MediaRecorder is automatically detected
   const params = new URLSearchParams({
     model: finalConfig.model,
     language: finalConfig.language,
     punctuate: String(finalConfig.punctuate),
     interim_results: String(finalConfig.interim_results),
-    encoding: finalConfig.encoding,
-    sample_rate: String(finalConfig.sample_rate),
-    channels: String(finalConfig.channels),
+    // Don't specify encoding/sample_rate - let Deepgram auto-detect
+    // This allows WebM/Opus from browser MediaRecorder to work
   });
 
   return `wss://api.deepgram.com/v1/listen?${params.toString()}`;

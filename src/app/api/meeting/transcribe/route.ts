@@ -71,8 +71,7 @@ export async function GET(request: NextRequest) {
         config: {
           model: 'nova-2',
           language: 'fr',
-          sample_rate: 16000,
-          encoding: 'linear16',
+          // encoding auto-detected by Deepgram for browser MediaRecorder (WebM/Opus)
         },
       },
       { headers: corsHeaders() }
