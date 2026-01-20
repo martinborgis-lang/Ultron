@@ -207,18 +207,14 @@ export default function MeetingsPage() {
 
                 {/* Actions */}
                 <div className="flex items-center gap-2 mt-3 pt-3 border-t border-border">
-                  {transcript.pdf_url && (
-                    <a
-                      href={transcript.pdf_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      onClick={e => e.stopPropagation()}
-                      className="flex items-center gap-1 px-2 py-1 text-xs bg-muted rounded hover:bg-muted/80 text-foreground"
-                    >
-                      <Download className="h-3 w-3" />
-                      PDF
-                    </a>
-                  )}
+                  <a
+                    href={`/api/meeting/transcripts/${transcript.id}/pdf`}
+                    onClick={e => e.stopPropagation()}
+                    className="flex items-center gap-1 px-2 py-1 text-xs bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 rounded hover:bg-indigo-200 dark:hover:bg-indigo-800/30"
+                  >
+                    <Download className="h-3 w-3" />
+                    PDF
+                  </a>
                   <button
                     onClick={e => {
                       e.stopPropagation();
@@ -535,22 +531,18 @@ function TranscriptDetailPanel({
 
             {/* Links */}
             <div className="pt-4 border-t border-border space-y-2">
-              {transcript.pdf_url && (
-                <a
-                  href={transcript.pdf_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-2 w-full px-4 py-2 bg-muted rounded-lg hover:bg-muted/80 text-foreground"
-                >
-                  <Download className="h-4 w-4" />
-                  Telecharger le rapport PDF
-                </a>
-              )}
+              <a
+                href={`/api/meeting/transcripts/${transcript.id}/pdf`}
+                className="flex items-center gap-2 w-full px-4 py-2 bg-indigo-100 dark:bg-indigo-900/30 rounded-lg hover:bg-indigo-200 dark:hover:bg-indigo-800/30 text-indigo-600 font-medium"
+              >
+                <Download className="h-4 w-4" />
+                Telecharger le rapport PDF
+              </a>
 
               {transcript.crm_prospects && (
                 <a
                   href={`/prospects/${transcript.crm_prospects.id}`}
-                  className="flex items-center gap-2 w-full px-4 py-2 bg-indigo-50 dark:bg-indigo-950/30 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-900/30 text-indigo-600"
+                  className="flex items-center gap-2 w-full px-4 py-2 bg-muted rounded-lg hover:bg-muted/80 text-foreground"
                 >
                   <User className="h-4 w-4" />
                   Voir la fiche prospect
