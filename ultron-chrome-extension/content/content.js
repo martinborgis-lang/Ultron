@@ -42,7 +42,7 @@ let dragOffset = { x: 0, y: 0 };
   console.log('Ultron Meeting Assistant v2.2: Initializing...');
 
   // Get token
-  const stored = await chrome.storage.local.get(['userToken']);
+  const stored = await chrome.storage.local.get(['userToken', 'autoPanel']);
   userToken = stored.userToken;
 
   if (!userToken) {
@@ -50,10 +50,88 @@ let dragOffset = { x: 0, y: 0 };
     return;
   }
 
-  // Note: The floating panel is disabled - we now use the Chrome Side Panel instead
-  // The side panel auto-opens via background.js when on Google Meet
+  // Show floating button to open Side Panel (Chrome requires user gesture to open side panel)
+  if (stored.autoPanel !== false) {
+    createOpenPanelButton();
+  }
+
   console.log('Ultron: Ready for transcription (Side Panel mode)');
 })();
+
+// Create a small floating button to open the Side Panel
+function createOpenPanelButton() {
+  // Check if button already exists
+  if (document.getElementById('ultron-open-panel-btn')) return;
+
+  const button = document.createElement('button');
+  button.id = 'ultron-open-panel-btn';
+  button.innerHTML = `
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <circle cx="12" cy="12" r="10"/>
+      <path d="M12 8v8M8 12h8"/>
+    </svg>
+    <span>Ultron</span>
+  `;
+  button.title = 'Ouvrir le panneau Ultron';
+
+  // Style the button
+  button.style.cssText = `
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 999999;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 16px;
+    background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+    color: white;
+    border: none;
+    border-radius: 50px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);
+    transition: all 0.3s ease;
+    animation: ultron-pulse 2s infinite;
+  `;
+
+  // Add hover effect
+  button.addEventListener('mouseenter', () => {
+    button.style.transform = 'scale(1.05)';
+    button.style.boxShadow = '0 6px 20px rgba(99, 102, 241, 0.5)';
+  });
+  button.addEventListener('mouseleave', () => {
+    button.style.transform = 'scale(1)';
+    button.style.boxShadow = '0 4px 15px rgba(99, 102, 241, 0.4)';
+  });
+
+  // Click handler - opens Side Panel
+  button.addEventListener('click', () => {
+    chrome.runtime.sendMessage({ type: 'OPEN_SIDE_PANEL' }, (response) => {
+      if (response && response.success) {
+        // Hide button after opening (optional - can keep it visible)
+        button.style.display = 'none';
+      } else {
+        console.log('Ultron: Could not open side panel', response?.error);
+      }
+    });
+  });
+
+  // Add animation keyframes
+  const style = document.createElement('style');
+  style.textContent = `
+    @keyframes ultron-pulse {
+      0%, 100% { box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4); }
+      50% { box-shadow: 0 4px 25px rgba(99, 102, 241, 0.6); }
+    }
+  `;
+  document.head.appendChild(style);
+
+  document.body.appendChild(button);
+  console.log('Ultron: Open panel button created');
+}
 
 function createPanel() {
   if (panelElement) return;
