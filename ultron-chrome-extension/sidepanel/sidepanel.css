@@ -406,3 +406,230 @@ button:hover {
 ::-webkit-scrollbar-thumb:hover {
   background: #444;
 }
+
+/* Transcription Section */
+.transcription-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.transcription-header h2 {
+  margin-bottom: 0;
+}
+
+.transcription-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #666;
+}
+
+.status-dot.connecting {
+  background: #f59e0b;
+  animation: pulse 1s infinite;
+}
+
+.status-dot.connected {
+  background: #22c55e;
+}
+
+.status-dot.error {
+  background: #ef4444;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.transcription-btn {
+  padding: 6px 12px;
+  font-size: 12px;
+}
+
+.transcription-btn.active {
+  background: #ef4444;
+}
+
+.transcription-btn.active:hover {
+  background: #dc2626;
+}
+
+.transcription-container {
+  background: #1a1a1a;
+  border-radius: 8px;
+  padding: 12px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.transcription-text {
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.transcription-placeholder {
+  color: #666;
+  font-style: italic;
+  text-align: center;
+}
+
+.transcript-segment {
+  padding: 6px 0;
+  border-bottom: 1px solid #2a2a2a;
+}
+
+.transcript-segment:last-child {
+  border-bottom: none;
+}
+
+.transcript-segment .speaker {
+  font-weight: 600;
+  font-size: 10px;
+  text-transform: uppercase;
+  margin-bottom: 2px;
+}
+
+.transcript-segment .speaker.advisor {
+  color: #6366f1;
+}
+
+.transcript-segment .speaker.prospect {
+  color: #22c55e;
+}
+
+.transcript-segment .time {
+  color: #666;
+  font-size: 10px;
+  margin-left: 8px;
+}
+
+.transcript-segment .text {
+  color: #ccc;
+}
+
+.transcript-interim {
+  color: #888;
+  font-style: italic;
+  padding-top: 8px;
+  border-top: 1px dashed #333;
+}
+
+.transcription-actions {
+  margin-top: 10px;
+}
+
+.save-btn {
+  width: 100%;
+  background: #22c55e;
+}
+
+.save-btn:hover {
+  background: #16a34a;
+}
+
+.save-btn:disabled {
+  background: #666;
+  cursor: not-allowed;
+}
+
+/* Real-time Suggestions */
+.realtime-suggestions {
+  background: #1a1a1a;
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.realtime-placeholder {
+  color: #666;
+  font-style: italic;
+  text-align: center;
+  font-size: 12px;
+}
+
+.realtime-alert {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 6px;
+  padding: 10px;
+  margin-bottom: 10px;
+}
+
+.realtime-alert.objection {
+  background: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+.realtime-alert strong {
+  color: #ef4444;
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
+.realtime-alert .response {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+.realtime-alert .response strong {
+  color: #22c55e;
+}
+
+.realtime-suggestion {
+  background: rgba(99, 102, 241, 0.1);
+  border: 1px solid rgba(99, 102, 241, 0.2);
+  border-radius: 6px;
+  padding: 10px;
+  margin-bottom: 10px;
+}
+
+.realtime-suggestion strong {
+  color: #6366f1;
+  font-size: 11px;
+  display: block;
+  margin-bottom: 4px;
+}
+
+.realtime-suggestion p {
+  color: #ccc;
+  font-size: 12px;
+  margin: 0;
+}
+
+.realtime-suggestion.highlight {
+  background: rgba(34, 197, 94, 0.1);
+  border-color: rgba(34, 197, 94, 0.2);
+}
+
+.realtime-suggestion.highlight strong {
+  color: #22c55e;
+}
+
+.tonalite {
+  text-align: center;
+  padding: 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  color: #ccc;
+}
+
+.tonalite.positive {
+  background: rgba(34, 197, 94, 0.1);
+}
+
+.tonalite.negative {
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.tonalite.neutre {
+  background: rgba(107, 114, 128, 0.1);
+}

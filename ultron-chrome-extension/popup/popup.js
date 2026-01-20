@@ -18,7 +18,6 @@ const meetStatus = document.getElementById('meet-status');
 const meetHint = document.getElementById('meet-hint');
 const prospectsList = document.getElementById('prospects-list');
 const autoPanelCheckbox = document.getElementById('auto-panel');
-const transcriptionCheckbox = document.getElementById('transcription-enabled');
 
 // Initialization
 document.addEventListener('DOMContentLoaded', async () => {
@@ -34,7 +33,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   autoPanelCheckbox.checked = stored.autoPanel !== false;
-  transcriptionCheckbox.checked = stored.transcriptionEnabled || false;
 
   // Check if on Google Meet
   checkMeetStatus();
@@ -44,7 +42,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 loginBtn.addEventListener('click', handleLogin);
 logoutBtn.addEventListener('click', handleLogout);
 autoPanelCheckbox.addEventListener('change', saveSettings);
-transcriptionCheckbox.addEventListener('change', saveSettings);
 
 async function handleLogin() {
   const email = emailInput.value.trim();
@@ -212,16 +209,5 @@ async function loadProspects() {
 async function saveSettings() {
   await chrome.storage.local.set({
     autoPanel: autoPanelCheckbox.checked,
-    transcriptionEnabled: transcriptionCheckbox.checked,
   });
-
-  // Notify content script
-  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  if (tab && tab.url && tab.url.includes('meet.google.com')) {
-    chrome.tabs.sendMessage(tab.id, {
-      type: 'SETTINGS_UPDATED',
-      autoPanel: autoPanelCheckbox.checked,
-      transcriptionEnabled: transcriptionCheckbox.checked,
-    });
-  }
 }

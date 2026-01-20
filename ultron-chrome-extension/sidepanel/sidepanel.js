@@ -6,6 +6,14 @@ let currentProspect = null;
 let currentAnalysis = null;
 let prospects = [];
 
+// Transcription state
+let isTranscribing = false;
+let transcriptSegments = [];
+let conversationHistory = [];
+let meetingStartTime = null;
+let deepgramSocket = null;
+let realtimeAnalysisTimeout = null;
+
 // DOM Elements
 const loginRequired = document.getElementById('login-required');
 const mainContent = document.getElementById('main-content');
@@ -35,6 +43,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Setup tabs
   setupTabs();
+
+  // Setup transcription
+  setupTranscription();
 });
 
 // Event listeners
@@ -227,6 +238,9 @@ function displayProspectInfo(prospect) {
 
   prospectInfo.classList.remove('hidden');
   tabsSection.classList.remove('hidden');
+
+  // Show transcription section when prospect is selected
+  document.getElementById('transcription-section').classList.remove('hidden');
 }
 
 async function loadDetailedAnalysis(prospect, interactions) {
@@ -344,4 +358,380 @@ function formatCurrency(value) {
     currency: 'EUR',
     maximumFractionDigits: 0,
   }).format(num);
+}
+
+// ========================
+// TRANSCRIPTION FUNCTIONS
+// ========================
+
+function setupTranscription() {
+  const toggleBtn = document.getElementById('toggle-transcription');
+  const saveBtn = document.getElementById('save-transcript');
+
+  toggleBtn?.addEventListener('click', toggleTranscription);
+  saveBtn?.addEventListener('click', saveTranscript);
+}
+
+async function toggleTranscription() {
+  const toggleBtn = document.getElementById('toggle-transcription');
+
+  if (isTranscribing) {
+    stopTranscription();
+    toggleBtn.textContent = 'Demarrer';
+    toggleBtn.classList.remove('active');
+  } else {
+    await startTranscription();
+    toggleBtn.textContent = 'Arreter';
+    toggleBtn.classList.add('active');
+  }
+}
+
+async function startTranscription() {
+  if (!currentProspect) {
+    alert('Veuillez d\'abord selectionner un prospect');
+    return;
+  }
+
+  const statusDot = document.getElementById('transcription-status');
+  const transcriptionText = document.getElementById('transcription-text');
+
+  try {
+    statusDot.className = 'status-dot connecting';
+    transcriptionText.innerHTML = '<p class="transcription-placeholder">Connexion en cours...</p>';
+
+    // Get Deepgram credentials from API
+    const credResponse = await fetch(`${ULTRON_API_URL}/api/meeting/transcribe`, {
+      headers: {
+        'Authorization': `Bearer ${userToken}`,
+      },
+    });
+
+    if (!credResponse.ok) {
+      throw new Error('Impossible de recuperer les credentials Deepgram');
+    }
+
+    const credentials = await credResponse.json();
+
+    // Connect to Deepgram WebSocket
+    const wsUrl = `${credentials.websocket_url}&token=${credentials.api_key}`;
+    deepgramSocket = new WebSocket(wsUrl);
+
+    deepgramSocket.onopen = () => {
+      console.log('Ultron: Deepgram WebSocket connected');
+      statusDot.className = 'status-dot connected';
+      transcriptionText.innerHTML = '<p class="transcription-placeholder">En ecoute... Parlez dans le micro.</p>';
+
+      // Start capturing audio from the tab
+      startAudioCapture();
+    };
+
+    deepgramSocket.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      handleDeepgramMessage(data);
+    };
+
+    deepgramSocket.onerror = (error) => {
+      console.error('Ultron: Deepgram WebSocket error', error);
+      statusDot.className = 'status-dot error';
+    };
+
+    deepgramSocket.onclose = () => {
+      console.log('Ultron: Deepgram WebSocket closed');
+      if (isTranscribing) {
+        statusDot.className = 'status-dot error';
+      }
+    };
+
+    isTranscribing = true;
+    meetingStartTime = Date.now();
+    transcriptSegments = [];
+    conversationHistory = [];
+
+    // Show sections
+    document.getElementById('transcription-section').classList.remove('hidden');
+    document.getElementById('realtime-section').classList.remove('hidden');
+    document.getElementById('transcription-actions').classList.remove('hidden');
+
+  } catch (error) {
+    console.error('Ultron: Failed to start transcription', error);
+    statusDot.className = 'status-dot error';
+    transcriptionText.innerHTML = `<p class="transcription-placeholder" style="color: #ef4444;">Erreur: ${error.message}</p>`;
+  }
+}
+
+async function startAudioCapture() {
+  try {
+    // Request microphone access for the user's voice
+    // Note: Tab audio capture requires the content script
+    // For now, we'll capture the user's microphone
+    const stream = await navigator.mediaDevices.getUserMedia({
+      audio: {
+        echoCancellation: true,
+        noiseSuppression: true,
+        sampleRate: 16000,
+      },
+    });
+
+    const mediaRecorder = new MediaRecorder(stream, {
+      mimeType: 'audio/webm;codecs=opus',
+    });
+
+    mediaRecorder.ondataavailable = async (event) => {
+      if (event.data.size > 0 && deepgramSocket && deepgramSocket.readyState === WebSocket.OPEN) {
+        deepgramSocket.send(event.data);
+      }
+    };
+
+    // Record in 250ms chunks for real-time streaming
+    mediaRecorder.start(250);
+
+    // Store for cleanup
+    window.ultronMediaRecorder = mediaRecorder;
+    window.ultronMediaStream = stream;
+
+    console.log('Ultron: Audio capture started');
+
+  } catch (error) {
+    console.error('Ultron: Failed to start audio capture', error);
+    const transcriptionText = document.getElementById('transcription-text');
+    transcriptionText.innerHTML = `<p class="transcription-placeholder" style="color: #ef4444;">Erreur micro: ${error.message}. Autorisez l'acces au microphone.</p>`;
+  }
+}
+
+function handleDeepgramMessage(data) {
+  if (data.type === 'Results' && data.channel) {
+    const transcript = data.channel.alternatives[0]?.transcript;
+    const isFinal = data.is_final;
+
+    if (transcript && transcript.trim()) {
+      const currentTime = meetingStartTime ? (Date.now() - meetingStartTime) / 1000 : 0;
+
+      if (isFinal) {
+        // Determine speaker (simplified - assumes user is advisor)
+        const speaker = 'advisor';
+
+        transcriptSegments.push({
+          timestamp: currentTime,
+          speaker: speaker,
+          text: transcript,
+        });
+
+        conversationHistory.push(`[Conseiller]: ${transcript}`);
+
+        // Schedule real-time AI analysis
+        scheduleRealtimeAnalysis();
+      }
+
+      // Update display
+      updateTranscriptDisplay(transcript, isFinal);
+    }
+  }
+}
+
+function updateTranscriptDisplay(currentTranscript, isFinal) {
+  const container = document.getElementById('transcription-text');
+
+  const segmentsHtml = transcriptSegments.map(seg => {
+    const speakerLabel = seg.speaker === 'advisor' ? 'Conseiller' : 'Prospect';
+    const time = formatTime(seg.timestamp);
+    return `
+      <div class="transcript-segment">
+        <span class="speaker ${seg.speaker}">${speakerLabel}</span>
+        <span class="time">${time}</span>
+        <div class="text">${seg.text}</div>
+      </div>
+    `;
+  }).join('');
+
+  const interimHtml = !isFinal && currentTranscript ? `
+    <div class="transcript-interim">${currentTranscript}</div>
+  ` : '';
+
+  container.innerHTML = segmentsHtml + interimHtml || '<p class="transcription-placeholder">En ecoute...</p>';
+  container.scrollTop = container.scrollHeight;
+}
+
+function formatTime(seconds) {
+  const mins = Math.floor(seconds / 60);
+  const secs = Math.floor(seconds % 60);
+  return `${mins}:${secs.toString().padStart(2, '0')}`;
+}
+
+function stopTranscription() {
+  // Stop media recorder
+  if (window.ultronMediaRecorder && window.ultronMediaRecorder.state !== 'inactive') {
+    window.ultronMediaRecorder.stop();
+  }
+
+  // Stop media stream
+  if (window.ultronMediaStream) {
+    window.ultronMediaStream.getTracks().forEach(track => track.stop());
+    window.ultronMediaStream = null;
+  }
+
+  // Close Deepgram WebSocket
+  if (deepgramSocket) {
+    deepgramSocket.close();
+    deepgramSocket = null;
+  }
+
+  // Clear timeout
+  if (realtimeAnalysisTimeout) {
+    clearTimeout(realtimeAnalysisTimeout);
+    realtimeAnalysisTimeout = null;
+  }
+
+  isTranscribing = false;
+
+  const statusDot = document.getElementById('transcription-status');
+  statusDot.className = 'status-dot';
+
+  console.log('Ultron: Transcription stopped');
+}
+
+// ========================
+// REAL-TIME AI ANALYSIS
+// ========================
+
+function scheduleRealtimeAnalysis() {
+  if (realtimeAnalysisTimeout) {
+    clearTimeout(realtimeAnalysisTimeout);
+  }
+
+  realtimeAnalysisTimeout = setTimeout(() => {
+    if (conversationHistory.length >= 2) {
+      runRealtimeAnalysis();
+    }
+  }, 3000);
+}
+
+async function runRealtimeAnalysis() {
+  if (!currentProspect || conversationHistory.length === 0) return;
+
+  const recentTranscript = conversationHistory.slice(-10).join('\n');
+
+  try {
+    const response = await fetch(`${ULTRON_API_URL}/api/meeting/analyze`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${userToken}`,
+      },
+      body: JSON.stringify({
+        prospect: currentProspect,
+        transcript: recentTranscript,
+        conversationHistory: conversationHistory.slice(-5),
+      }),
+    });
+
+    const data = await response.json();
+
+    if (data.analysis) {
+      displayRealtimeSuggestions(data.analysis);
+    }
+
+  } catch (error) {
+    console.error('Ultron: Realtime analysis error', error);
+  }
+}
+
+function displayRealtimeSuggestions(analysis) {
+  const container = document.getElementById('realtime-suggestions');
+
+  let html = '';
+
+  if (analysis.objectionDetectee) {
+    html += `
+      <div class="realtime-alert objection">
+        <strong>Objection detectee:</strong> ${analysis.objectionDetectee}
+        <div class="response">
+          <strong>Reponse suggeree:</strong> ${analysis.reponseObjection || 'N/A'}
+        </div>
+      </div>
+    `;
+  }
+
+  if (analysis.questionSuivante) {
+    html += `
+      <div class="realtime-suggestion">
+        <strong>Question a poser maintenant:</strong>
+        <p>${analysis.questionSuivante}</p>
+      </div>
+    `;
+  }
+
+  if (analysis.pointCle) {
+    html += `
+      <div class="realtime-suggestion highlight">
+        <strong>Point cle a aborder:</strong>
+        <p>${analysis.pointCle}</p>
+      </div>
+    `;
+  }
+
+  if (analysis.tonalite) {
+    html += `
+      <div class="tonalite ${analysis.tonalite.toLowerCase()}">
+        Tonalite du prospect: <strong>${analysis.tonalite}</strong>
+      </div>
+    `;
+  }
+
+  if (!html) {
+    html = '<p class="realtime-placeholder">Continuez la conversation...</p>';
+  }
+
+  container.innerHTML = html;
+}
+
+// ========================
+// SAVE TRANSCRIPT
+// ========================
+
+async function saveTranscript() {
+  if (transcriptSegments.length === 0) {
+    alert('Aucune transcription a sauvegarder');
+    return;
+  }
+
+  const saveBtn = document.getElementById('save-transcript');
+  saveBtn.disabled = true;
+  saveBtn.textContent = 'Sauvegarde en cours...';
+
+  const durationSeconds = meetingStartTime ? Math.floor((Date.now() - meetingStartTime) / 1000) : 0;
+
+  try {
+    const response = await fetch(`${ULTRON_API_URL}/api/meeting/save`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${userToken}`,
+      },
+      body: JSON.stringify({
+        prospect_id: currentProspect?.id,
+        google_meet_link: window.location.href,
+        transcript_segments: transcriptSegments,
+        duration_seconds: durationSeconds,
+      }),
+    });
+
+    const data = await response.json();
+
+    if (response.ok) {
+      alert(`Transcript sauvegarde avec succes!\n\nResume: ${data.ai_summary?.substring(0, 200) || 'N/A'}...`);
+
+      if (data.pdf_url) {
+        window.open(data.pdf_url, '_blank');
+      }
+    } else {
+      throw new Error(data.error || 'Erreur de sauvegarde');
+    }
+
+  } catch (error) {
+    console.error('Ultron: Save error', error);
+    alert('Erreur lors de la sauvegarde: ' + error.message);
+  } finally {
+    saveBtn.disabled = false;
+    saveBtn.textContent = 'Sauvegarder et generer PDF';
+  }
 }
