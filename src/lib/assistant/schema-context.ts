@@ -7,42 +7,42 @@ export const DATABASE_SCHEMA = `
 ## TABLES DISPONIBLES
 
 ### crm_prospects (Table principale des prospects)
-Colonnes:
+
+#### COLONNES PRINCIPALES (les plus utilisees):
 - id: UUID (cle primaire)
 - organization_id: UUID (OBLIGATOIRE dans WHERE)
-- first_name: VARCHAR (prenom)
-- last_name: VARCHAR (nom)
+- first_name: VARCHAR (prenom du prospect)
+- last_name: VARCHAR (nom du prospect)
 - email: VARCHAR
 - phone: VARCHAR (telephone)
-- company: VARCHAR (entreprise)
-- job_title: VARCHAR (poste)
-- address: TEXT (adresse)
-- city: VARCHAR (ville)
-- postal_code: VARCHAR (code postal)
-- country: VARCHAR DEFAULT 'France'
-- patrimoine_estime: NUMERIC (patrimoine estime en euros)
-- revenus_annuels: NUMERIC (revenus annuels en euros)
-- situation_familiale: VARCHAR (marie, celibataire, divorce, veuf)
-- nb_enfants: INTEGER (nombre d'enfants)
-- age: INTEGER
-- profession: VARCHAR
-- stage_id: UUID (FK vers pipeline_stages)
-- stage_slug: VARCHAR (slug de l'etape: nouveau, en_attente, rdv_pris, rdv_effectue, negociation, gagne, perdu)
-- deal_value: NUMERIC (valeur potentielle du deal)
-- close_probability: INTEGER (probabilite de closing 0-100)
-- expected_close_date: DATE
-- qualification: VARCHAR (CHAUD, TIEDE, FROID, NON_QUALIFIE) - IMPORTANT: utiliser UPPER() pour comparaison ou 'chaud', 'tiede', 'froid', 'non_qualifie' en minuscules
+
+#### DONNEES FINANCIERES DU CLIENT (IMPORTANT - ne pas confondre):
+- patrimoine_estime: NUMERIC - LE PATRIMOINE REEL DU CLIENT en euros (ses actifs, biens, epargne). Utiliser quand on parle de "patrimoine", "fortune", "richesse", "actifs" du prospect
+- revenus_annuels: NUMERIC - les revenus annuels du client en euros
+
+#### QUALIFICATION IA:
+- qualification: VARCHAR - valeurs: 'chaud', 'tiede', 'froid', 'non_qualifie' (en minuscules)
 - score_ia: INTEGER (score 0-100 calcule par l'IA)
 - analyse_ia: TEXT (justification du score)
 - derniere_qualification: TIMESTAMPTZ
-- source: VARCHAR (origine du lead: linkedin, referral, site_web, etc.)
-- source_detail: VARCHAR
-- assigned_to: UUID (FK vers users - conseiller assigne)
+
+#### PIPELINE:
+- stage_slug: VARCHAR (etape: nouveau, en_attente, rdv_pris, rdv_effectue, negociation, gagne, perdu)
+- assigned_to: UUID (FK vers users - conseiller assigne, NULL si pas assigne)
+
+#### PROFIL CLIENT:
+- situation_familiale: VARCHAR (marie, celibataire, divorce, veuf)
+- nb_enfants: INTEGER
+- age: INTEGER
+- profession: VARCHAR
+- company: VARCHAR (entreprise)
+- job_title: VARCHAR (poste)
+- city: VARCHAR (ville)
+
+#### AUTRES COLONNES:
+- source: VARCHAR (origine du lead)
 - tags: TEXT[] (tableau de tags)
 - notes: TEXT
-- lost_reason: VARCHAR (raison de la perte)
-- won_date: TIMESTAMPTZ (date de gain)
-- lost_date: TIMESTAMPTZ (date de perte)
 - last_activity_at: TIMESTAMPTZ (derniere interaction)
 - created_at: TIMESTAMPTZ
 - updated_at: TIMESTAMPTZ
@@ -115,25 +115,30 @@ export const SQL_RULES = `
 5. Pour les comparaisons textuelles insensibles a la casse, utiliser LOWER()
 6. Pour les dates relatives, utiliser NOW(), CURRENT_DATE, INTERVAL
 
+## IMPORTANT - PATRIMOINE vs DEAL VALUE
+- Quand l'utilisateur parle de "patrimoine", "fortune", "richesse", "actifs", "plus riches" -> utiliser patrimoine_estime
+- patrimoine_estime = les biens/actifs reels du client (ce qu'il possede)
+- NE PAS utiliser deal_value pour les questions sur le patrimoine
+
 ## EXEMPLES DE MAPPING LANGAGE NATUREL -> SQL
 
 | Expression | SQL |
 |------------|-----|
-| "prospects chauds" | qualification = 'chaud' OU LOWER(qualification) = 'chaud' |
+| "prospects chauds" | qualification = 'chaud' |
 | "prospects tiedes" | qualification = 'tiede' |
 | "prospects froids" | qualification = 'froid' |
 | "non qualifies" ou "nouveaux" | qualification = 'non_qualifie' |
 | "sans conseiller" | assigned_to IS NULL |
 | "avec conseiller" | assigned_to IS NOT NULL |
-| "cette semaine" | >= date_trunc('week', CURRENT_DATE) AND < date_trunc('week', CURRENT_DATE) + INTERVAL '7 days' |
+| "plus gros patrimoine" | ORDER BY patrimoine_estime DESC |
+| "plus riches" | ORDER BY patrimoine_estime DESC |
+| "patrimoine eleve" | patrimoine_estime > 100000 |
+| "gros patrimoine" | patrimoine_estime > 100000 |
+| "meilleurs revenus" | ORDER BY revenus_annuels DESC |
+| "cette semaine" | >= date_trunc('week', CURRENT_DATE) |
 | "ce mois" | >= date_trunc('month', CURRENT_DATE) |
 | "les 30 derniers jours" | >= NOW() - INTERVAL '30 days' |
-| "pas contactes depuis X jours" | last_activity_at < NOW() - INTERVAL 'X days' OU last_activity_at IS NULL |
-| "patrimoine eleve" ou "gros patrimoine" | patrimoine_estime > 100000 (adapter selon contexte) |
 | "RDV" ou "rendez-vous" | type = 'meeting' dans crm_events |
-| "taches" | type = 'task' dans crm_events |
-| "appels" | type = 'call' dans crm_events ou crm_activities |
-| "etape X" ou "stage X" | stage_slug = 'x' |
 
 ## EXEMPLES DE REQUETES COMPLETES
 
@@ -188,7 +193,7 @@ WHERE organization_id = $1
 ORDER BY last_activity_at ASC NULLS FIRST
 LIMIT 50
 
-5. "Top 10 par patrimoine":
+5. "Top 10 par patrimoine" ou "les plus riches" ou "plus gros patrimoine":
 SELECT
   first_name AS prenom,
   last_name AS nom,
@@ -202,6 +207,18 @@ WHERE organization_id = $1
   AND patrimoine_estime IS NOT NULL
 ORDER BY patrimoine_estime DESC
 LIMIT 10
+
+6. "3 prospects avec le plus de patrimoine":
+SELECT
+  first_name AS prenom,
+  last_name AS nom,
+  patrimoine_estime AS patrimoine,
+  qualification
+FROM crm_prospects
+WHERE organization_id = $1
+  AND patrimoine_estime IS NOT NULL
+ORDER BY patrimoine_estime DESC
+LIMIT 3
 `;
 
 /**
