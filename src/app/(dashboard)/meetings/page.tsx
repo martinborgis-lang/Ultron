@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { FileText, Clock, User, Calendar, ChevronRight, Download, Trash2, Video, Search, X } from 'lucide-react';
+import { FileText, Clock, User, Calendar, ChevronRight, Download, Trash2, Search, X, Bot } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { TranscriptSegment, ObjectionDetected } from '@/types/meeting';
 
@@ -219,18 +219,6 @@ export default function MeetingsPage() {
                       PDF
                     </a>
                   )}
-                  {transcript.google_meet_link && (
-                    <a
-                      href={transcript.google_meet_link}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      onClick={e => e.stopPropagation()}
-                      className="flex items-center gap-1 px-2 py-1 text-xs bg-muted rounded hover:bg-muted/80 text-foreground"
-                    >
-                      <Video className="h-3 w-3" />
-                      Meet
-                    </a>
-                  )}
                   <button
                     onClick={e => {
                       e.stopPropagation();
@@ -271,6 +259,73 @@ export default function MeetingsPage() {
   );
 }
 
+interface ConsolidatedSegment {
+  speaker: string;
+  text: string;
+  startTimestamp: number;
+}
+
+/**
+ * Consolidate consecutive segments from the same speaker
+ */
+function consolidateSegments(segments: TranscriptSegment[]): ConsolidatedSegment[] {
+  if (!segments || segments.length === 0) return [];
+
+  const consolidated: ConsolidatedSegment[] = [];
+  let current: ConsolidatedSegment | null = null;
+  let lastTimestamp = 0;
+
+  for (const segment of segments) {
+    if (!current) {
+      current = {
+        speaker: segment.speaker,
+        text: segment.text,
+        startTimestamp: segment.timestamp,
+      };
+      lastTimestamp = segment.timestamp;
+    } else if (current.speaker === segment.speaker) {
+      // Same speaker - append text
+      const timeDiff = segment.timestamp - lastTimestamp;
+      // If pause is more than 3 seconds, add a period
+      if (timeDiff > 3) {
+        current.text = current.text.trim();
+        if (!current.text.endsWith('.') && !current.text.endsWith('?') && !current.text.endsWith('!')) {
+          current.text += '.';
+        }
+        current.text += ' ' + segment.text;
+      } else {
+        // Short pause - just add space
+        current.text += ' ' + segment.text;
+      }
+      lastTimestamp = segment.timestamp;
+    } else {
+      // Different speaker - save current and start new
+      current.text = current.text.trim();
+      if (!current.text.endsWith('.') && !current.text.endsWith('?') && !current.text.endsWith('!')) {
+        current.text += '.';
+      }
+      consolidated.push(current);
+      current = {
+        speaker: segment.speaker,
+        text: segment.text,
+        startTimestamp: segment.timestamp,
+      };
+      lastTimestamp = segment.timestamp;
+    }
+  }
+
+  // Don't forget the last segment
+  if (current) {
+    current.text = current.text.trim();
+    if (!current.text.endsWith('.') && !current.text.endsWith('?') && !current.text.endsWith('!')) {
+      current.text += '.';
+    }
+    consolidated.push(current);
+  }
+
+  return consolidated;
+}
+
 function TranscriptDetailPanel({
   transcript,
   onClose,
@@ -285,6 +340,11 @@ function TranscriptDetailPanel({
     const secs = Math.floor(seconds % 60);
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
+
+  // Consolidate transcript segments
+  const consolidatedSegments = transcript.transcript_json
+    ? consolidateSegments(transcript.transcript_json)
+    : [];
 
   return (
     <div className="bg-card border border-border rounded-xl overflow-hidden">
@@ -334,28 +394,39 @@ function TranscriptDetailPanel({
       {/* Content */}
       <div className="p-4 max-h-[60vh] overflow-y-auto">
         {activeTab === 'summary' && (
-          <div className="space-y-4">
+          <div className="space-y-5">
+            {/* Ultron Analysis Header */}
+            <div className="flex items-center gap-2 pb-3 border-b border-border">
+              <Bot className="h-5 w-5 text-indigo-600" />
+              <h4 className="font-semibold text-foreground">Analyse Ultron</h4>
+            </div>
+
             {/* AI Summary */}
-            {transcript.ai_summary && (
-              <div>
-                <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wide mb-2">
-                  Resume IA
-                </h4>
-                <p className="text-foreground">{transcript.ai_summary}</p>
+            {transcript.ai_summary ? (
+              <div className="bg-indigo-50 dark:bg-indigo-950/30 rounded-lg p-4 border border-indigo-200 dark:border-indigo-800">
+                <h5 className="text-sm font-medium text-indigo-600 mb-2">
+                  Resume de la reunion
+                </h5>
+                <p className="text-foreground leading-relaxed">{transcript.ai_summary}</p>
+              </div>
+            ) : (
+              <div className="bg-muted/50 rounded-lg p-4 text-center">
+                <p className="text-muted-foreground">Aucune analyse disponible pour cette reunion</p>
               </div>
             )}
 
             {/* Key Points */}
             {transcript.key_points && transcript.key_points.length > 0 && (
               <div>
-                <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wide mb-2">
-                  Points cles
-                </h4>
-                <ul className="space-y-2">
+                <h5 className="text-sm font-medium text-foreground mb-3 flex items-center gap-2">
+                  <span className="text-green-500">✓</span>
+                  Points cles identifies
+                </h5>
+                <ul className="space-y-2 bg-green-50 dark:bg-green-950/20 rounded-lg p-3">
                   {transcript.key_points.map((point, i) => (
                     <li key={i} className="flex items-start gap-2 text-foreground">
-                      <span className="text-indigo-500 mt-1">•</span>
-                      {point}
+                      <span className="text-green-500 mt-0.5 flex-shrink-0">•</span>
+                      <span>{point}</span>
                     </li>
                   ))}
                 </ul>
@@ -365,32 +436,54 @@ function TranscriptDetailPanel({
             {/* Objections */}
             {transcript.objections_detected && transcript.objections_detected.length > 0 && (
               <div>
-                <h4 className="text-sm font-medium text-red-500 uppercase tracking-wide mb-2">
+                <h5 className="text-sm font-medium text-foreground mb-3 flex items-center gap-2">
+                  <span className="text-red-500">⚠</span>
                   Objections detectees
-                </h4>
+                </h5>
                 <div className="space-y-3">
                   {transcript.objections_detected.map((obj, i) => (
                     <div key={i} className="bg-red-50 dark:bg-red-950/30 rounded-lg p-3 border border-red-200 dark:border-red-800">
                       <p className="text-foreground font-medium">{obj.objection}</p>
                       {obj.suggested_response && (
-                        <p className="text-sm text-muted-foreground mt-2">
-                          <span className="text-green-600">Reponse suggeree:</span> {obj.suggested_response}
-                        </p>
+                        <div className="mt-2 pt-2 border-t border-red-200 dark:border-red-700">
+                          <p className="text-sm">
+                            <span className="text-green-600 font-medium">Reponse suggeree:</span>
+                            <span className="text-muted-foreground ml-1">{obj.suggested_response}</span>
+                          </p>
+                        </div>
                       )}
                     </div>
                   ))}
                 </div>
               </div>
             )}
+
+            {/* No data state */}
+            {!transcript.ai_summary &&
+             (!transcript.key_points || transcript.key_points.length === 0) &&
+             (!transcript.objections_detected || transcript.objections_detected.length === 0) && (
+              <div className="text-center py-6 text-muted-foreground">
+                <Bot className="h-12 w-12 mx-auto mb-3 opacity-30" />
+                <p>L&apos;analyse IA n&apos;est pas disponible pour cette reunion</p>
+              </div>
+            )}
           </div>
         )}
 
         {activeTab === 'transcript' && (
-          <div className="space-y-3">
-            {transcript.transcript_json && transcript.transcript_json.length > 0 ? (
-              transcript.transcript_json.map((segment, i) => (
-                <div key={i} className="border-b border-border pb-3 last:border-0">
-                  <div className="flex items-center gap-2 mb-1">
+          <div className="space-y-4">
+            {consolidatedSegments.length > 0 ? (
+              consolidatedSegments.map((segment, i) => (
+                <div
+                  key={i}
+                  className={cn(
+                    "rounded-lg p-3",
+                    segment.speaker === 'advisor'
+                      ? "bg-indigo-50 dark:bg-indigo-950/30 border-l-4 border-indigo-500"
+                      : "bg-green-50 dark:bg-green-950/30 border-l-4 border-green-500"
+                  )}
+                >
+                  <div className="flex items-center gap-2 mb-2">
                     <span className={cn(
                       "text-xs font-semibold uppercase",
                       segment.speaker === 'advisor' ? "text-indigo-600" : "text-green-600"
@@ -398,10 +491,10 @@ function TranscriptDetailPanel({
                       {segment.speaker === 'advisor' ? 'Conseiller' : 'Prospect'}
                     </span>
                     <span className="text-xs text-muted-foreground">
-                      {formatTime(segment.timestamp)}
+                      {formatTime(segment.startTimestamp)}
                     </span>
                   </div>
-                  <p className="text-foreground">{segment.text}</p>
+                  <p className="text-foreground leading-relaxed">{segment.text}</p>
                 </div>
               ))
             ) : transcript.transcript_text ? (

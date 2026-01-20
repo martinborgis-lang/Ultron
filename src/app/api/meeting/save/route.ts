@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import Anthropic from '@anthropic-ai/sdk';
 import { corsHeaders } from '@/lib/cors';
-import { generateTranscriptHtml, generateTranscriptText } from '@/lib/pdf-generator';
+import { generateTranscriptPdf, generateTranscriptText } from '@/lib/pdf-generator';
 import type { TranscriptSegment, ObjectionDetected, SaveMeetingRequest, SaveMeetingResponse } from '@/types/meeting';
 
 export const dynamic = 'force-dynamic';
@@ -143,6 +143,24 @@ export async function POST(request: NextRequest) {
       // Continue without AI analysis
     }
 
+    // Get organization name
+    const { data: organization } = await adminClient
+      .from('organizations')
+      .select('name')
+      .eq('id', userData.organization_id)
+      .single();
+
+    const organizationName = organization?.name || 'Organisation';
+
+    // Get advisor (user) name
+    const { data: advisor } = await adminClient
+      .from('users')
+      .select('full_name, email')
+      .eq('id', userData.id)
+      .single();
+
+    const advisorName = advisor?.full_name || advisor?.email || 'Conseiller';
+
     // Get prospect name if available
     let prospectName = 'Prospect';
     if (prospect_id) {
@@ -157,8 +175,10 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Generate PDF HTML
-    const pdfHtml = generateTranscriptHtml({
+    // Generate real PDF with all info
+    const pdfBuffer = generateTranscriptPdf({
+      organizationName,
+      advisorName,
       prospectName,
       meetingDate: new Date(),
       duration: duration_seconds,
@@ -169,15 +189,15 @@ export async function POST(request: NextRequest) {
       nextActions: aiAnalysis.nextActions,
     });
 
-    // Store HTML in Supabase Storage (can be converted to PDF client-side or via a service)
+    // Store PDF in Supabase Storage
     let pdfUrl: string | null = null;
     try {
-      const fileName = `transcripts/${userData.organization_id}/${Date.now()}-${prospect_id || 'unknown'}.html`;
+      const fileName = `transcripts/${userData.organization_id}/${Date.now()}-${prospect_id || 'unknown'}.pdf`;
 
       const { error: uploadError } = await adminClient.storage
         .from('meeting-transcripts')
-        .upload(fileName, pdfHtml, {
-          contentType: 'text/html',
+        .upload(fileName, pdfBuffer, {
+          contentType: 'application/pdf',
           upsert: false,
         });
 
@@ -187,6 +207,8 @@ export async function POST(request: NextRequest) {
           .getPublicUrl(fileName);
 
         pdfUrl = urlData.publicUrl;
+      } else {
+        console.error('PDF upload error:', uploadError);
       }
     } catch (error) {
       console.error('PDF upload error:', error);
