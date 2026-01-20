@@ -929,6 +929,13 @@ async function handleMessage(message, sendResponse) {
     stopTranscriptionForSidePanel();
     sendResponse({ success: true });
   }
+
+  // Handle speaker toggle from Side Panel
+  if (message.type === 'SET_SPEAKER') {
+    console.log('Ultron Content: Speaker override set to:', message.speaker);
+    manualSpeakerOverride = message.speaker; // 'advisor', 'prospect', or null to reset
+    sendResponse({ success: true });
+  }
 }
 
 // ========================
@@ -938,6 +945,8 @@ async function handleMessage(message, sendResponse) {
 let sidePanelDeepgramSocket = null;
 let sidePanelMediaRecorder = null;
 let sidePanelMediaStream = null;
+let currentAudioSource = null; // 'microphone' or 'tab'
+let manualSpeakerOverride = null; // 'advisor' or 'prospect' - set by user toggle
 
 async function startTranscriptionForSidePanel() {
   console.log('Ultron Content: Starting transcription for Side Panel...');
@@ -1068,6 +1077,9 @@ async function startTabAudioCapture() {
           video: false,
         });
 
+        // Mark that we're using tab audio (mixed audio from call)
+        currentAudioSource = 'tab';
+        console.log('Ultron Content: Tab audio capture started (source: tab = mixed)');
         setupMediaRecorder(sidePanelMediaStream);
         resolve();
 
@@ -1094,7 +1106,9 @@ async function startMicrophoneCapture() {
       },
     });
 
-    console.log('Ultron Content: Microphone stream obtained');
+    // Mark that we're using microphone = advisor's voice
+    currentAudioSource = 'microphone';
+    console.log('Ultron Content: Microphone stream obtained (source: microphone = advisor)');
     setupMediaRecorder(sidePanelMediaStream);
 
   } catch (error) {
@@ -1166,16 +1180,29 @@ function setupMediaRecorder(stream) {
 }
 
 function detectSpeakerFromTranscript(transcript) {
+  // Check for manual override first (user toggled speaker)
+  if (manualSpeakerOverride) {
+    return manualSpeakerOverride;
+  }
+
+  // If using microphone capture, it's the advisor speaking
+  if (currentAudioSource === 'microphone') {
+    return 'advisor';
+  }
+
+  // For tab audio (mixed), use keyword heuristics as fallback
   const lowerTranscript = transcript.toLowerCase();
 
   const prospectIndicators = [
     'je voudrais', 'j\'aimerais', 'est-ce que', 'combien', 'pourquoi',
-    'je ne sais pas', 'je dois reflechir', 'c\'est trop cher', 'pas maintenant'
+    'je ne sais pas', 'je dois reflechir', 'c\'est trop cher', 'pas maintenant',
+    'merci de me rappeler', 'je vous ecoute'
   ];
 
   const advisorIndicators = [
     'je vous propose', 'permettez-moi', 'comme je disais', 'nos clients',
-    'notre solution', 'je comprends', 'excellente question'
+    'notre solution', 'je comprends', 'excellente question', 'je me presente',
+    'je suis conseiller', 'notre cabinet'
   ];
 
   const isProspect = prospectIndicators.some(ind => lowerTranscript.includes(ind));
@@ -1183,7 +1210,9 @@ function detectSpeakerFromTranscript(transcript) {
 
   if (isProspect && !isAdvisor) return 'prospect';
   if (isAdvisor && !isProspect) return 'advisor';
-  return 'unknown';
+
+  // Default to advisor for unknown (since advisor initiates the call usually)
+  return 'advisor';
 }
 
 function stopTranscriptionForSidePanel() {
@@ -1202,6 +1231,10 @@ function stopTranscriptionForSidePanel() {
     sidePanelDeepgramSocket.close(1000);
     sidePanelDeepgramSocket = null;
   }
+
+  // Reset state
+  currentAudioSource = null;
+  manualSpeakerOverride = null;
 
   chrome.runtime.sendMessage({ type: 'TRANSCRIPTION_STOPPED' });
 }

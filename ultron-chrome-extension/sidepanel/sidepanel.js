@@ -364,12 +364,51 @@ function formatCurrency(value) {
 // TRANSCRIPTION FUNCTIONS
 // ========================
 
+let currentSpeakerMode = 'auto'; // 'auto', 'advisor', 'prospect'
+
 function setupTranscription() {
   const toggleBtn = document.getElementById('toggle-transcription');
   const saveBtn = document.getElementById('save-transcript');
 
   toggleBtn?.addEventListener('click', toggleTranscription);
   saveBtn?.addEventListener('click', saveTranscript);
+
+  // Setup speaker toggle buttons
+  setupSpeakerToggle();
+}
+
+function setupSpeakerToggle() {
+  const speakerBtns = document.querySelectorAll('.speaker-btn');
+
+  speakerBtns.forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const speaker = btn.dataset.speaker;
+
+      // Update UI
+      speakerBtns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+
+      // Update state
+      currentSpeakerMode = speaker;
+
+      // Send to content script
+      try {
+        const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+        const meetTab = tabs.find(t => t.url?.includes('meet.google.com'));
+
+        if (meetTab) {
+          const speakerOverride = speaker === 'auto' ? null : speaker;
+          chrome.tabs.sendMessage(meetTab.id, {
+            type: 'SET_SPEAKER',
+            speaker: speakerOverride,
+          });
+          console.log('Ultron: Speaker mode set to:', speaker);
+        }
+      } catch (e) {
+        console.error('Ultron: Error setting speaker', e);
+      }
+    });
+  });
 }
 
 async function toggleTranscription() {
@@ -439,6 +478,14 @@ async function startTranscription() {
     document.getElementById('transcription-section').classList.remove('hidden');
     document.getElementById('realtime-section').classList.remove('hidden');
     document.getElementById('transcription-actions').classList.remove('hidden');
+
+    // Show speaker toggle
+    document.getElementById('speaker-toggle').classList.remove('hidden');
+
+    // Reset speaker to auto (advisor by default since using microphone)
+    currentSpeakerMode = 'auto';
+    document.querySelectorAll('.speaker-btn').forEach(b => b.classList.remove('active'));
+    document.querySelector('.speaker-btn[data-speaker="advisor"]').classList.add('active');
 
   } catch (error) {
     console.error('Ultron: Failed to start transcription', error);
@@ -561,6 +608,9 @@ async function stopTranscription() {
 
   const statusDot = document.getElementById('transcription-status');
   statusDot.className = 'status-dot';
+
+  // Hide speaker toggle
+  document.getElementById('speaker-toggle').classList.add('hidden');
 
   console.log('Ultron: Transcription stopped');
 }
