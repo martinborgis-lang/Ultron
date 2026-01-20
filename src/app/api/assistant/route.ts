@@ -170,8 +170,32 @@ async function executeQueryDirectly(
     throw new Error('Could not determine table from query');
   }
 
+  // Extract SELECT columns
+  const selectMatch = sql.match(/select\s+([\s\S]+?)\s+from/i);
+  let selectColumns = '*';
+  if (selectMatch) {
+    // Extract column names, handling aliases (col AS alias)
+    const rawSelect = selectMatch[1];
+    const columns = rawSelect.split(',').map(col => {
+      const trimmed = col.trim();
+      // If it has AS, extract the original column name
+      const asMatch = trimmed.match(/^([a-z_]+)\s+as\s+/i);
+      if (asMatch) {
+        return asMatch[1];
+      }
+      // Handle aggregate functions like COUNT(*)
+      if (trimmed.toLowerCase().startsWith('count(')) {
+        return trimmed;
+      }
+      return trimmed.split(/\s+/)[0]; // Get first word (column name)
+    });
+    selectColumns = columns.join(',');
+  }
+
+  console.log('Executing query on table:', tableName, 'with columns:', selectColumns);
+
   // Build a basic query
-  let query = supabase.from(tableName).select('*').eq('organization_id', organizationId);
+  let query = supabase.from(tableName).select(selectColumns).eq('organization_id', organizationId);
 
   // Try to extract LIMIT
   const limitMatch = sql.match(/limit\s+(\d+)/i);
@@ -182,8 +206,29 @@ async function executeQueryDirectly(
   const orderMatch = sql.match(/order\s+by\s+([a-z_]+)(?:\s+(asc|desc))?/i);
   if (orderMatch) {
     const orderColumn = orderMatch[1];
-    const orderDir = orderMatch[2]?.toLowerCase() === 'asc';
-    query = query.order(orderColumn, { ascending: orderDir });
+    const isAscending = orderMatch[2]?.toLowerCase() === 'asc';
+    query = query.order(orderColumn, { ascending: isAscending, nullsFirst: false });
+  }
+
+  // Handle IS NOT NULL conditions
+  const notNullMatches = lowerSQL.matchAll(/([a-z_]+)\s+is\s+not\s+null/gi);
+  for (const match of notNullMatches) {
+    const column = match[1];
+    if (column !== 'organization_id') {
+      console.log('Adding NOT NULL filter for:', column);
+      query = query.not(column, 'is', null);
+    }
+  }
+
+  // Handle IS NULL conditions
+  const nullMatches = lowerSQL.matchAll(/([a-z_]+)\s+is\s+null(?!\s*\))/gi);
+  for (const match of nullMatches) {
+    const column = match[1];
+    // Skip if this was part of "IS NOT NULL"
+    if (!lowerSQL.includes(`${column} is not null`)) {
+      console.log('Adding IS NULL filter for:', column);
+      query = query.is(column, null);
+    }
   }
 
   // Try to extract simple WHERE conditions for qualification
@@ -193,18 +238,26 @@ async function executeQueryDirectly(
     query = query.eq('qualification', 'tiede');
   } else if (lowerSQL.includes("qualification") && lowerSQL.includes("'froid'")) {
     query = query.eq('qualification', 'froid');
+  } else if (lowerSQL.includes("qualification") && lowerSQL.includes("'non_qualifie'")) {
+    query = query.eq('qualification', 'non_qualifie');
   }
 
-  // Check for assigned_to IS NULL
-  if (lowerSQL.includes('assigned_to is null')) {
-    query = query.is('assigned_to', null);
+  // Handle greater than conditions for numeric fields
+  const gtMatches = lowerSQL.matchAll(/([a-z_]+)\s*>\s*(\d+)/gi);
+  for (const match of gtMatches) {
+    const column = match[1];
+    const value = parseInt(match[2], 10);
+    console.log('Adding > filter:', column, '>', value);
+    query = query.gt(column, value);
   }
 
   const { data, error } = await query;
 
   if (error) {
+    console.error('Query execution error:', error);
     throw error;
   }
 
-  return data || [];
+  console.log('Query returned', data?.length || 0, 'results');
+  return (data as unknown as Record<string, unknown>[]) || [];
 }
