@@ -913,4 +913,226 @@ async function handleMessage(message, sendResponse) {
     selectProspect(message.prospectId);
     sendResponse({ success: true });
   }
+
+  // Handle transcription start from Side Panel
+  if (message.type === 'START_TRANSCRIPTION') {
+    console.log('Ultron Content: Received START_TRANSCRIPTION');
+    userToken = message.token;
+    startTranscriptionForSidePanel()
+      .then(() => sendResponse({ success: true }))
+      .catch((err) => sendResponse({ success: false, error: err.message }));
+  }
+
+  // Handle transcription stop from Side Panel
+  if (message.type === 'STOP_TRANSCRIPTION') {
+    console.log('Ultron Content: Received STOP_TRANSCRIPTION');
+    stopTranscriptionForSidePanel();
+    sendResponse({ success: true });
+  }
+}
+
+// ========================
+// TRANSCRIPTION FOR SIDE PANEL
+// ========================
+
+let sidePanelDeepgramSocket = null;
+let sidePanelMediaRecorder = null;
+let sidePanelMediaStream = null;
+
+async function startTranscriptionForSidePanel() {
+  console.log('Ultron Content: Starting transcription for Side Panel...');
+
+  // Get Deepgram credentials
+  const credResponse = await fetch(`${ULTRON_API_URL}/api/meeting/transcribe`, {
+    headers: {
+      'Authorization': `Bearer ${userToken}`,
+    },
+  });
+
+  const credentials = await credResponse.json();
+
+  if (!credResponse.ok) {
+    throw new Error(credentials.error || 'Failed to get Deepgram credentials');
+  }
+
+  console.log('Ultron Content: Got Deepgram credentials, connecting...');
+
+  // Connect to Deepgram
+  sidePanelDeepgramSocket = new WebSocket(credentials.websocket_url, ['token', credentials.api_key]);
+
+  sidePanelDeepgramSocket.onopen = async () => {
+    console.log('Ultron Content: Deepgram connected!');
+
+    // Notify Side Panel
+    chrome.runtime.sendMessage({
+      type: 'TRANSCRIPTION_STATUS',
+      status: 'connected',
+    });
+
+    // Start capturing tab audio via background script
+    try {
+      await startTabAudioCapture();
+    } catch (err) {
+      console.error('Ultron Content: Tab audio capture failed, trying microphone...', err);
+      // Fallback to microphone
+      await startMicrophoneCapture();
+    }
+  };
+
+  sidePanelDeepgramSocket.onmessage = (event) => {
+    try {
+      const data = JSON.parse(event.data);
+
+      if (data.type === 'Results' && data.channel) {
+        const transcript = data.channel.alternatives[0]?.transcript;
+        const isFinal = data.is_final;
+
+        if (transcript && transcript.trim()) {
+          console.log('Ultron Content: Transcript:', transcript, 'Final:', isFinal);
+
+          // Send to Side Panel
+          chrome.runtime.sendMessage({
+            type: 'TRANSCRIPT_UPDATE',
+            data: {
+              transcript,
+              isFinal,
+              speaker: detectSpeakerFromTranscript(transcript),
+            },
+          });
+        }
+      }
+    } catch (e) {
+      console.error('Ultron Content: Error parsing Deepgram message', e);
+    }
+  };
+
+  sidePanelDeepgramSocket.onerror = (error) => {
+    console.error('Ultron Content: Deepgram error', error);
+    chrome.runtime.sendMessage({
+      type: 'TRANSCRIPTION_STATUS',
+      status: 'error',
+      error: 'Erreur de connexion Deepgram',
+    });
+  };
+
+  sidePanelDeepgramSocket.onclose = (event) => {
+    console.log('Ultron Content: Deepgram closed', event.code);
+    if (event.code !== 1000) {
+      chrome.runtime.sendMessage({
+        type: 'TRANSCRIPTION_STATUS',
+        status: 'error',
+        error: `Connexion fermee (code ${event.code})`,
+      });
+    }
+  };
+}
+
+async function startTabAudioCapture() {
+  console.log('Ultron Content: Requesting tab audio capture...');
+
+  return new Promise((resolve, reject) => {
+    chrome.runtime.sendMessage({ type: 'GET_TAB_MEDIA_STREAM_ID' }, async (response) => {
+      if (chrome.runtime.lastError) {
+        reject(new Error(chrome.runtime.lastError.message));
+        return;
+      }
+
+      if (response.error) {
+        reject(new Error(response.error));
+        return;
+      }
+
+      try {
+        console.log('Ultron Content: Got stream ID, starting capture...');
+
+        sidePanelMediaStream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            mandatory: {
+              chromeMediaSource: 'tab',
+              chromeMediaSourceId: response.streamId,
+            },
+          },
+          video: false,
+        });
+
+        setupMediaRecorder(sidePanelMediaStream);
+        resolve();
+
+      } catch (error) {
+        reject(error);
+      }
+    });
+  });
+}
+
+async function startMicrophoneCapture() {
+  console.log('Ultron Content: Starting microphone capture as fallback...');
+
+  sidePanelMediaStream = await navigator.mediaDevices.getUserMedia({
+    audio: {
+      echoCancellation: true,
+      noiseSuppression: true,
+    },
+  });
+
+  setupMediaRecorder(sidePanelMediaStream);
+}
+
+function setupMediaRecorder(stream) {
+  let mimeType = 'audio/webm;codecs=opus';
+  if (!MediaRecorder.isTypeSupported(mimeType)) {
+    mimeType = 'audio/webm';
+  }
+
+  sidePanelMediaRecorder = new MediaRecorder(stream, { mimeType });
+
+  sidePanelMediaRecorder.ondataavailable = (event) => {
+    if (event.data.size > 0 && sidePanelDeepgramSocket && sidePanelDeepgramSocket.readyState === WebSocket.OPEN) {
+      sidePanelDeepgramSocket.send(event.data);
+    }
+  };
+
+  sidePanelMediaRecorder.start(250);
+  console.log('Ultron Content: MediaRecorder started');
+}
+
+function detectSpeakerFromTranscript(transcript) {
+  const lowerTranscript = transcript.toLowerCase();
+
+  const prospectIndicators = [
+    'je voudrais', 'j\'aimerais', 'est-ce que', 'combien', 'pourquoi',
+    'je ne sais pas', 'je dois reflechir', 'c\'est trop cher', 'pas maintenant'
+  ];
+
+  const advisorIndicators = [
+    'je vous propose', 'permettez-moi', 'comme je disais', 'nos clients',
+    'notre solution', 'je comprends', 'excellente question'
+  ];
+
+  const isProspect = prospectIndicators.some(ind => lowerTranscript.includes(ind));
+  const isAdvisor = advisorIndicators.some(ind => lowerTranscript.includes(ind));
+
+  if (isProspect && !isAdvisor) return 'prospect';
+  if (isAdvisor && !isProspect) return 'advisor';
+  return 'unknown';
+}
+
+function stopTranscriptionForSidePanel() {
+  console.log('Ultron Content: Stopping transcription...');
+
+  if (sidePanelMediaRecorder && sidePanelMediaRecorder.state !== 'inactive') {
+    sidePanelMediaRecorder.stop();
+  }
+
+  if (sidePanelMediaStream) {
+    sidePanelMediaStream.getTracks().forEach(track => track.stop());
+    sidePanelMediaStream = null;
+  }
+
+  if (sidePanelDeepgramSocket) {
+    sidePanelDeepgramSocket.close(1000);
+    sidePanelDeepgramSocket = null;
+  }
+
+  chrome.runtime.sendMessage({ type: 'TRANSCRIPTION_STOPPED' });
 }

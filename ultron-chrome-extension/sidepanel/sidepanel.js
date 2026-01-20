@@ -399,59 +399,36 @@ async function startTranscription() {
     statusDot.className = 'status-dot connecting';
     transcriptionText.innerHTML = '<p class="transcription-placeholder">Connexion en cours...</p>';
 
-    // Get Deepgram credentials from API
-    const credResponse = await fetch(`${ULTRON_API_URL}/api/meeting/transcribe`, {
-      headers: {
-        'Authorization': `Bearer ${userToken}`,
-      },
-    });
+    // Get the active Google Meet tab
+    const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+    const meetTab = tabs.find(t => t.url?.includes('meet.google.com'));
 
-    const credentials = await credResponse.json();
-
-    if (!credResponse.ok) {
-      throw new Error(credentials.error || 'Impossible de recuperer les credentials Deepgram');
+    if (!meetTab) {
+      throw new Error('Aucun onglet Google Meet actif trouve');
     }
 
-    // Connect to Deepgram WebSocket using token subprotocol
-    // Format: wss://api.deepgram.com/v1/listen?params with token as subprotocol
-    const wsUrl = credentials.websocket_url;
-    console.log('Ultron: Connecting to Deepgram...', wsUrl);
-
-    // Use token authentication via subprotocol
-    deepgramSocket = new WebSocket(wsUrl, ['token', credentials.api_key]);
-
-    deepgramSocket.onopen = () => {
-      console.log('Ultron: Deepgram WebSocket connected!');
-      statusDot.className = 'status-dot connected';
-      transcriptionText.innerHTML = '<p class="transcription-placeholder">Connecte! Parlez dans le micro...</p>';
-
-      // Start capturing audio
-      startAudioCapture();
-    };
-
-    deepgramSocket.onmessage = (event) => {
-      console.log('Ultron: Received Deepgram message');
-      try {
-        const data = JSON.parse(event.data);
-        handleDeepgramMessage(data);
-      } catch (e) {
-        console.error('Ultron: Error parsing Deepgram message', e);
-      }
-    };
-
-    deepgramSocket.onerror = (error) => {
-      console.error('Ultron: Deepgram WebSocket error', error);
-      statusDot.className = 'status-dot error';
-      transcriptionText.innerHTML = '<p class="transcription-placeholder" style="color: #ef4444;">Erreur de connexion WebSocket</p>';
-    };
-
-    deepgramSocket.onclose = (event) => {
-      console.log('Ultron: Deepgram WebSocket closed', event.code, event.reason);
-      if (isTranscribing) {
+    // Send message to content script to start transcription
+    chrome.tabs.sendMessage(meetTab.id, {
+      type: 'START_TRANSCRIPTION',
+      token: userToken,
+      prospectId: currentProspect.id,
+    }, (response) => {
+      if (chrome.runtime.lastError) {
+        console.error('Ultron: Error sending message to content script', chrome.runtime.lastError);
         statusDot.className = 'status-dot error';
-        transcriptionText.innerHTML = `<p class="transcription-placeholder" style="color: #ef4444;">Connexion fermee (${event.code})</p>`;
+        transcriptionText.innerHTML = '<p class="transcription-placeholder" style="color: #ef4444;">Erreur: Impossible de communiquer avec Google Meet. Rafraichissez la page.</p>';
+        return;
       }
-    };
+
+      if (response && response.success) {
+        console.log('Ultron: Transcription started via content script');
+        statusDot.className = 'status-dot connected';
+        transcriptionText.innerHTML = '<p class="transcription-placeholder">En ecoute... (capture audio de l\'onglet)</p>';
+      } else {
+        statusDot.className = 'status-dot error';
+        transcriptionText.innerHTML = `<p class="transcription-placeholder" style="color: #ef4444;">Erreur: ${response?.error || 'Echec du demarrage'}</p>`;
+      }
+    });
 
     isTranscribing = true;
     meetingStartTime = Date.now();
@@ -470,107 +447,65 @@ async function startTranscription() {
   }
 }
 
-async function startAudioCapture() {
-  try {
-    console.log('Ultron: Requesting microphone access...');
-
-    // Request microphone access for the user's voice
-    const stream = await navigator.mediaDevices.getUserMedia({
-      audio: {
-        echoCancellation: true,
-        noiseSuppression: true,
-        sampleRate: 16000,
-      },
-    });
-
-    console.log('Ultron: Microphone access granted, starting recorder...');
-
-    // Check supported mime types
-    let mimeType = 'audio/webm;codecs=opus';
-    if (!MediaRecorder.isTypeSupported(mimeType)) {
-      mimeType = 'audio/webm';
-      if (!MediaRecorder.isTypeSupported(mimeType)) {
-        mimeType = 'audio/mp4';
-      }
-    }
-    console.log('Ultron: Using mimeType:', mimeType);
-
-    const mediaRecorder = new MediaRecorder(stream, { mimeType });
-
-    let chunkCount = 0;
-    mediaRecorder.ondataavailable = async (event) => {
-      if (event.data.size > 0 && deepgramSocket && deepgramSocket.readyState === WebSocket.OPEN) {
-        chunkCount++;
-        if (chunkCount <= 5 || chunkCount % 20 === 0) {
-          console.log(`Ultron: Sending audio chunk #${chunkCount}, size: ${event.data.size} bytes`);
-        }
-        deepgramSocket.send(event.data);
-      }
-    };
-
-    mediaRecorder.onerror = (error) => {
-      console.error('Ultron: MediaRecorder error', error);
-    };
-
-    // Record in 250ms chunks for real-time streaming
-    mediaRecorder.start(250);
-
-    // Store for cleanup
-    window.ultronMediaRecorder = mediaRecorder;
-    window.ultronMediaStream = stream;
-
-    console.log('Ultron: Audio capture started successfully');
-
-    // Update UI
-    const transcriptionText = document.getElementById('transcription-text');
-    transcriptionText.innerHTML = '<p class="transcription-placeholder">En ecoute... Parlez maintenant!</p>';
-
-  } catch (error) {
-    console.error('Ultron: Failed to start audio capture', error);
-    const transcriptionText = document.getElementById('transcription-text');
-    transcriptionText.innerHTML = `<p class="transcription-placeholder" style="color: #ef4444;">Erreur micro: ${error.message}. Autorisez l'acces au microphone.</p>`;
+// Listen for transcript updates from content script
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.type === 'TRANSCRIPT_UPDATE') {
+    handleTranscriptUpdate(message.data);
+    sendResponse({ success: true });
   }
-}
 
-function handleDeepgramMessage(data) {
-  console.log('Ultron: Deepgram message type:', data.type);
-
-  if (data.type === 'Results' && data.channel) {
-    const transcript = data.channel.alternatives[0]?.transcript;
-    const isFinal = data.is_final;
-
-    console.log('Ultron: Transcript received:', { transcript, isFinal });
-
-    if (transcript && transcript.trim()) {
-      const currentTime = meetingStartTime ? (Date.now() - meetingStartTime) / 1000 : 0;
-
-      if (isFinal) {
-        // Determine speaker (simplified - assumes user is advisor)
-        const speaker = 'advisor';
-
-        transcriptSegments.push({
-          timestamp: currentTime,
-          speaker: speaker,
-          text: transcript,
-        });
-
-        conversationHistory.push(`[Conseiller]: ${transcript}`);
-
-        console.log('Ultron: Added final segment, total:', transcriptSegments.length);
-
-        // Schedule real-time AI analysis
-        scheduleRealtimeAnalysis();
-      }
-
-      // Update display
-      updateTranscriptDisplay(transcript, isFinal);
-    }
-  } else if (data.type === 'Metadata') {
-    console.log('Ultron: Deepgram metadata:', data);
-  } else if (data.type === 'Error') {
-    console.error('Ultron: Deepgram error:', data);
+  if (message.type === 'TRANSCRIPTION_STATUS') {
+    const statusDot = document.getElementById('transcription-status');
     const transcriptionText = document.getElementById('transcription-text');
-    transcriptionText.innerHTML = `<p class="transcription-placeholder" style="color: #ef4444;">Erreur Deepgram: ${data.message || 'Erreur inconnue'}</p>`;
+
+    if (message.status === 'connected') {
+      statusDot.className = 'status-dot connected';
+      transcriptionText.innerHTML = '<p class="transcription-placeholder">En ecoute... Parlez!</p>';
+    } else if (message.status === 'error') {
+      statusDot.className = 'status-dot error';
+      transcriptionText.innerHTML = `<p class="transcription-placeholder" style="color: #ef4444;">${message.error}</p>`;
+    }
+    sendResponse({ success: true });
+  }
+
+  if (message.type === 'TRANSCRIPTION_STOPPED') {
+    isTranscribing = false;
+    const toggleBtn = document.getElementById('toggle-transcription');
+    toggleBtn.textContent = 'Demarrer';
+    toggleBtn.classList.remove('active');
+    document.getElementById('transcription-status').className = 'status-dot';
+    sendResponse({ success: true });
+  }
+
+  return true;
+});
+
+function handleTranscriptUpdate(data) {
+  const { transcript, isFinal, speaker } = data;
+
+  console.log('Ultron: Transcript update:', { transcript, isFinal, speaker });
+
+  if (transcript && transcript.trim()) {
+    const currentTime = meetingStartTime ? (Date.now() - meetingStartTime) / 1000 : 0;
+
+    if (isFinal) {
+      transcriptSegments.push({
+        timestamp: currentTime,
+        speaker: speaker || 'unknown',
+        text: transcript,
+      });
+
+      const speakerLabel = speaker === 'advisor' ? 'Conseiller' : 'Prospect';
+      conversationHistory.push(`[${speakerLabel}]: ${transcript}`);
+
+      console.log('Ultron: Added final segment, total:', transcriptSegments.length);
+
+      // Schedule real-time AI analysis
+      scheduleRealtimeAnalysis();
+    }
+
+    // Update display
+    updateTranscriptDisplay(transcript, isFinal);
   }
 }
 
@@ -603,22 +538,17 @@ function formatTime(seconds) {
   return `${mins}:${secs.toString().padStart(2, '0')}`;
 }
 
-function stopTranscription() {
-  // Stop media recorder
-  if (window.ultronMediaRecorder && window.ultronMediaRecorder.state !== 'inactive') {
-    window.ultronMediaRecorder.stop();
-  }
+async function stopTranscription() {
+  // Send message to content script to stop transcription
+  try {
+    const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+    const meetTab = tabs.find(t => t.url?.includes('meet.google.com'));
 
-  // Stop media stream
-  if (window.ultronMediaStream) {
-    window.ultronMediaStream.getTracks().forEach(track => track.stop());
-    window.ultronMediaStream = null;
-  }
-
-  // Close Deepgram WebSocket
-  if (deepgramSocket) {
-    deepgramSocket.close();
-    deepgramSocket = null;
+    if (meetTab) {
+      chrome.tabs.sendMessage(meetTab.id, { type: 'STOP_TRANSCRIPTION' });
+    }
+  } catch (e) {
+    console.error('Ultron: Error stopping transcription', e);
   }
 
   // Clear timeout
