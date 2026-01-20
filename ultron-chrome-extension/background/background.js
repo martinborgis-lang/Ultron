@@ -9,9 +9,9 @@ chrome.runtime.onInstalled.addListener(() => {
   });
 
   // Set default for auto-open
-  chrome.storage.local.get(['autoOpenSidePanel'], (result) => {
-    if (result.autoOpenSidePanel === undefined) {
-      chrome.storage.local.set({ autoOpenSidePanel: true });
+  chrome.storage.local.get(['autoPanel'], (result) => {
+    if (result.autoPanel === undefined) {
+      chrome.storage.local.set({ autoPanel: true });
     }
   });
 });
@@ -52,15 +52,18 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
   if (changeInfo.status === 'complete' && tab.url?.includes('meet.google.com')) {
     // Check if user is logged in and auto-open is enabled
-    const stored = await chrome.storage.local.get(['userToken', 'autoOpenSidePanel']);
+    const stored = await chrome.storage.local.get(['userToken', 'autoPanel']);
 
-    if (stored.userToken && stored.autoOpenSidePanel !== false) {
+    console.log('Ultron: Google Meet detected, autoPanel:', stored.autoPanel, 'userToken:', !!stored.userToken);
+
+    if (stored.userToken && stored.autoPanel !== false) {
       // Small delay to ensure page is fully loaded
       setTimeout(() => {
+        console.log('Ultron: Opening side panel...');
         chrome.sidePanel.open({ tabId: tabId }).catch((err) => {
-          console.log('Could not auto-open side panel:', err.message);
+          console.log('Ultron: Could not auto-open side panel:', err.message);
         });
-      }, 2000);
+      }, 1500);
     }
   }
 });
