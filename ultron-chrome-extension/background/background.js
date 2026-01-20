@@ -1,7 +1,51 @@
 // Background service worker for Ultron Meeting Assistant
 
 chrome.runtime.onInstalled.addListener(() => {
-  console.log('Ultron Meeting Assistant v2.0 installed');
+  console.log('Ultron Meeting Assistant v2.1 installed');
+
+  // Enable side panel for Google Meet
+  chrome.sidePanel.setOptions({
+    enabled: true,
+  });
+});
+
+// Open side panel when clicking extension icon on Google Meet
+chrome.action.onClicked.addListener((tab) => {
+  if (tab.url && tab.url.includes('meet.google.com')) {
+    chrome.sidePanel.open({ tabId: tab.id });
+  }
+});
+
+// Handle messages for opening side panel
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.type === 'OPEN_SIDE_PANEL') {
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      if (tabs[0]) {
+        chrome.sidePanel.open({ tabId: tabs[0].id })
+          .then(() => sendResponse({ success: true }))
+          .catch((err) => sendResponse({ success: false, error: err.message }));
+      } else {
+        sendResponse({ success: false, error: 'No active tab' });
+      }
+    });
+    return true; // Keep channel open for async response
+  }
+
+  if (message.type === 'OPEN_SIDE_PANEL_WITH_PROSPECT') {
+    // Store the prospect ID to be loaded in side panel
+    chrome.storage.local.set({ selectedProspectId: message.prospectId });
+
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      if (tabs[0]) {
+        chrome.sidePanel.open({ tabId: tabs[0].id })
+          .then(() => sendResponse({ success: true }))
+          .catch((err) => sendResponse({ success: false, error: err.message }));
+      } else {
+        sendResponse({ success: false, error: 'No active tab' });
+      }
+    });
+    return true;
+  }
 });
 
 // Listen for tab updates to detect Google Meet

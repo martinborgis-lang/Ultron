@@ -146,19 +146,17 @@ async function checkMeetStatus() {
 
 async function handleOpenPanel() {
   try {
-    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    if (tab && tab.url && tab.url.includes('meet.google.com')) {
-      chrome.tabs.sendMessage(tab.id, {
-        type: 'OPEN_PANEL',
-      }, (response) => {
-        if (chrome.runtime.lastError) {
-          console.log('Could not open panel:', chrome.runtime.lastError);
-          alert('Impossible d\'ouvrir le panel. Veuillez rafraichir la page Google Meet.');
-        } else if (response && response.success) {
-          window.close(); // Close popup after opening panel
-        }
-      });
-    }
+    // Open the side panel instead of the injected panel
+    chrome.runtime.sendMessage({
+      type: 'OPEN_SIDE_PANEL',
+    }, (response) => {
+      if (response && response.success) {
+        window.close();
+      } else {
+        console.log('Could not open side panel:', response?.error);
+        alert('Impossible d\'ouvrir le panneau lateral. Verifiez que vous etes sur Chrome 114+.');
+      }
+    });
   } catch (error) {
     console.error('Error opening panel:', error);
   }
@@ -207,27 +205,18 @@ async function loadProspects() {
         // Add event listener properly
         const btn = div.querySelector('.prep-btn');
         btn.addEventListener('click', async () => {
-          // Check if on Google Meet
-          const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-
-          if (tab && tab.url && tab.url.includes('meet.google.com')) {
-            // On Google Meet - send message to content script to select this prospect
-            chrome.tabs.sendMessage(tab.id, {
-              type: 'SELECT_PROSPECT',
-              prospectId: p.id,
-            }, (response) => {
-              if (chrome.runtime.lastError) {
-                // Content script not available - open popup window instead
-                openPreparePopup(p.id);
-              } else {
-                // Success - close popup
-                window.close();
-              }
-            });
-          } else {
-            // Not on Google Meet - open in popup window
-            openPreparePopup(p.id);
-          }
+          // Open side panel with this prospect selected
+          chrome.runtime.sendMessage({
+            type: 'OPEN_SIDE_PANEL_WITH_PROSPECT',
+            prospectId: p.id,
+          }, (response) => {
+            if (response && response.success) {
+              window.close();
+            } else {
+              // Fallback: open in popup window if side panel fails
+              openPreparePopup(p.id);
+            }
+          });
         });
 
         prospectsList.appendChild(div);

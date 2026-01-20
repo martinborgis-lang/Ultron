@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ultron - Preparation RDV</title>
+  <link rel="stylesheet" href="sidepanel.css">
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <h1>ULTRON</h1>
+      <p>Assistant Meeting</p>
+    </header>
+
+    <div id="login-required" class="section hidden">
+      <p>Veuillez vous connecter via l'extension popup.</p>
+      <button id="open-popup-btn">Ouvrir le popup</button>
+    </div>
+
+    <div id="main-content" class="hidden">
+      <!-- Prospect Selection -->
+      <div id="prospect-section" class="section">
+        <h2>Prospect</h2>
+        <div id="prospect-selector">
+          <select id="prospect-select">
+            <option value="">Selectionner un prospect...</option>
+          </select>
+          <button id="refresh-prospects" title="Rafraichir">&#8635;</button>
+        </div>
+        <div id="prospect-info" class="hidden">
+          <div class="prospect-card">
+            <div class="prospect-header">
+              <span id="prospect-name" class="prospect-name"></span>
+              <span id="prospect-badge" class="badge"></span>
+            </div>
+            <div class="prospect-details">
+              <div><strong>Email:</strong> <span id="prospect-email"></span></div>
+              <div><strong>Tel:</strong> <span id="prospect-phone"></span></div>
+              <div><strong>Revenus:</strong> <span id="prospect-revenus"></span></div>
+              <div><strong>Patrimoine:</strong> <span id="prospect-patrimoine"></span></div>
+              <div><strong>Profession:</strong> <span id="prospect-profession"></span></div>
+            </div>
+            <div class="prospect-needs">
+              <strong>Besoins:</strong>
+              <p id="prospect-besoins"></p>
+            </div>
+            <div class="prospect-notes">
+              <strong>Notes:</strong>
+              <p id="prospect-notes"></p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- AI Suggestions -->
+      <div id="suggestions-section" class="section hidden">
+        <h2>Suggestions IA</h2>
+        <div id="suggestions-loading" class="loading">Analyse en cours...</div>
+        <div id="suggestions-content" class="hidden">
+          <div class="suggestion-group">
+            <h3>Questions a poser</h3>
+            <ul id="questions-list"></ul>
+          </div>
+          <div class="suggestion-group">
+            <h3>Arguments cles</h3>
+            <ul id="arguments-list"></ul>
+          </div>
+          <div class="suggestion-group">
+            <h3>Objections probables</h3>
+            <ul id="objections-list"></ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- Interactions History -->
+      <div id="history-section" class="section hidden">
+        <h2>Historique</h2>
+        <div id="history-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="sidepanel.js"></script>
+</body>
+</html>
