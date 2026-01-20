@@ -112,7 +112,7 @@ export class CrmPlanningService implements IPlanningService {
     return this.mapDbToEvent(data);
   }
 
-  async create(event: Partial<PlanningEvent> & { addGoogleMeet?: boolean; attendeeEmail?: string }): Promise<PlanningEvent & { meetLink?: string }> {
+  async create(event: Partial<PlanningEvent> & { addGoogleMeet?: boolean; attendeeEmail?: string; meetLink?: string }): Promise<PlanningEvent & { meetLink?: string }> {
     // Si prospect_id fourni, recuperer le nom et l'email
     let prospectName = event.prospectName;
     let prospectEmail = event.attendeeEmail;
@@ -157,6 +157,9 @@ export class CrmPlanningService implements IPlanningService {
       prospectId: event.prospectId,
     }));
 
+    // Prepare initial metadata with meet link if provided directly
+    const initialMetadata = event.meetLink ? { meet_link: event.meetLink } : undefined;
+
     const { data, error } = await this.supabase
       .from('crm_events')
       .insert({
@@ -174,6 +177,7 @@ export class CrmPlanningService implements IPlanningService {
         assigned_to: this.userId,
         created_by: this.userId,
         status: 'pending',
+        metadata: initialMetadata,
       })
       .select(
         `
@@ -259,6 +263,21 @@ export class CrmPlanningService implements IPlanningService {
     if (data.priority !== undefined) updateData.priority = data.priority;
     if (data.status !== undefined) updateData.status = data.status;
     if (data.completedAt !== undefined) updateData.completed_at = data.completedAt;
+
+    // Handle meetLink update via metadata
+    if (data.meetLink !== undefined) {
+      // First get current metadata
+      const { data: currentEvent } = await this.supabase
+        .from('crm_events')
+        .select('metadata')
+        .eq('id', id)
+        .single();
+
+      updateData.metadata = {
+        ...(currentEvent?.metadata || {}),
+        meet_link: data.meetLink,
+      };
+    }
 
     const { data: result, error } = await this.supabase
       .from('crm_events')

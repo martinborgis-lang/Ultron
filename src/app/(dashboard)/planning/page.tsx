@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Plus, List, Calendar, CheckCircle2, Circle, Clock, User } from 'lucide-react';
+import { Plus, List, Calendar, CheckCircle2, Circle, Clock, User, Video, ExternalLink, X, Play } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface PlanningEvent {
@@ -20,6 +20,8 @@ interface PlanningEvent {
   prospectName?: string;
   assignedToName?: string;
   priority: 'low' | 'medium' | 'high' | 'urgent';
+  meetLink?: string;
+  calendarLink?: string;
   createdAt: string;
 }
 
@@ -29,6 +31,7 @@ export default function PlanningPage() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'overdue' | 'today' | 'upcoming' | 'all'>('today');
   const [showNewForm, setShowNewForm] = useState(false);
+  const [selectedEvent, setSelectedEvent] = useState<PlanningEvent | null>(null);
 
   useEffect(() => {
     fetchEvents();
@@ -310,7 +313,7 @@ export default function PlanningPage() {
         </div>
       ) : (
         /* VUE CALENDRIER */
-        <CalendarView events={events} onComplete={handleComplete} />
+        <CalendarView events={events} onSelect={setSelectedEvent} />
       )}
 
       {/* Modal nouvelle tâche */}
@@ -323,6 +326,23 @@ export default function PlanningPage() {
           }}
         />
       )}
+
+      {/* Modal détail événement */}
+      {selectedEvent && (
+        <EventDetailModal
+          event={selectedEvent}
+          onClose={() => setSelectedEvent(null)}
+          onComplete={(completed) => {
+            handleComplete(selectedEvent.id, completed);
+            setSelectedEvent(null);
+          }}
+          onDelete={() => {
+            handleDelete(selectedEvent.id);
+            setSelectedEvent(null);
+          }}
+          onUpdate={fetchEvents}
+        />
+      )}
     </div>
   );
 }
@@ -330,10 +350,10 @@ export default function PlanningPage() {
 // Composant Vue Calendrier
 function CalendarView({
   events,
-  onComplete
+  onSelect
 }: {
   events: PlanningEvent[];
-  onComplete: (id: string, completed: boolean) => void;
+  onSelect: (event: PlanningEvent) => void;
 }) {
   const [currentDate, setCurrentDate] = useState(new Date());
 
@@ -437,20 +457,21 @@ function CalendarView({
                     {dayEvents.map(event => (
                       <div
                         key={event.id}
-                        onClick={() => onComplete(event.id, event.status !== 'completed')}
+                        onClick={() => onSelect(event)}
                         className={cn(
-                          "text-xs p-1 rounded mb-1 cursor-pointer truncate",
+                          "text-xs p-1.5 rounded mb-1 cursor-pointer truncate flex items-center gap-1",
                           event.status === 'completed'
                             ? "bg-muted text-muted-foreground line-through"
                             : event.type === 'meeting'
-                              ? "bg-purple-100 text-purple-700 dark:bg-purple-950 dark:text-purple-300"
+                              ? "bg-purple-100 text-purple-700 dark:bg-purple-950 dark:text-purple-300 hover:bg-purple-200 dark:hover:bg-purple-900"
                               : event.type === 'call'
-                                ? "bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300"
-                                : "bg-muted text-foreground"
+                                ? "bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-900"
+                                : "bg-muted text-foreground hover:bg-muted/80"
                         )}
                         title={event.title}
                       >
-                        {event.title}
+                        {event.meetLink && <Video className="h-3 w-3 flex-shrink-0" />}
+                        <span className="truncate">{event.title}</span>
                       </div>
                     ))}
                   </div>
@@ -481,6 +502,7 @@ function NewEventModal({
     dueTime: '',
     priority: 'medium',
     prospectId: '',
+    meetLink: '',
   });
   const [prospects, setProspects] = useState<{ id: string; name: string }[]>([]);
 
@@ -521,6 +543,7 @@ function NewEventModal({
           start_date: formData.type === 'meeting' ? dueDateTime : null,
           priority: formData.priority,
           prospect_id: formData.prospectId || null,
+          meet_link: formData.type === 'meeting' ? formData.meetLink || null : null,
         }),
       });
 
@@ -628,6 +651,25 @@ function NewEventModal({
             </select>
           </div>
 
+          {/* Lien Google Meet (pour les meetings) */}
+          {formData.type === 'meeting' && (
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1">
+                Lien Google Meet
+              </label>
+              <input
+                type="url"
+                value={formData.meetLink || ''}
+                onChange={e => setFormData({...formData, meetLink: e.target.value})}
+                placeholder="https://meet.google.com/xxx-xxxx-xxx"
+                className="w-full px-3 py-2 border border-input rounded-lg bg-background text-foreground placeholder:text-muted-foreground"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Collez le lien de votre Google Meet ici
+              </p>
+            </div>
+          )}
+
           {/* Actions */}
           <div className="flex justify-end gap-3 pt-2">
             <Button type="button" variant="outline" onClick={onClose}>
@@ -638,6 +680,311 @@ function NewEventModal({
             </Button>
           </div>
         </form>
+      </div>
+    </div>
+  );
+}
+
+// Modal détail d'événement
+function EventDetailModal({
+  event,
+  onClose,
+  onComplete,
+  onDelete,
+  onUpdate
+}: {
+  event: PlanningEvent;
+  onClose: () => void;
+  onComplete: (completed: boolean) => void;
+  onDelete: () => void;
+  onUpdate: () => void;
+}) {
+  const [meetLink, setMeetLink] = useState(event.meetLink || '');
+  const [isEditing, setIsEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [prospectInfo, setProspectInfo] = useState<{
+    email?: string;
+    phone?: string;
+    patrimoine?: string;
+    revenus?: string;
+    besoins?: string;
+    qualification?: string;
+  } | null>(null);
+
+  // Charger les infos du prospect si lié
+  useEffect(() => {
+    if (event.prospectId) {
+      fetch(`/api/prospects/unified/${event.prospectId}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data && !data.error) {
+            setProspectInfo({
+              email: data.email,
+              phone: data.phone,
+              patrimoine: data.patrimoine || data.patrimoineEstime,
+              revenus: data.revenusMensuels || data.revenus,
+              besoins: data.besoins,
+              qualification: data.qualification,
+            });
+          }
+        })
+        .catch(() => {});
+    }
+  }, [event.prospectId]);
+
+  const handleSaveMeetLink = async () => {
+    setSaving(true);
+    try {
+      await fetch(`/api/planning/${event.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ meet_link: meetLink }),
+      });
+      setIsEditing(false);
+      onUpdate();
+    } catch (error) {
+      console.error('Erreur sauvegarde:', error);
+    }
+    setSaving(false);
+  };
+
+  const handleLaunchMeet = () => {
+    if (meetLink) {
+      window.open(meetLink, '_blank');
+    }
+  };
+
+  const formatDateTime = (dateStr?: string) => {
+    if (!dateStr) return 'Non défini';
+    const date = new Date(dateStr);
+    return date.toLocaleString('fr-FR', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  const getTypeLabel = (type: string) => {
+    switch (type) {
+      case 'meeting': return '📅 RDV';
+      case 'call': return '📞 Appel';
+      case 'email': return '✉️ Email';
+      case 'reminder': return '⏰ Rappel';
+      default: return '✓ Tâche';
+    }
+  };
+
+  const getQualificationColor = (qual?: string) => {
+    switch (qual?.toUpperCase()) {
+      case 'CHAUD': return 'bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-400';
+      case 'TIEDE': return 'bg-orange-100 text-orange-700 dark:bg-orange-950 dark:text-orange-400';
+      case 'FROID': return 'bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-400';
+      default: return 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400';
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-card rounded-xl w-full max-w-lg shadow-xl border border-border overflow-hidden">
+        {/* Header */}
+        <div className="flex items-center justify-between p-4 border-b border-border bg-muted/50">
+          <div className="flex items-center gap-3">
+            <span className="text-xl">{getTypeLabel(event.type).split(' ')[0]}</span>
+            <div>
+              <h2 className="font-semibold text-foreground">{event.title}</h2>
+              <p className="text-sm text-muted-foreground">
+                {formatDateTime(event.startDate || event.dueDate)}
+              </p>
+            </div>
+          </div>
+          <button onClick={onClose} className="p-1 hover:bg-muted rounded">
+            <X className="h-5 w-5 text-muted-foreground" />
+          </button>
+        </div>
+
+        <div className="p-4 space-y-4 max-h-[60vh] overflow-y-auto">
+          {/* Bouton lancer le meeting (si c'est un RDV) */}
+          {event.type === 'meeting' && (
+            <div className="bg-purple-50 dark:bg-purple-950/30 rounded-lg p-4 border border-purple-200 dark:border-purple-800">
+              {meetLink && !isEditing ? (
+                <div className="space-y-3">
+                  <button
+                    onClick={handleLaunchMeet}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-colors"
+                  >
+                    <Play className="h-5 w-5" />
+                    Lancer le meeting Google Meet
+                  </button>
+                  <div className="flex items-center justify-between text-sm">
+                    <a
+                      href={meetLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-purple-600 dark:text-purple-400 hover:underline flex items-center gap-1 truncate max-w-[80%]"
+                    >
+                      <ExternalLink className="h-3 w-3 flex-shrink-0" />
+                      {meetLink}
+                    </a>
+                    <button
+                      onClick={() => setIsEditing(true)}
+                      className="text-muted-foreground hover:text-foreground text-xs"
+                    >
+                      Modifier
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-foreground">
+                    Lien Google Meet
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      type="url"
+                      value={meetLink}
+                      onChange={e => setMeetLink(e.target.value)}
+                      placeholder="https://meet.google.com/xxx-xxxx-xxx"
+                      className="flex-1 px-3 py-2 border border-input rounded-lg bg-background text-foreground text-sm placeholder:text-muted-foreground"
+                    />
+                    <Button
+                      onClick={handleSaveMeetLink}
+                      disabled={saving}
+                      size="sm"
+                    >
+                      {saving ? '...' : 'OK'}
+                    </Button>
+                    {isEditing && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setMeetLink(event.meetLink || '');
+                          setIsEditing(false);
+                        }}
+                      >
+                        Annuler
+                      </Button>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Collez le lien de votre Google Meet pour pouvoir le lancer d&apos;ici
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Infos prospect */}
+          {event.prospectName && (
+            <div className="bg-muted/50 rounded-lg p-4">
+              <h3 className="text-sm font-medium text-foreground mb-3 flex items-center gap-2">
+                <User className="h-4 w-4" />
+                Prospect: {event.prospectName}
+                {prospectInfo?.qualification && (
+                  <span className={cn(
+                    "px-2 py-0.5 text-xs rounded-full font-medium",
+                    getQualificationColor(prospectInfo.qualification)
+                  )}>
+                    {prospectInfo.qualification}
+                  </span>
+                )}
+              </h3>
+
+              {prospectInfo && (
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  {prospectInfo.email && (
+                    <div>
+                      <span className="text-muted-foreground">Email:</span>
+                      <p className="text-foreground">{prospectInfo.email}</p>
+                    </div>
+                  )}
+                  {prospectInfo.phone && (
+                    <div>
+                      <span className="text-muted-foreground">Téléphone:</span>
+                      <p className="text-foreground">{prospectInfo.phone}</p>
+                    </div>
+                  )}
+                  {prospectInfo.revenus && (
+                    <div>
+                      <span className="text-muted-foreground">Revenus:</span>
+                      <p className="text-foreground">{prospectInfo.revenus}€</p>
+                    </div>
+                  )}
+                  {prospectInfo.patrimoine && (
+                    <div>
+                      <span className="text-muted-foreground">Patrimoine:</span>
+                      <p className="text-foreground">{prospectInfo.patrimoine}€</p>
+                    </div>
+                  )}
+                  {prospectInfo.besoins && (
+                    <div className="col-span-2">
+                      <span className="text-muted-foreground">Besoins:</span>
+                      <p className="text-foreground">{prospectInfo.besoins}</p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {event.prospectId && (
+                <a
+                  href={`/prospects/${event.prospectId}`}
+                  className="text-indigo-600 hover:text-indigo-700 text-sm mt-3 inline-flex items-center gap-1"
+                >
+                  Voir la fiche complète
+                  <ExternalLink className="h-3 w-3" />
+                </a>
+              )}
+            </div>
+          )}
+
+          {/* Description */}
+          {event.description && (
+            <div>
+              <h3 className="text-sm font-medium text-muted-foreground mb-1">Description</h3>
+              <p className="text-foreground">{event.description}</p>
+            </div>
+          )}
+
+          {/* Statut */}
+          <div className="flex items-center gap-4 pt-2 border-t border-border">
+            <div className="flex items-center gap-2">
+              {event.status === 'completed' ? (
+                <CheckCircle2 className="h-5 w-5 text-green-500" />
+              ) : (
+                <Circle className="h-5 w-5 text-muted-foreground" />
+              )}
+              <span className="text-sm text-muted-foreground">
+                {event.status === 'completed' ? 'Terminé' : 'En cours'}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Footer actions */}
+        <div className="flex items-center justify-between p-4 border-t border-border bg-muted/30">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onDelete}
+            className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950"
+          >
+            Supprimer
+          </Button>
+
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={() => onComplete(event.status !== 'completed')}
+            >
+              {event.status === 'completed' ? 'Marquer non terminé' : 'Marquer terminé'}
+            </Button>
+            <Button onClick={onClose}>
+              Fermer
+            </Button>
+          </div>
+        </div>
       </div>
     </div>
   );

@@ -68,6 +68,7 @@ export async function POST(request: NextRequest) {
       prospectId: body.prospect_id || body.prospectId,
       addGoogleMeet: body.addGoogleMeet || body.add_google_meet || false,
       attendeeEmail: body.attendeeEmail || body.attendee_email,
+      meetLink: body.meet_link || body.meetLink,
     };
 
     const event = await service.create(eventData);

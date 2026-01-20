@@ -59,6 +59,7 @@ export async function PATCH(
       priority: body.priority,
       status: body.status,
       completedAt: body.completedAt || body.completed_at,
+      meetLink: body.meetLink || body.meet_link,
     });
 
     return NextResponse.json(event);

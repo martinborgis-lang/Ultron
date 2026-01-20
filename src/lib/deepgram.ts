@@ -36,7 +36,7 @@ export function getDeepgramWebSocketUrl(config: Partial<DeepgramConfig> = {}): s
  * Transcribe pre-recorded audio using Deepgram
  */
 export async function transcribeAudio(
-  audioBuffer: Buffer,
+  audioBuffer: Buffer | Uint8Array,
   config: Partial<DeepgramConfig> = {}
 ): Promise<{ transcript: string; words: { word: string; start: number; end: number }[] }> {
   const apiKey = getDeepgramApiKey();
@@ -48,13 +48,16 @@ export async function transcribeAudio(
     punctuate: String(finalConfig.punctuate),
   });
 
+  // Convert to Blob for fetch compatibility - cast needed for TypeScript
+  const blob = new Blob([audioBuffer as unknown as BlobPart], { type: 'audio/wav' });
+
   const response = await fetch(`${DEEPGRAM_API_URL}/listen?${params.toString()}`, {
     method: 'POST',
     headers: {
       'Authorization': `Token ${apiKey}`,
       'Content-Type': 'audio/wav',
     },
-    body: audioBuffer,
+    body: blob,
   });
 
   if (!response.ok) {
