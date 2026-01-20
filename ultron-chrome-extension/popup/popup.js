@@ -18,6 +18,7 @@ const meetStatus = document.getElementById('meet-status');
 const prospectsList = document.getElementById('prospects-list');
 const autoPanelCheckbox = document.getElementById('auto-panel');
 const transcriptionCheckbox = document.getElementById('transcription-enabled');
+const openPanelBtn = document.getElementById('open-panel-btn');
 
 // Initialization
 document.addEventListener('DOMContentLoaded', async () => {
@@ -44,6 +45,7 @@ loginBtn.addEventListener('click', handleLogin);
 logoutBtn.addEventListener('click', handleLogout);
 autoPanelCheckbox.addEventListener('change', saveSettings);
 transcriptionCheckbox.addEventListener('change', saveSettings);
+openPanelBtn.addEventListener('click', handleOpenPanel);
 
 async function handleLogin() {
   const email = emailInput.value.trim();
@@ -76,6 +78,19 @@ async function handleLogin() {
 
       showLoggedInUI();
       loadProspects();
+
+      // Notify content script if on Google Meet
+      try {
+        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+        if (tab && tab.url && tab.url.includes('meet.google.com')) {
+          chrome.tabs.sendMessage(tab.id, {
+            type: 'USER_LOGGED_IN',
+            token: userToken,
+          });
+        }
+      } catch (e) {
+        console.log('Could not notify content script:', e);
+      }
     } else {
       loginError.textContent = data.error || 'Erreur de connexion';
     }
@@ -116,13 +131,36 @@ async function checkMeetStatus() {
       meetStatus.textContent = 'Sur Google Meet';
       meetStatus.classList.add('active');
       meetStatus.classList.remove('inactive');
+      // Show open panel button when on Google Meet
+      openPanelBtn.classList.remove('hidden');
     } else {
       meetStatus.textContent = 'Pas sur Google Meet';
       meetStatus.classList.add('inactive');
       meetStatus.classList.remove('active');
+      openPanelBtn.classList.add('hidden');
     }
   } catch (error) {
     console.error('Error checking meet status:', error);
+  }
+}
+
+async function handleOpenPanel() {
+  try {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (tab && tab.url && tab.url.includes('meet.google.com')) {
+      chrome.tabs.sendMessage(tab.id, {
+        type: 'OPEN_PANEL',
+      }, (response) => {
+        if (chrome.runtime.lastError) {
+          console.log('Could not open panel:', chrome.runtime.lastError);
+          alert('Impossible d\'ouvrir le panel. Veuillez rafraichir la page Google Meet.');
+        } else if (response && response.success) {
+          window.close(); // Close popup after opening panel
+        }
+      });
+    }
+  } catch (error) {
+    console.error('Error opening panel:', error);
   }
 }
 

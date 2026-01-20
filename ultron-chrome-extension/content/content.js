@@ -773,6 +773,30 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === 'SETTINGS_UPDATED') {
     if (message.autoPanel && !panelElement) {
       createPanel();
+      if (!currentProspect) {
+        detectProspect();
+      }
     }
+  }
+
+  // Handle login from popup - open panel automatically
+  if (message.type === 'USER_LOGGED_IN') {
+    userToken = message.token;
+    if (!panelElement) {
+      createPanel();
+      detectProspect();
+    }
+    sendResponse({ success: true });
+  }
+
+  // Handle request to open panel manually
+  if (message.type === 'OPEN_PANEL') {
+    if (!panelElement && userToken) {
+      createPanel();
+      detectProspect();
+    } else if (panelElement) {
+      panelElement.classList.remove('minimized');
+    }
+    sendResponse({ success: true });
   }
 });

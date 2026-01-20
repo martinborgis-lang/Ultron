@@ -131,6 +131,15 @@ button.small:hover {
   color: #888;
 }
 
+#open-panel-btn {
+  margin-top: 8px;
+  background: #22c55e;
+}
+
+#open-panel-btn:hover {
+  background: #16a34a;
+}
+
 .prospects {
   margin-bottom: 16px;
 }
