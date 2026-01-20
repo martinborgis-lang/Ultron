@@ -982,13 +982,17 @@ async function startTranscriptionForSidePanel() {
   sidePanelDeepgramSocket.onmessage = (event) => {
     try {
       const data = JSON.parse(event.data);
+      console.log('Ultron Content: Deepgram message type:', data.type);
 
       if (data.type === 'Results' && data.channel) {
         const transcript = data.channel.alternatives[0]?.transcript;
         const isFinal = data.is_final;
+        const confidence = data.channel.alternatives[0]?.confidence;
+
+        console.log('Ultron Content: Transcript result:', { transcript: transcript || '(empty)', isFinal, confidence });
 
         if (transcript && transcript.trim()) {
-          console.log('Ultron Content: Transcript:', transcript, 'Final:', isFinal);
+          console.log('Ultron Content: Sending transcript to Side Panel:', transcript);
 
           // Send to Side Panel
           chrome.runtime.sendMessage({
@@ -1000,9 +1004,18 @@ async function startTranscriptionForSidePanel() {
             },
           });
         }
+      } else if (data.type === 'Metadata') {
+        console.log('Ultron Content: Deepgram metadata received');
+      } else if (data.type === 'Error' || data.error) {
+        console.error('Ultron Content: Deepgram error:', data);
+        chrome.runtime.sendMessage({
+          type: 'TRANSCRIPTION_STATUS',
+          status: 'error',
+          error: data.message || data.error || 'Erreur Deepgram',
+        });
       }
     } catch (e) {
-      console.error('Ultron Content: Error parsing Deepgram message', e);
+      console.error('Ultron Content: Error parsing Deepgram message', e, event.data);
     }
   };
 
@@ -1068,32 +1081,88 @@ async function startTabAudioCapture() {
 async function startMicrophoneCapture() {
   console.log('Ultron Content: Starting microphone capture as fallback...');
 
-  sidePanelMediaStream = await navigator.mediaDevices.getUserMedia({
-    audio: {
-      echoCancellation: true,
-      noiseSuppression: true,
-    },
-  });
+  try {
+    // First check if we have permission
+    const permissionStatus = await navigator.permissions.query({ name: 'microphone' });
+    console.log('Ultron Content: Microphone permission status:', permissionStatus.state);
 
-  setupMediaRecorder(sidePanelMediaStream);
+    sidePanelMediaStream = await navigator.mediaDevices.getUserMedia({
+      audio: {
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true,
+      },
+    });
+
+    console.log('Ultron Content: Microphone stream obtained');
+    setupMediaRecorder(sidePanelMediaStream);
+
+  } catch (error) {
+    console.error('Ultron Content: Microphone capture failed:', error.name, error.message);
+    chrome.runtime.sendMessage({
+      type: 'TRANSCRIPTION_STATUS',
+      status: 'error',
+      error: `Erreur micro: ${error.message}. Autorisez le micro pour meet.google.com`,
+    });
+  }
 }
 
 function setupMediaRecorder(stream) {
+  // Check audio tracks
+  const audioTracks = stream.getAudioTracks();
+  console.log('Ultron Content: Audio tracks:', audioTracks.length, audioTracks.map(t => t.label));
+
+  if (audioTracks.length === 0) {
+    console.error('Ultron Content: No audio tracks in stream!');
+    chrome.runtime.sendMessage({
+      type: 'TRANSCRIPTION_STATUS',
+      status: 'error',
+      error: 'Aucune piste audio detectee',
+    });
+    return;
+  }
+
   let mimeType = 'audio/webm;codecs=opus';
   if (!MediaRecorder.isTypeSupported(mimeType)) {
     mimeType = 'audio/webm';
+    if (!MediaRecorder.isTypeSupported(mimeType)) {
+      mimeType = '';
+    }
   }
+  console.log('Ultron Content: Using mimeType:', mimeType || 'default');
 
-  sidePanelMediaRecorder = new MediaRecorder(stream, { mimeType });
+  const options = mimeType ? { mimeType } : {};
+  sidePanelMediaRecorder = new MediaRecorder(stream, options);
 
+  let chunkCount = 0;
   sidePanelMediaRecorder.ondataavailable = (event) => {
-    if (event.data.size > 0 && sidePanelDeepgramSocket && sidePanelDeepgramSocket.readyState === WebSocket.OPEN) {
-      sidePanelDeepgramSocket.send(event.data);
+    chunkCount++;
+    if (event.data.size > 0) {
+      if (chunkCount <= 5 || chunkCount % 20 === 0) {
+        console.log(`Ultron Content: Audio chunk #${chunkCount}, size: ${event.data.size} bytes, WS state: ${sidePanelDeepgramSocket?.readyState}`);
+      }
+      if (sidePanelDeepgramSocket && sidePanelDeepgramSocket.readyState === WebSocket.OPEN) {
+        sidePanelDeepgramSocket.send(event.data);
+      } else {
+        console.warn('Ultron Content: WebSocket not open, cannot send audio');
+      }
+    } else {
+      console.warn('Ultron Content: Empty audio chunk');
     }
   };
 
+  sidePanelMediaRecorder.onerror = (error) => {
+    console.error('Ultron Content: MediaRecorder error', error);
+  };
+
   sidePanelMediaRecorder.start(250);
-  console.log('Ultron Content: MediaRecorder started');
+  console.log('Ultron Content: MediaRecorder started, state:', sidePanelMediaRecorder.state);
+
+  // Notify Side Panel
+  chrome.runtime.sendMessage({
+    type: 'TRANSCRIPTION_STATUS',
+    status: 'connected',
+  });
 }
 
 function detectSpeakerFromTranscript(transcript) {
