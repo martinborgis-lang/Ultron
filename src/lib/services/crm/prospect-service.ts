@@ -213,8 +213,18 @@ export class CrmProspectService implements IProspectService {
     total: number;
     byQualification: Record<string, number>;
     byStage: Record<string, number>;
+    mailsSent: number;
   }> {
-    const prospects = await this.getAll();
+    // Fetch all prospects with mail flags
+    const { data: prospects, error } = await this.supabase
+      .from('crm_prospects')
+      .select('qualification, stage_slug, mail_plaquette_sent, mail_synthese_sent, mail_rappel_sent, metadata')
+      .eq('organization_id', this.organizationId);
+
+    if (error) {
+      console.error('CrmProspectService.getStats error:', error);
+      throw error;
+    }
 
     const byQualification: Record<string, number> = {
       CHAUD: 0,
@@ -226,23 +236,35 @@ export class CrmProspectService implements IProspectService {
       nouveau: 0,
       contacte: 0,
       rdv_valide: 0,
+      rdv_pris: 0,
+      en_attente: 0,
+      rdv_effectue: 0,
       proposition: 0,
       negociation: 0,
       gagne: 0,
       perdu: 0,
     };
+    let mailsSent = 0;
 
-    prospects.forEach((p) => {
+    (prospects || []).forEach((p: any) => {
       // Normalize qualification to uppercase for comparison
       const qual = (p.qualification || 'non_qualifie').toUpperCase();
       if (byQualification[qual] !== undefined) byQualification[qual]++;
       else byQualification['NON_QUALIFIE']++;
 
-      const stage = p.stage || 'nouveau';
+      const stage = p.stage_slug || 'nouveau';
       if (byStage[stage] !== undefined) byStage[stage]++;
       else byStage['nouveau']++;
+
+      // Count mails sent (check both boolean flags and metadata)
+      if (p.mail_plaquette_sent) mailsSent++;
+      if (p.mail_synthese_sent) mailsSent++;
+      if (p.mail_rappel_sent) mailsSent++;
+      // Also check metadata for mail flags (some might be stored there)
+      if (p.metadata?.mail_plaquette_sent) mailsSent++;
+      if (p.metadata?.mail_synthese_sent) mailsSent++;
     });
 
-    return { total: prospects.length, byQualification, byStage };
+    return { total: (prospects || []).length, byQualification, byStage, mailsSent };
   }
 }

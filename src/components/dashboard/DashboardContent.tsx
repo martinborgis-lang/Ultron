@@ -323,14 +323,14 @@ export function DashboardContent() {
         throw new Error(statsData.error || prospectsData.error || 'Erreur');
       }
 
-      // Format unifie: { total, byQualification: { CHAUD, TIEDE, FROID, NON_QUALIFIE }, byStage }
+      // Format unifie: { total, byQualification: { CHAUD, TIEDE, FROID, NON_QUALIFIE }, byStage, mailsSent }
       setStats({
         total: statsData.total || 0,
         chauds: statsData.byQualification?.CHAUD || 0,
         tiedes: statsData.byQualification?.TIEDE || 0,
         froids: statsData.byQualification?.FROID || 0,
-        mailsEnvoyes: 0, // Non disponible dans le format unifie
-        rdvPris: statsData.byStage?.rdv_valide || 0,
+        mailsEnvoyes: statsData.mailsSent || 0,
+        rdvPris: (statsData.byStage?.rdv_valide || 0) + (statsData.byStage?.rdv_pris || 0),
       });
 
       // Convertir les prospects unifies au format Google pour les helpers existants
