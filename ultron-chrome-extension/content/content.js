@@ -3,7 +3,15 @@
  * Real-time transcription with Deepgram + AI coaching
  */
 
-const ULTRON_API_URL = 'https://ultron-murex.vercel.app';
+// Prevent re-initialization on extension reload
+if (window.ULTRON_CONTENT_LOADED) {
+  console.log('Ultron: Content script already loaded, skipping re-initialization');
+}
+window.ULTRON_CONTENT_LOADED = true;
+
+// Define API URL on window to share with other scripts (use var to allow redeclaration)
+window.ULTRON_API_URL = 'https://ultron-murex.vercel.app';
+var ULTRON_API_URL = window.ULTRON_API_URL;
 
 // State
 let panelElement = null;
@@ -31,7 +39,7 @@ let dragOffset = { x: 0, y: 0 };
 
 // Initialization
 (async function init() {
-  console.log('Ultron Meeting Assistant v2.0: Initializing...');
+  console.log('Ultron Meeting Assistant v2.1: Initializing...');
 
   // Get token
   const stored = await chrome.storage.local.get(['userToken', 'autoPanel', 'transcriptionEnabled']);

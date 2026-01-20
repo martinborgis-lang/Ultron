@@ -3,9 +3,17 @@
  * Handles WebSocket connection to Deepgram for real-time transcription
  */
 
-const ULTRON_API_URL = 'https://ultron-murex.vercel.app';
+(function() {
+  // Prevent re-declaration on extension reload
+  if (typeof window.UltronDeepgramClient !== 'undefined') {
+    console.log('Ultron: DeepgramClient already defined, skipping...');
+    return;
+  }
 
-class DeepgramClient {
+  // Use existing ULTRON_API_URL if already defined, otherwise define it
+  const DEEPGRAM_API_URL = window.ULTRON_API_URL || 'https://ultron-murex.vercel.app';
+
+  class DeepgramClient {
   constructor() {
     this.websocket = null;
     this.isConnected = false;
@@ -23,7 +31,7 @@ class DeepgramClient {
    * @returns {Promise<{websocket_url: string, api_key: string}>}
    */
   async getCredentials(token) {
-    const response = await fetch(`${ULTRON_API_URL}/api/meeting/transcribe`, {
+    const response = await fetch(`${DEEPGRAM_API_URL}/api/meeting/transcribe`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -174,7 +182,7 @@ class DeepgramClient {
   }
 }
 
-// Export for use in content script
-if (typeof window !== 'undefined') {
+  // Export for use in content script
   window.UltronDeepgramClient = DeepgramClient;
-}
+
+})(); // End IIFE

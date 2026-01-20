@@ -3,7 +3,14 @@
  * Captures tab audio from Google Meet using chrome.tabCapture
  */
 
-class AudioCapture {
+(function() {
+  // Prevent re-declaration on extension reload
+  if (typeof window.UltronAudioCapture !== 'undefined') {
+    console.log('Ultron: AudioCapture already defined, skipping...');
+    return;
+  }
+
+  class AudioCapture {
   constructor() {
     this.mediaStream = null;
     this.mediaRecorder = null;
@@ -129,7 +136,7 @@ class AudioCapture {
   }
 }
 
-// Export for use in content script
-if (typeof window !== 'undefined') {
+  // Export for use in content script
   window.UltronAudioCapture = AudioCapture;
-}
+
+})(); // End IIFE
