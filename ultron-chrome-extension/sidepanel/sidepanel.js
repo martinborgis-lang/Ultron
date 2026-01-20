@@ -406,11 +406,11 @@ async function startTranscription() {
       },
     });
 
-    if (!credResponse.ok) {
-      throw new Error('Impossible de recuperer les credentials Deepgram');
-    }
-
     const credentials = await credResponse.json();
+
+    if (!credResponse.ok) {
+      throw new Error(credentials.error || 'Impossible de recuperer les credentials Deepgram');
+    }
 
     // Connect to Deepgram WebSocket
     const wsUrl = `${credentials.websocket_url}&token=${credentials.api_key}`;

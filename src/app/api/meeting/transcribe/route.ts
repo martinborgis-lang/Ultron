@@ -46,7 +46,17 @@ export async function GET(request: NextRequest) {
     }
 
     // Get Deepgram credentials
-    const apiKey = getDeepgramApiKey();
+    let apiKey: string;
+    try {
+      apiKey = getDeepgramApiKey();
+    } catch (e) {
+      console.error('Deepgram API key error:', e);
+      return NextResponse.json(
+        { error: 'DEEPGRAM_API_KEY non configuré sur le serveur. Ajoutez-le dans les variables d\'environnement Vercel et redéployez.' },
+        { status: 500, headers: corsHeaders() }
+      );
+    }
+
     const websocketUrl = getDeepgramWebSocketUrl({
       model: 'nova-2',
       language: 'fr',
@@ -69,8 +79,9 @@ export async function GET(request: NextRequest) {
     );
   } catch (error) {
     console.error('Meeting transcribe error:', error);
+    const message = error instanceof Error ? error.message : 'Erreur inconnue';
     return NextResponse.json(
-      { error: 'Erreur lors de la récupération des credentials' },
+      { error: `Erreur serveur: ${message}` },
       { status: 500, headers: corsHeaders() }
     );
   }
