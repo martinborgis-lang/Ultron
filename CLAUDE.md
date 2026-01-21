@@ -2,20 +2,20 @@
 
 ## 🎯 PROJET ULTRON
 
-**Ultron** est une application SaaS multi-tenant pour automatiser la gestion de prospects pour des cabinets de gestion de patrimoine (CGP).
+**Ultron** est une application SaaS multi-tenant avancée pour automatiser la gestion de prospects et les ventes pour des cabinets de gestion de patrimoine (CGP).
 
 ### Fonctionnalités principales
 - **Architecture Bi-Mode** : Choix entre mode CRM (Supabase) ou mode Google Sheet
-- Dashboard avec statistiques en temps réel
-- Pipeline CRM avec drag & drop (Kanban)
-- Connexion OAuth Google par entreprise (Sheets) + par conseiller (Gmail)
-- Workflows automatisés (qualification IA, emails, rappels)
-- Personnalisation des prompts IA par entreprise
-- Gestion multi-conseillers avec Gmail individuel
-- Planning et tâches intégrés
-- Import CSV de prospects
-- Rappels programmés via QStash
-- Calculateur d'intérêts composés
+- **Dashboard Admin** : Statistiques avancées avec KPIs, heatmaps, et performances équipe
+- **Pipeline CRM Intelligent** : Kanban avec gestion de produits et commissions
+- **Extension Chrome** : Side panel pour analyse temps réel et qualification pendant calls
+- **IA Assistant** : Chat intégré pour requêtes SQL et aide conversationnelle
+- **Système de Meetings** : Transcription automatique, analyse IA, et suivi RDV
+- **Gestion de Produits** : Configuration produits avec commissions variables
+- **Workflows Automatisés** : Qualification IA, emails, rappels programmés
+- **Multi-tenant** : OAuth Google par entreprise + Gmail individuel par conseiller
+- **Planning Avancé** : Tâches, événements, intégration Google Calendar
+- **Landing Page Moderne** : Interface marketing avec animations et branding
 
 ---
 
@@ -68,7 +68,7 @@ Ultron supporte deux modes de stockage des données, configurables par organisat
 | Styling | Tailwind CSS + shadcn/ui |
 | Database | Supabase (PostgreSQL) |
 | Auth | Supabase Auth |
-| AI | Anthropic Claude API |
+| AI | Anthropic Claude Sonnet 4 |
 | Email | Gmail API |
 | Sheets | Google Sheets API |
 | Scheduling | Upstash QStash |
@@ -76,6 +76,8 @@ Ultron supporte deux modes de stockage des données, configurables par organisat
 | Icons | Lucide React |
 | Charts | Recharts |
 | Hosting | Vercel |
+| Real-time | Supabase Realtime |
+| PDF Generation | jsPDF / PDFKit |
 
 ---
 
@@ -89,84 +91,186 @@ src/
 │   │   └── register/page.tsx
 │   ├── (dashboard)/
 │   │   ├── dashboard/page.tsx
+│   │   ├── admin/page.tsx                  # 🆕 Dashboard Admin
 │   │   ├── prospects/
 │   │   │   ├── page.tsx
-│   │   │   └── [id]/page.tsx          # Vue 360° prospect
-│   │   ├── pipeline/page.tsx           # Kanban CRM
-│   │   ├── planning/page.tsx           # Tâches & événements
+│   │   │   └── [id]/page.tsx               # Vue 360° prospect
+│   │   ├── pipeline/page.tsx               # Kanban CRM
+│   │   ├── planning/page.tsx               # Tâches & événements
+│   │   ├── meetings/page.tsx               # 🆕 Gestion transcriptions RDV
+│   │   ├── assistant/page.tsx              # 🆕 IA Assistant conversationnel
+│   │   ├── tasks/page.tsx                  # 🆕 Gestionnaire de tâches
+│   │   ├── import/page.tsx                 # 🆕 Import CSV prospects
+│   │   ├── agenda/page.tsx                 # 🆕 Vue calendrier avancée
+│   │   ├── meeting/
+│   │   │   └── prepare/[prospectId]/page.tsx # 🆕 Préparation RDV IA
 │   │   ├── features/
 │   │   │   └── calculateur/page.tsx
 │   │   └── settings/
 │   │       ├── page.tsx
-│   │       ├── data-source/page.tsx    # Choix mode Sheet/CRM
+│   │       ├── data-source/page.tsx        # Choix mode Sheet/CRM
 │   │       ├── prompts/page.tsx
+│   │       ├── products/page.tsx           # 🆕 Gestion produits
+│   │       ├── scoring/page.tsx            # 🆕 Configuration scoring IA
+│   │       ├── thresholds/page.tsx         # 🆕 Seuils admin
 │   │       └── team/page.tsx
 │   ├── auth/
 │   │   ├── callback/page.tsx
 │   │   └── set-password/page.tsx
 │   ├── api/
 │   │   ├── prospects/
-│   │   │   └── unified/                # ⭐ APIs BI-MODE
-│   │   │       ├── route.ts            # GET/POST prospects
-│   │   │       ├── stats/route.ts      # GET stats
-│   │   │       ├── by-stage/route.ts   # GET groupé par stage
+│   │   │   └── unified/                    # ⭐ APIs BI-MODE
+│   │   │       ├── route.ts                # GET/POST prospects
+│   │   │       ├── stats/route.ts          # GET stats
+│   │   │       ├── by-stage/route.ts       # GET groupé par stage
 │   │   │       └── [id]/
-│   │   │           ├── route.ts        # GET/PATCH/DELETE
-│   │   │           └── stage/route.ts  # PATCH stage (drag&drop)
-│   │   ├── planning/                   # ⭐ APIs BI-MODE
-│   │   │   ├── route.ts                # GET/POST events
+│   │   │           ├── route.ts            # GET/PATCH/DELETE
+│   │   │           └── stage/route.ts      # PATCH stage (drag&drop)
+│   │   ├── planning/                       # ⭐ APIs BI-MODE
+│   │   │   ├── route.ts                    # GET/POST events
 │   │   │   └── [id]/
-│   │   │       ├── route.ts            # GET/PATCH/DELETE
-│   │   │       └── complete/route.ts   # POST mark complete
-│   │   ├── crm/                        # APIs CRM directes
+│   │   │       ├── route.ts                # GET/PATCH/DELETE
+│   │   │       └── complete/route.ts       # POST mark complete
+│   │   ├── meeting/                        # 🆕 APIs Meetings & Transcription
+│   │   │   ├── transcribe/route.ts         # POST transcription automatique
+│   │   │   ├── analyze/route.ts            # POST analyse IA meeting
+│   │   │   ├── save/route.ts               # POST sauvegarde meeting
+│   │   │   ├── prepare/[prospectId]/route.ts # GET préparation RDV
+│   │   │   └── transcripts/
+│   │   │       ├── route.ts                # GET/POST transcriptions
+│   │   │       ├── [id]/route.ts           # GET/DELETE transcription
+│   │   │       └── [id]/pdf/route.ts       # GET export PDF
+│   │   ├── extension/                      # 🆕 APIs Extension Chrome
+│   │   │   ├── analyze/route.ts            # POST analyse prospect
+│   │   │   ├── analyze-realtime/route.ts   # POST analyse temps réel
+│   │   │   ├── prospects/route.ts          # GET prospects pour extension
+│   │   │   ├── search-prospect/route.ts    # POST recherche prospect
+│   │   │   └── prospect/[id]/route.ts      # GET détail prospect
+│   │   ├── assistant/route.ts              # 🆕 POST IA Assistant chat
+│   │   ├── admin/                          # 🆕 APIs Dashboard Admin
+│   │   │   ├── stats/route.ts              # GET statistiques admin
+│   │   │   ├── charts/route.ts             # GET données graphiques
+│   │   │   ├── thresholds/route.ts         # GET/POST seuils config
+│   │   │   └── revenue-breakdown/route.ts  # GET répartition revenus
+│   │   ├── products/                       # 🆕 APIs Gestion Produits
+│   │   │   ├── route.ts                    # GET/POST produits
+│   │   │   └── [id]/route.ts               # GET/PATCH/DELETE produit
+│   │   ├── deal-products/route.ts          # 🆕 API Produits par deal
+│   │   ├── advisor-commissions/            # 🆕 APIs Commissions
+│   │   │   ├── route.ts                    # GET/POST commissions
+│   │   │   └── [id]/route.ts               # PATCH/DELETE commission
+│   │   ├── crm/                            # APIs CRM directes
 │   │   │   ├── prospects/route.ts
 │   │   │   ├── stages/route.ts
 │   │   │   ├── activities/route.ts
 │   │   │   ├── tasks/route.ts
+│   │   │   ├── emails/route.ts
 │   │   │   └── import/route.ts
-│   │   ├── sheets/                     # APIs Google Sheets
+│   │   ├── sheets/                         # APIs Google Sheets
 │   │   │   ├── prospects/route.ts
 │   │   │   ├── stats/route.ts
+│   │   │   ├── update-status/route.ts
 │   │   │   └── test/route.ts
 │   │   ├── google/
 │   │   │   ├── auth/route.ts
-│   │   │   └── callback/route.ts
+│   │   │   ├── callback/route.ts
+│   │   │   └── check-scopes/route.ts       # 🆕 Vérification scopes
+│   │   ├── calendar/                       # 🆕 APIs Google Calendar
+│   │   │   └── events/
+│   │   │       ├── route.ts                # GET/POST événements
+│   │   │       └── [id]/route.ts           # GET/PATCH/DELETE événement
+│   │   ├── auth/
+│   │   │   └── extension-login/route.ts    # 🆕 Auth pour extension
 │   │   ├── webhooks/
 │   │   │   ├── qualification/route.ts
 │   │   │   ├── rdv-valide/route.ts
 │   │   │   ├── plaquette/route.ts
 │   │   │   └── send-rappel/route.ts
+│   │   ├── agents/                         # 🆕 APIs Agents automatisés
+│   │   │   ├── telegram/route.ts           # Webhook Telegram
+│   │   │   └── trigger/route.ts            # Déclenchement agents
 │   │   ├── organization/
 │   │   ├── team/
 │   │   ├── user/
 │   │   └── prompts/
 │   ├── layout.tsx
-│   └── page.tsx
+│   └── page.tsx                            # 🆕 Landing page moderne
 ├── components/
-│   ├── ui/                             # shadcn components
+│   ├── ui/                                 # shadcn components
+│   │   ├── confirm-dialog.tsx              # 🆕 Modal confirmation custom
+│   │   ├── alert-dialog-custom.tsx         # 🆕 Modal alerte custom
+│   │   └── prompt-dialog.tsx               # 🆕 Modal saisie custom
 │   ├── layout/
 │   │   ├── Sidebar.tsx
 │   │   ├── Header.tsx
 │   │   └── MobileNav.tsx
+│   ├── landing/                            # 🆕 Composants Landing Page
+│   │   ├── HeroSection.tsx
+│   │   ├── FeaturesSection.tsx
+│   │   ├── TrustSection.tsx
+│   │   ├── FooterSection.tsx
+│   │   ├── ParticleBackground.tsx
+│   │   ├── SmoothScroll.tsx
+│   │   ├── DashboardPreview.tsx
+│   │   ├── PipelinePreview.tsx
+│   │   ├── FinalCTA.tsx
+│   │   └── NexusLogo.tsx
 │   ├── dashboard/
-│   │   ├── DashboardContent.tsx        # Utilise /api/prospects/unified
+│   │   ├── DashboardContent.tsx            # Utilise /api/prospects/unified
 │   │   ├── StatsCards.tsx
 │   │   ├── ProspectsChart.tsx
 │   │   ├── RecentProspects.tsx
 │   │   └── ActivityFeed.tsx
+│   ├── admin/                              # 🆕 Composants Dashboard Admin
+│   │   ├── AdminDashboardContent.tsx
+│   │   ├── AdminStatsCards.tsx
+│   │   ├── AdvisorPerformanceTable.tsx
+│   │   ├── ConversionFunnelChart.tsx
+│   │   ├── RevenueChart.tsx
+│   │   ├── RevenueBreakdownDashboard.tsx
+│   │   ├── ActivityHeatmap.tsx
+│   │   ├── TopPerformers.tsx
+│   │   ├── AlertsPanel.tsx
+│   │   └── RevenueExplanation.tsx
+│   ├── assistant/                          # 🆕 Composants IA Assistant
+│   │   ├── AssistantContent.tsx
+│   │   ├── ChatInput.tsx
+│   │   ├── ChatMessage.tsx
+│   │   ├── QueryResultTable.tsx
+│   │   ├── TypingIndicator.tsx
+│   │   └── WelcomeScreen.tsx
+│   ├── meeting/                            # 🆕 Composants Meetings
+│   │   └── MeetingPrepContent.tsx
 │   ├── prospects/
-│   │   └── ProspectsContent.tsx        # Utilise /api/prospects/unified
+│   │   └── ProspectsContent.tsx            # Utilise /api/prospects/unified
 │   ├── crm/
-│   │   ├── PipelineKanban.tsx          # Utilise /api/crm/* (à migrer)
+│   │   ├── PipelineKanban.tsx              # Utilise /api/crm/* (à migrer)
 │   │   ├── ProspectForm.tsx
 │   │   ├── ProspectCard.tsx
-│   │   └── ActivityTimeline.tsx
+│   │   ├── DealProductSelector.tsx         # 🆕 Sélecteur produits
+│   │   ├── WaitingReasonModal.tsx
+│   │   ├── RdvNotesModal.tsx
+│   │   ├── ActivityTimeline.tsx
+│   │   ├── PipelineColumn.tsx
+│   │   └── ProspectTasks.tsx
+│   ├── agenda/                             # 🆕 Composants Agenda
+│   │   └── AgendaContent.tsx
 │   ├── planning/
-│   │   ├── PlanningContent.tsx         # Utilise /api/planning
+│   │   ├── PlanningContent.tsx             # Utilise /api/planning
 │   │   └── TaskForm.tsx
-│   ├── auth/
 │   ├── settings/
-│   └── features/
+│   │   ├── PromptsEditor.tsx
+│   │   ├── ProductsManager.tsx             # 🆕 Gestionnaire produits
+│   │   ├── ScoringConfig.tsx               # 🆕 Configuration scoring
+│   │   ├── ThresholdConfigForm.tsx         # 🆕 Configuration seuils
+│   │   ├── GoogleSheetsConfig.tsx
+│   │   ├── PlaquetteConfig.tsx
+│   │   ├── TeamManager.tsx
+│   │   ├── GmailTestButton.tsx
+│   │   └── ThemeSelector.tsx
+│   ├── features/
+│   │   └── InterestCalculator.tsx
+│   └── auth/
 ├── lib/
 │   ├── supabase/
 │   │   ├── client.ts
@@ -190,11 +294,16 @@ src/
 │   ├── gmail.ts
 │   ├── anthropic.ts
 │   ├── qstash.ts
+│   ├── cors.ts                         # 🆕 Configuration CORS extension
 │   └── utils.ts
 ├── hooks/
 ├── types/
 │   ├── index.ts
-│   └── crm.ts                          # Types CRM (CrmProspect, PipelineStage...)
+│   ├── crm.ts                          # Types CRM (CrmProspect, PipelineStage...)
+│   ├── products.ts                     # 🆕 Types produits et commissions
+│   ├── meeting.ts                      # 🆕 Types transcriptions et meetings
+│   ├── pipeline.ts                     # 🆕 Types pipeline bi-mode
+│   └── admin.ts                        # 🆕 Types dashboard admin
 └── middleware.ts
 ```
 
@@ -202,25 +311,55 @@ src/
 
 ## 🗄️ STRUCTURE BASE DE DONNÉES SUPABASE
 
+> **Schema SQL Complet :** Toute la base de données est disponible dans [`/database/ultron-complete-schema.sql`](database/ultron-complete-schema.sql)
+
+### 📊 Vue d'ensemble Architecture Multi-Tenant
+
+```
+🏢 ORGANIZATIONS (Multi-tenant)
+├── 👥 USERS (Admins + Conseillers)
+├── 🛍️ PRODUCTS & COMMISSIONS System
+├── 🎯 CRM Complete (Prospects + Pipeline)
+├── 📹 MEETINGS & Transcription IA
+├── 📊 ADMIN Analytics & Thresholds
+├── 🤖 AGENT Automation System
+└── ⚙️ SYSTEM Configuration
+```
+
 ### Tables Principales
 
-**organizations** - Entreprises clientes
+**🏢 organizations** - Entreprises clientes (Multi-tenant)
 ```sql
-- id UUID PRIMARY KEY
-- name VARCHAR NOT NULL
-- slug VARCHAR NOT NULL UNIQUE
-- data_mode VARCHAR DEFAULT 'crm'        -- ⭐ 'sheet' | 'crm'
-- google_sheet_id VARCHAR
-- google_credentials JSONB
-- logo_url VARCHAR
-- primary_color VARCHAR DEFAULT '#6366f1'
-- plan VARCHAR DEFAULT 'free'
-- prompt_qualification JSONB
-- prompt_synthese JSONB
-- prompt_rappel JSONB
-- prompt_plaquette JSONB
-- plaquette_url VARCHAR
-- scoring_config JSONB DEFAULT '{        -- ⭐ Config scoring IA
+CREATE TABLE organizations (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name VARCHAR NOT NULL,
+  slug VARCHAR NOT NULL UNIQUE,
+
+  -- Mode de données configurable
+  data_mode VARCHAR DEFAULT 'crm' CHECK (data_mode IN ('sheet', 'crm')), -- ⭐ Bi-mode
+
+  -- Intégrations Google
+  google_sheet_id VARCHAR,
+  google_credentials JSONB,
+
+  -- Branding & UI
+  logo_url VARCHAR,
+  primary_color VARCHAR DEFAULT '#6366f1',
+
+  -- Abonnement
+  plan VARCHAR DEFAULT 'free' CHECK (plan IN ('free', 'starter', 'pro', 'enterprise')),
+
+  -- Configuration IA Prompts
+  prompt_qualification JSONB,
+  prompt_synthese JSONB,
+  prompt_rappel JSONB,
+  prompt_plaquette JSONB,
+
+  -- Plaquette PDF
+  plaquette_id VARCHAR, -- Google Drive ID
+
+  -- Configuration Scoring IA ⭐
+  scoring_config JSONB DEFAULT '{
     "seuil_chaud": 70,
     "seuil_tiede": 40,
     "poids_revenus": 25,
@@ -230,187 +369,689 @@ src/
     "seuil_revenus_min": 2500,
     "seuil_patrimoine_max": 300000,
     "seuil_patrimoine_min": 30000
-  }'
-- created_at, updated_at TIMESTAMPTZ
+  }',
+
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
 ```
 
-**users** - Utilisateurs (conseillers)
+**👥 users** - Utilisateurs (Admins + Conseillers)
 ```sql
-- id UUID PRIMARY KEY
-- auth_id UUID UNIQUE                    -- Lien avec Supabase Auth
-- organization_id UUID REFERENCES organizations(id)
-- email VARCHAR NOT NULL
-- full_name VARCHAR
-- role VARCHAR DEFAULT 'conseiller'      -- 'admin' | 'conseiller'
-- gmail_credentials JSONB
-- avatar_url VARCHAR
-- is_active BOOLEAN DEFAULT true
-- created_at, updated_at TIMESTAMPTZ
+CREATE TABLE users (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  auth_id UUID UNIQUE, -- Lien avec Supabase Auth
+  organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
+
+  -- Identité
+  email VARCHAR NOT NULL,
+  full_name VARCHAR,
+  role VARCHAR DEFAULT 'conseiller' CHECK (role IN ('admin', 'conseiller')),
+
+  -- Credentials Gmail individuels
+  gmail_credentials JSONB,
+
+  -- Profil
+  avatar_url VARCHAR,
+  is_active BOOLEAN DEFAULT true,
+
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
 ```
 
-### Tables CRM
+### 🛍️ Système Produits & Commissions
 
-**crm_prospects** - Prospects CRM
+**products** - Catalogue produits configurables
 ```sql
-- id UUID PRIMARY KEY
-- organization_id UUID REFERENCES organizations(id)
--- Identité
-- first_name, last_name, email, phone VARCHAR
-- company, job_title VARCHAR
-- address TEXT, city, postal_code VARCHAR
-- country VARCHAR DEFAULT 'France'
--- Profil financier (CGP)
-- patrimoine_estime NUMERIC
-- revenus_annuels NUMERIC
-- situation_familiale VARCHAR
-- nb_enfants INTEGER
-- age INTEGER
-- profession VARCHAR
--- Pipeline
-- stage_id UUID REFERENCES pipeline_stages(id)
-- stage_slug VARCHAR DEFAULT 'nouveau'
-- deal_value NUMERIC
-- close_probability INTEGER DEFAULT 50
-- expected_close_date DATE
--- Qualification IA
-- qualification VARCHAR DEFAULT 'non_qualifie'  -- 'CHAUD', 'TIEDE', 'FROID', 'non_qualifie'
-- score_ia INTEGER
-- analyse_ia TEXT
-- derniere_qualification TIMESTAMPTZ
--- Source & Attribution
-- source VARCHAR
-- source_detail VARCHAR
-- assigned_to UUID REFERENCES users(id)
-- tags TEXT[]
-- notes TEXT
--- Statut final
-- lost_reason VARCHAR
-- won_date TIMESTAMPTZ
-- lost_date TIMESTAMPTZ
-- last_activity_at TIMESTAMPTZ
--- Metadata
-- created_at TIMESTAMPTZ DEFAULT now()
-- updated_at TIMESTAMPTZ DEFAULT now()
+CREATE TABLE products (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+
+  -- Info produit
+  name VARCHAR NOT NULL,
+  description TEXT,
+  type VARCHAR NOT NULL CHECK (type IN ('fixed', 'commission')), -- Type flexible
+  category VARCHAR, -- Catégorie métier (ex: 'assurance_vie', 'pea')
+
+  -- Produits à bénéfice fixe (ex: pompe à chaleur = 500€ fixe)
+  fixed_value NUMERIC, -- Valeur fixe en euros
+
+  -- Produits à commission (ex: CGP = 2% du montant investi)
+  commission_rate NUMERIC, -- Pourcentage commission
+
+  -- Métadonnées
+  is_active BOOLEAN DEFAULT true,
+  created_by UUID REFERENCES users(id),
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now(),
+
+  -- Contraintes de validation
+  CONSTRAINT valid_fixed_product CHECK (
+    (type = 'fixed' AND fixed_value IS NOT NULL AND fixed_value > 0) OR type = 'commission'
+  ),
+  CONSTRAINT valid_commission_product CHECK (
+    (type = 'commission' AND commission_rate IS NOT NULL AND commission_rate > 0 AND commission_rate <= 100) OR type = 'fixed'
+  )
+);
 ```
 
-**pipeline_stages** - Étapes du pipeline (configurables par org)
+**advisor_commissions** - Commissions personnalisées par conseiller
 ```sql
-- id UUID PRIMARY KEY
-- organization_id UUID REFERENCES organizations(id)
-- name VARCHAR NOT NULL                   -- "Nouveau", "Contacté", etc.
-- slug VARCHAR NOT NULL                   -- "nouveau", "contacte", etc.
-- color VARCHAR DEFAULT '#6366f1'
-- position INTEGER NOT NULL               -- Ordre d'affichage
-- is_won BOOLEAN DEFAULT false
-- is_lost BOOLEAN DEFAULT false
-- default_probability INTEGER DEFAULT 50
-- created_at TIMESTAMPTZ DEFAULT now()
+CREATE TABLE advisor_commissions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  product_id UUID REFERENCES products(id) ON DELETE CASCADE, -- NULL = commission par défaut
+
+  commission_rate NUMERIC NOT NULL CHECK (commission_rate >= 0 AND commission_rate <= 100),
+  is_default BOOLEAN DEFAULT false, -- Commission par défaut pour ce conseiller
+
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now(),
+
+  UNIQUE(user_id, product_id), -- Un taux par conseiller/produit
+  EXCLUDE (user_id WITH =) WHERE (is_default = true AND product_id IS NULL) -- Un seul défaut par conseiller
+);
 ```
 
-**crm_activities** - Historique des interactions
+**deal_products** - Deals avec calcul automatique CA/commissions
 ```sql
-- id UUID PRIMARY KEY
-- organization_id, prospect_id, user_id UUID
-- type VARCHAR NOT NULL                   -- 'note', 'call', 'email', 'meeting'
-- direction VARCHAR                       -- 'inbound', 'outbound'
-- subject VARCHAR
-- content TEXT
-- email_status VARCHAR
-- email_opened_at TIMESTAMPTZ
-- email_opened_count INTEGER DEFAULT 0
-- duration_minutes INTEGER
-- outcome VARCHAR
-- metadata JSONB DEFAULT '{}'
-- created_at TIMESTAMPTZ DEFAULT now()
+CREATE TABLE deal_products (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  prospect_id UUID NOT NULL REFERENCES crm_prospects(id) ON DELETE CASCADE,
+  product_id UUID NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+  advisor_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+
+  -- Montants client
+  client_amount NUMERIC NOT NULL CHECK (client_amount > 0), -- Montant investi client
+
+  -- Calculs automatiques (via trigger)
+  company_revenue NUMERIC NOT NULL CHECK (company_revenue > 0), -- CA entreprise calculé
+  advisor_commission NUMERIC DEFAULT 0 CHECK (advisor_commission >= 0), -- Commission conseiller
+  commission_rate_used NUMERIC, -- Taux produit utilisé
+  advisor_commission_rate NUMERIC, -- Taux conseiller utilisé
+
+  -- Métadonnées
+  closed_at TIMESTAMPTZ DEFAULT now(),
+  notes TEXT,
+  created_at TIMESTAMPTZ DEFAULT now(),
+
+  UNIQUE(prospect_id) -- Un deal actif par prospect
+);
 ```
 
-**crm_events** - Événements / Planning (bi-mode)
+### 🎯 CRM Complet
+
+**pipeline_stages** - Étapes pipeline personnalisables
 ```sql
-- id UUID PRIMARY KEY
-- organization_id UUID
-- prospect_id UUID
-- prospect_sheet_id VARCHAR               -- ⭐ Pour lien avec Sheet en mode bi-mode
-- prospect_name VARCHAR
-- type VARCHAR DEFAULT 'task'             -- 'task', 'call', 'meeting', 'reminder', 'email'
-- title VARCHAR NOT NULL
-- description TEXT
-- start_date, end_date, due_date TIMESTAMPTZ
-- all_day BOOLEAN DEFAULT false
-- status VARCHAR DEFAULT 'pending'        -- 'pending', 'completed', 'cancelled'
-- completed_at TIMESTAMPTZ
-- assigned_to, created_by UUID
-- priority VARCHAR DEFAULT 'medium'       -- 'low', 'medium', 'high', 'urgent'
-- external_id VARCHAR                     -- Pour sync Google Calendar
-- external_source VARCHAR
-- metadata JSONB DEFAULT '{}'
-- created_at, updated_at TIMESTAMPTZ
+CREATE TABLE pipeline_stages (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
+
+  name VARCHAR NOT NULL, -- "Nouveau", "RDV Pris", etc.
+  slug VARCHAR NOT NULL, -- "nouveau", "rdv_pris", etc.
+  color VARCHAR DEFAULT '#6366f1',
+  position INTEGER NOT NULL,
+
+  -- Comportement étape
+  is_won BOOLEAN DEFAULT false,
+  is_lost BOOLEAN DEFAULT false,
+  default_probability INTEGER DEFAULT 50,
+
+  created_at TIMESTAMPTZ DEFAULT now(),
+  UNIQUE(organization_id, slug)
+);
 ```
 
-**crm_tasks** - Tâches (legacy, préférer crm_events)
+**crm_prospects** - Prospects avec qualification IA
 ```sql
-- id UUID PRIMARY KEY
-- organization_id, prospect_id UUID
-- assigned_to, created_by UUID
-- title VARCHAR NOT NULL
-- description TEXT
-- type VARCHAR DEFAULT 'task'             -- 'task', 'call', 'email', 'meeting', 'follow_up'
-- priority VARCHAR DEFAULT 'medium'
-- due_date TIMESTAMPTZ
-- reminder_at TIMESTAMPTZ
-- completed_at TIMESTAMPTZ
-- is_completed BOOLEAN DEFAULT false
-- created_at TIMESTAMPTZ DEFAULT now()
+CREATE TABLE crm_prospects (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
+
+  -- Identité
+  first_name VARCHAR, last_name VARCHAR, email VARCHAR, phone VARCHAR,
+  company VARCHAR, job_title VARCHAR,
+  address TEXT, city VARCHAR, postal_code VARCHAR, country VARCHAR DEFAULT 'France',
+
+  -- Profil financier CGP
+  patrimoine_estime NUMERIC,
+  revenus_annuels NUMERIC,
+  situation_familiale VARCHAR,
+  nb_enfants INTEGER,
+  age INTEGER,
+  profession VARCHAR,
+
+  -- Pipeline
+  stage_id UUID REFERENCES pipeline_stages(id),
+  stage_slug VARCHAR DEFAULT 'nouveau',
+  deal_value NUMERIC,
+  close_probability INTEGER DEFAULT 50,
+  expected_close_date DATE,
+
+  -- Qualification IA ⭐
+  qualification VARCHAR DEFAULT 'non_qualifie' CHECK (qualification IN ('CHAUD', 'TIEDE', 'FROID', 'non_qualifie')),
+  score_ia INTEGER CHECK (score_ia >= 0 AND score_ia <= 100),
+  analyse_ia TEXT,
+  derniere_qualification TIMESTAMPTZ,
+
+  -- Métriques produits (calculées)
+  total_commission_earned NUMERIC DEFAULT 0,
+  products_sold INTEGER DEFAULT 0,
+
+  -- Source & Attribution
+  source VARCHAR, source_detail VARCHAR,
+  assigned_to UUID REFERENCES users(id),
+  tags TEXT[], notes TEXT,
+
+  -- Statut final
+  lost_reason VARCHAR,
+  won_date TIMESTAMPTZ, lost_date TIMESTAMPTZ,
+  last_activity_at TIMESTAMPTZ,
+
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
 ```
 
-**crm_email_templates** - Templates d'emails
+**crm_activities** - Historique interactions
 ```sql
-- id UUID PRIMARY KEY
-- organization_id, created_by UUID
-- name VARCHAR NOT NULL
-- subject VARCHAR NOT NULL
-- content TEXT NOT NULL
-- category VARCHAR                        -- 'introduction', 'follow_up', 'proposal', 'closing', 'other'
-- is_shared BOOLEAN DEFAULT true
-- is_active BOOLEAN DEFAULT true
-- usage_count INTEGER DEFAULT 0
-- created_at, updated_at TIMESTAMPTZ
+CREATE TABLE crm_activities (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
+  prospect_id UUID REFERENCES crm_prospects(id) ON DELETE CASCADE,
+  user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+
+  type VARCHAR NOT NULL CHECK (type IN ('note', 'call', 'email', 'meeting', 'task')),
+  direction VARCHAR CHECK (direction IN ('inbound', 'outbound')),
+  subject VARCHAR, content TEXT,
+
+  -- Email spécifique
+  email_status VARCHAR,
+  email_opened_at TIMESTAMPTZ,
+  email_opened_count INTEGER DEFAULT 0,
+
+  -- Call/Meeting spécifique
+  duration_minutes INTEGER,
+  outcome VARCHAR,
+
+  metadata JSONB DEFAULT '{}',
+  created_at TIMESTAMPTZ DEFAULT now()
+);
 ```
 
-**crm_saved_filters** - Filtres sauvegardés
+**crm_events** - Planning bi-mode compatible
 ```sql
-- id UUID PRIMARY KEY
-- organization_id, user_id UUID
-- name VARCHAR NOT NULL
-- filters JSONB NOT NULL
-- is_default BOOLEAN DEFAULT false
-- is_shared BOOLEAN DEFAULT false
-- created_at TIMESTAMPTZ DEFAULT now()
+CREATE TABLE crm_events (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
+
+  -- Liaison prospect (bi-mode) ⭐
+  prospect_id UUID REFERENCES crm_prospects(id) ON DELETE CASCADE,
+  prospect_sheet_id VARCHAR, -- ID ligne Sheet pour mode bi-mode
+  prospect_name VARCHAR,
+
+  -- Info événement
+  type VARCHAR DEFAULT 'task' CHECK (type IN ('task', 'call', 'meeting', 'reminder', 'email')),
+  title VARCHAR NOT NULL, description TEXT,
+
+  -- Timing
+  start_date TIMESTAMPTZ, end_date TIMESTAMPTZ, due_date TIMESTAMPTZ,
+  all_day BOOLEAN DEFAULT false,
+
+  -- Statut
+  status VARCHAR DEFAULT 'pending' CHECK (status IN ('pending', 'completed', 'cancelled')),
+  completed_at TIMESTAMPTZ,
+
+  -- Attribution
+  assigned_to UUID REFERENCES users(id),
+  created_by UUID REFERENCES users(id),
+  priority VARCHAR DEFAULT 'medium' CHECK (priority IN ('low', 'medium', 'high', 'urgent')),
+
+  -- Liens meeting
+  meet_link VARCHAR, -- Google Meet
+  calendar_link VARCHAR, -- Rappel calendrier
+
+  -- Sync externe
+  external_id VARCHAR, -- Google Calendar
+  external_source VARCHAR,
+
+  metadata JSONB DEFAULT '{}',
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
 ```
 
-### Tables Système
+### 📹 Système Meetings & IA
 
-**activity_logs** - Logs d'activité
+**meeting_transcripts** - Transcriptions avec analyse IA
 ```sql
-- id UUID PRIMARY KEY
-- organization_id, user_id UUID
-- action VARCHAR NOT NULL
-- details JSONB
-- created_at TIMESTAMPTZ DEFAULT now()
+CREATE TABLE meeting_transcripts (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  prospect_id UUID REFERENCES crm_prospects(id) ON DELETE SET NULL,
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+
+  -- Info meeting
+  meeting_date TIMESTAMPTZ DEFAULT now(),
+  duration_seconds INTEGER,
+  google_meet_link VARCHAR(500),
+
+  -- Données transcription
+  transcript_text TEXT, -- Transcription brute
+  transcript_json JSONB, -- Segmentée avec speakers ⭐
+
+  -- Analyse IA avancée
+  ai_summary TEXT, -- Résumé intelligent
+  key_points JSONB, -- Array points clés
+  objections_detected JSONB, -- Array objections avec réponses suggérées ⭐
+  next_actions JSONB, -- Array prochaines actions
+
+  -- Export
+  pdf_url VARCHAR(500), -- Rapport PDF généré
+
+  created_at TIMESTAMPTZ DEFAULT now()
+);
 ```
 
-**email_logs** - Historique des emails envoyés
+### 📊 Admin & Analytics
+
+**admin_thresholds** - Seuils configurables alertes
 ```sql
-- id UUID PRIMARY KEY
-- organization_id UUID
-- prospect_email, prospect_name VARCHAR
-- email_type VARCHAR NOT NULL
-- subject, body TEXT
-- gmail_message_id VARCHAR
-- has_attachment BOOLEAN DEFAULT false
-- sent_at TIMESTAMPTZ DEFAULT now()
+CREATE TABLE admin_thresholds (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
+
+  metric_name VARCHAR NOT NULL, -- 'conversion_rate', 'activity_target', etc.
+  threshold_value NUMERIC NOT NULL,
+  threshold_type VARCHAR NOT NULL CHECK (threshold_type IN ('warning', 'critical')),
+  description TEXT,
+  is_active BOOLEAN DEFAULT true,
+
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
 ```
 
-**daily_stats** - Stats quotidiennes
+**daily_stats** - Statistiques quotidiennes enrichies
+```sql
+CREATE TABLE daily_stats (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
+  date DATE NOT NULL,
+
+  -- Métriques prospects
+  total_prospects INTEGER DEFAULT 0,
+  prospects_chaud INTEGER DEFAULT 0, prospects_tiede INTEGER DEFAULT 0, prospects_froid INTEGER DEFAULT 0,
+
+  -- Métriques activité
+  mails_envoyes INTEGER DEFAULT 0, rdv_pris INTEGER DEFAULT 0,
+
+  -- Métriques revenus ⭐
+  revenue_generated NUMERIC DEFAULT 0, -- CA généré
+  commissions_paid NUMERIC DEFAULT 0, -- Commissions versées
+  products_sold INTEGER DEFAULT 0, -- Produits vendus
+  conversion_rate NUMERIC DEFAULT 0, -- Taux conversion
+
+  created_at TIMESTAMPTZ DEFAULT now(),
+  UNIQUE(organization_id, date)
+);
+```
+
+**activity_logs** - Logs d'activité enrichis
+```sql
+CREATE TABLE activity_logs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
+  user_id UUID REFERENCES users(id),
+
+  action VARCHAR NOT NULL,
+  entity_type VARCHAR, -- 'prospect', 'product', 'meeting', etc. ⭐
+  entity_id UUID, -- ID entité concernée ⭐
+  details JSONB,
+
+  -- Tracking avancé
+  ip_address INET, -- Tracking IP ⭐
+  user_agent TEXT, -- Tracking navigateur ⭐
+
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+```
+
+### 🤖 Système Agents & Automation
+
+**agent_runs** - Exécutions agent IA
+```sql
+CREATE TABLE agent_runs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID REFERENCES organizations(id),
+
+  agent_type VARCHAR NOT NULL, -- 'qualification', 'email', 'analysis'
+  trigger_event VARCHAR, -- Événement déclencheur
+  input_data JSONB, output_data JSONB, -- Entrée/Sortie
+
+  -- Exécution
+  status VARCHAR DEFAULT 'pending' CHECK (status IN ('pending', 'running', 'completed', 'failed')),
+  tokens_used INTEGER DEFAULT 0, -- Tokens IA consommés ⭐
+  duration_ms INTEGER, -- Durée exécution
+  error_message TEXT,
+
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+```
+
+**agent_ideas** & **agent_tasks** - Système d'idées automatiques
+```sql
+CREATE TABLE agent_ideas (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  title VARCHAR NOT NULL, description TEXT,
+  source VARCHAR DEFAULT 'auto',
+  priority INTEGER DEFAULT 50,
+  status VARCHAR DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected', 'implemented')),
+  telegram_message_id BIGINT, -- Intégration Telegram
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE TABLE agent_tasks (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  idea_id UUID REFERENCES agent_ideas(id) ON DELETE CASCADE,
+  status VARCHAR DEFAULT 'pending',
+  prompt TEXT NOT NULL,
+  branch_name VARCHAR, commit_hash VARCHAR, pr_url VARCHAR, -- Git integration
+  started_at TIMESTAMPTZ, completed_at TIMESTAMPTZ,
+  error_message TEXT,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+```
+
+### ⚙️ Tables Système
+
+**system_settings** - Configuration système
+```sql
+CREATE TABLE system_settings (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
+
+  setting_key VARCHAR NOT NULL, -- 'ai_model', 'email_limits', 'features'
+  setting_value JSONB NOT NULL, -- Valeur configuration flexible
+  is_active BOOLEAN DEFAULT true,
+  updated_by UUID REFERENCES users(id),
+
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now(),
+  UNIQUE(organization_id, setting_key)
+);
+```
+
+**Autres tables système :**
+- `email_logs` - Historique emails envoyés
+- `scheduled_emails` - Emails programmés (legacy QStash)
+- `prompts` - Prompts IA configurables
+- `crm_email_templates` - Templates emails
+- `crm_saved_filters` - Filtres sauvegardés
+
+### 🔐 Sécurité & Performance
+
+**Row Level Security (RLS) :** Toutes les tables principales activées
+**Index optimisés :** Performance sur requêtes fréquentes
+**Triggers automatiques :**
+- Calcul automatique revenus/commissions (`calculate_deal_revenue()`)
+- Synchronisation valeur deal (`sync_prospect_deal_value()`)
+- Mise à jour timestamps (`update_updated_at_column()`)
+
+**Contraintes métier :**
+- Validation types produits (fixed vs commission)
+- Unicité commissions par conseiller/produit
+- Seuils scores IA (0-100)
+- États pipeline cohérents
+
+---
+
+## 🆕 NOUVELLES FONCTIONNALITÉS DÉVELOPPÉES
+
+### 🎮 Extension Chrome - Side Panel Intelligent
+**Localisation :** `/api/extension/*`
+
+L'extension Chrome offre un side panel intégré pour l'analyse en temps réel :
+
+**Fonctionnalités :**
+- **Authentification sécurisée** : Login via token Supabase (`/api/auth/extension-login`)
+- **Analyse temps réel** : IA analyse la conversation pendant les appels (`/api/extension/analyze-realtime`)
+- **Recherche prospects** : Recherche instantanée dans la base (`/api/extension/search-prospect`)
+- **Qualification automatique** : Suggestions contextuelles et détection d'objections
+- **Synchronisation** : Accès aux prospects et mise à jour en direct
+
+**APIs spécialisées :**
+- `POST /api/extension/analyze` - Analyse complète prospect
+- `POST /api/extension/analyze-realtime` - Analyse temps réel avec suggestions
+- `GET /api/extension/prospects` - Liste prospects pour extension
+- `GET /api/extension/prospect/[id]` - Détail prospect spécifique
+
+### 🎯 Dashboard Admin Avancé
+**Localisation :** `/admin`, `/src/components/admin/*`
+
+Dashboard complet pour superviseurs avec KPIs avancés :
+
+**Composants principaux :**
+- **AdminStatsCards** : Métriques clés (CA, conversion, activité)
+- **AdvisorPerformanceTable** : Classement performance conseillers
+- **ConversionFunnelChart** : Entonnoir de conversion par étapes
+- **RevenueChart** : Graphiques revenus avec tendances
+- **ActivityHeatmap** : Heatmap d'activité par conseiller/période
+- **RevenueBreakdownDashboard** : Répartition détaillée CA par produit/conseiller
+- **AlertsPanel** : Alertes automatiques sur seuils critiques
+
+**APIs admin spécialisées :**
+- `GET /api/admin/stats` - Statistiques globales organisation
+- `GET /api/admin/charts` - Données pour graphiques dashboard
+- `GET /api/admin/revenue-breakdown` - Détail répartition revenus
+- `GET/POST /api/admin/thresholds` - Configuration seuils alertes
+
+### 🤖 IA Assistant Conversationnel
+**Localisation :** `/assistant`, `/src/components/assistant/*`
+
+Assistant IA intégré pour requêtes naturelles sur les données :
+
+**Fonctionnalités :**
+- **Chat intelligent** : Interface conversationnelle avec Claude Sonnet 4
+- **Requêtes SQL** : Conversion requêtes naturelles en SQL sécurisé
+- **Analyses instantanées** : Statistiques et insights à la demande
+- **Suggestions contextuelles** : Aide proactive selon le contexte
+- **Accès sécurisé** : Respect RLS et permissions utilisateur
+
+**Composants :**
+- `AssistantContent` : Interface principale chat
+- `ChatMessage` : Rendu messages avec support markdown/tableaux
+- `QueryResultTable` : Affichage résultats requêtes SQL
+- `TypingIndicator` : Animation en cours de réponse
+- `WelcomeScreen` : Écran d'accueil avec suggestions
+
+### 📹 Système de Meetings Avancé
+**Localisation :** `/meetings`, `/src/app/api/meeting/*`
+
+Gestion complète des RDV avec transcription et analyse IA :
+
+**Fonctionnalités :**
+- **Transcription automatique** : Conversion audio en texte structuré
+- **Analyse IA avancée** : Résumés, points clés, objections détectées
+- **Préparation RDV** : Brief IA personnalisé avant chaque meeting
+- **Export PDF** : Rapports complets avec insights IA
+- **Gestion historique** : Archivage et recherche dans les transcriptions
+
+**APIs meetings :**
+- `POST /api/meeting/transcribe` - Transcription audio en temps réel
+- `POST /api/meeting/analyze` - Analyse IA complète du meeting
+- `GET /api/meeting/prepare/[prospectId]` - Préparation meeting
+- `POST /api/meeting/save` - Sauvegarde meeting et métadonnées
+- `GET /api/meeting/transcripts` - Liste des transcriptions
+- `GET /api/meeting/transcripts/[id]/pdf` - Export PDF rapport
+
+### 🛍️ Gestion Avancée de Produits
+**Localisation :** `/settings/products`, `/src/app/api/products/*`
+
+Système complet de gestion produits et commissions :
+
+**Types de produits :**
+- **Produits à bénéfice fixe** : Entreprise gagne montant fixe par vente
+- **Produits à commission** : Entreprise gagne % du montant investi
+
+**Gestion commissions :**
+- **Configuration flexible** : Taux par conseiller/produit
+- **Calcul automatique** : Commission calculée selon type produit
+- **Suivi performance** : CA généré par conseiller/produit
+- **Rapports détaillés** : Répartition revenus et commissions
+
+**Tables associées :**
+- `products` : Catalogue produits organisation
+- `deal_products` : Produits vendus par prospect
+- `advisor_commissions` : Taux commissions conseillers
+
+### 🎨 Landing Page Moderne
+**Localisation :** `/`, `/src/components/landing/*`
+
+Page d'accueil marketing avancée avec branding Ultron :
+
+**Composants :**
+- **HeroSection** : Section héro avec animations et CTA
+- **FeaturesSection** : Présentation fonctionnalités avec icônes
+- **DashboardPreview** : Aperçu interface dashboard
+- **PipelinePreview** : Démonstration pipeline CRM
+- **ParticleBackground** : Animation particules arrière-plan
+- **NexusLogo** : Logo Ultron animé en 3D
+- **FinalCTA** : Call-to-action final avec formulaire
+
+### 📊 Système de Scoring IA Configurable
+**Localisation :** `/settings/scoring`, `organizations.scoring_config`
+
+Configuration avancée de l'algorithme de qualification :
+
+**Paramètres configurables :**
+- **Seuils qualification** : CHAUD (70+), TIÈDE (40-69), FROID (<40)
+- **Pondération critères** : Revenus (25%), IA (50%), Patrimoine (25%)
+- **Seuils financiers** : Revenus min/max, patrimoine min/max
+- **Adaptation métier** : Personnalisation selon secteur CGP
+
+### 🗓️ Planning Avancé avec Google Calendar
+**Localisation :** `/planning`, `/agenda`, `/src/app/api/calendar/*`
+
+Gestion complète planning avec intégration Google :
+
+**Fonctionnalités :**
+- **Vues multiples** : Jour, semaine, mois, liste
+- **Synchronisation Google** : Bidirectionnelle avec Google Calendar
+- **Gestion tâches** : Création, assignation, suivi complétion
+- **Liens Meet** : Génération automatique Google Meet
+- **Rappels** : Notifications programmées via QStash
+
+### 📈 Analytics et Métriques Avancées
+**Répartition :** Composants admin + dashboard
+
+Système complet de métriques et KPIs :
+
+**Métriques principales :**
+- **Taux de conversion** : Par étape pipeline et global
+- **CA par conseiller** : Revenus générés et commissions
+- **Performance produits** : Ventes et rentabilité par produit
+- **Activité équipe** : Heatmaps d'engagement
+- **Tendances temporelles** : Évolution indicateurs
+
+**Alertes configurables :**
+- **Seuils personnalisés** : Warning/Critical par métrique
+- **Notifications proactives** : Alerts dashboard admin
+- **Suivi objectifs** : Écarts performance vs targets
+
+---
+
+## 🔌 INTERFACES & SERVICES BI-MODE (Enrichi)
+
+### APIs Unifiées Complètes
+
+| Endpoint | Méthodes | Description | Statut |
+|----------|----------|-------------|---------|
+| `/api/prospects/unified` | GET, POST | Liste/Créer prospects | ✅ Bi-Mode |
+| `/api/prospects/unified/stats` | GET | Statistiques prospects | ✅ Bi-Mode |
+| `/api/prospects/unified/by-stage` | GET | Prospects groupés par stage | ✅ Bi-Mode |
+| `/api/prospects/unified/[id]` | GET, PATCH, DELETE | CRUD prospect | ✅ Bi-Mode |
+| `/api/prospects/unified/[id]/stage` | PATCH | Update stage (drag&drop) | ✅ Bi-Mode |
+| `/api/planning` | GET, POST | Liste/Créer événements | ✅ Bi-Mode |
+| `/api/planning/[id]` | GET, PATCH, DELETE | CRUD événement | ✅ Bi-Mode |
+| `/api/planning/[id]/complete` | POST | Marquer complété | ✅ Bi-Mode |
+| `/api/stages/unified` | GET | Stages pipeline | ✅ Bi-Mode |
+| `/api/sheets/update-status` | PATCH | 🆕 Update statut Sheet | 🔶 Sheet only |
+
+---
+
+## 🔐 AUTHENTIFICATION & SÉCURITÉ (Enrichi)
+
+### Extension Chrome - Authentification Sécurisée
+
+```typescript
+// /api/auth/extension-login
+export async function POST(request: NextRequest) {
+  const { email, password } = await request.json();
+
+  // Auth Supabase standard
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email, password
+  });
+
+  if (error) return NextResponse.json({ error }, { status: 401 });
+
+  // Retourne token pour extension
+  return NextResponse.json({
+    access_token: data.session.access_token,
+    user: data.user
+  });
+}
+```
+
+### CORS pour Extension
+```typescript
+// /lib/cors.ts - Configuration CORS extension
+export function corsHeaders() {
+  return {
+    'Access-Control-Allow-Origin': 'chrome-extension://*',
+    'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type,Authorization',
+  };
+}
+```
+
+---
+
+## 🎯 WORKFLOWS AUTOMATISÉS (Enrichis)
+
+### 1. Qualification IA Avancée (/api/webhooks/qualification)
+- **Analyse contextuelle** : Prompt personnalisé par organisation
+- **Scoring multicritère** : Revenus + IA + Patrimoine avec pondération
+- **Seuils adaptatifs** : Configuration flexible via `scoring_config`
+- **Justification détaillée** : Explication du score IA
+
+### 2. Meetings et Transcription (/api/meeting/*)
+- **Transcription temps réel** : Conversion audio avec speakers
+- **Analyse post-meeting** : Résumé, points clés, objections
+- **Actions suggérées** : Prochaines étapes recommandées par IA
+- **Export automatique** : PDF rapport complet
+
+### 3. Système de Commissions (/api/deal-products, /api/advisor-commissions)
+- **Calcul automatique** : Commission selon type produit
+- **Répartition flexible** : Taux personnalisés par conseiller/produit
+- **Suivi revenus** : Mise à jour temps réel CA et commissions
+
+### 4. Alertes Proactives (/api/admin/*)
+- **Seuils configurables** : Warning/Critical par métrique
+- **Notifications dashboard** : Alerts temps réel admin
+- **Escalation automatique** : Actions selon niveau alerte
+
+---
+
+## 📊 NOUVELLES TABLES & STRUCTURE (Complément)
+
+### Tables Analytics
+
+**daily_stats** - Stats quotidiennes (enrichie)
 ```sql
 - id UUID PRIMARY KEY
 - organization_id UUID
@@ -418,558 +1059,187 @@ src/
 - total_prospects INTEGER DEFAULT 0
 - prospects_chaud, prospects_tiede, prospects_froid INTEGER DEFAULT 0
 - mails_envoyes, rdv_pris INTEGER DEFAULT 0
+- revenue_generated NUMERIC DEFAULT 0        -- 🆕 CA généré
+- commissions_paid NUMERIC DEFAULT 0         -- 🆕 Commissions versées
+- products_sold INTEGER DEFAULT 0            -- 🆕 Produits vendus
+- conversion_rate NUMERIC DEFAULT 0          -- 🆕 Taux de conversion
 - created_at TIMESTAMPTZ DEFAULT now()
 ```
 
-**prompts** - Prompts IA personnalisables
+**activity_logs** - Logs d'activité (enrichis)
+```sql
+- id UUID PRIMARY KEY
+- organization_id, user_id UUID
+- action VARCHAR NOT NULL
+- entity_type VARCHAR                        -- 🆕 'prospect', 'product', 'meeting'
+- entity_id UUID                            -- 🆕 ID entité concernée
+- details JSONB
+- ip_address INET                           -- 🆕 Tracking IP
+- user_agent TEXT                           -- 🆕 Tracking navigateur
+- created_at TIMESTAMPTZ DEFAULT now()
+```
+
+### Tables Système Avancées
+
+**agent_runs** - Exécutions agent (nouvelles)
 ```sql
 - id UUID PRIMARY KEY
 - organization_id UUID
-- type VARCHAR NOT NULL
-- name VARCHAR NOT NULL
-- system_prompt, user_prompt TEXT
+- agent_type VARCHAR NOT NULL               -- 'qualification', 'email', 'analysis'
+- trigger_event VARCHAR                     -- Événement déclencheur
+- input_data JSONB                          -- Données entrée
+- output_data JSONB                         -- Résultats
+- status VARCHAR DEFAULT 'pending'          -- 'pending', 'running', 'completed', 'failed'
+- tokens_used INTEGER DEFAULT 0             -- Tokens IA consommés
+- duration_ms INTEGER                       -- Durée exécution
+- error_message TEXT                        -- Message d'erreur si échec
+- created_at TIMESTAMPTZ DEFAULT now()
+```
+
+**system_settings** - Configuration système (nouvelle)
+```sql
+- id UUID PRIMARY KEY
+- organization_id UUID REFERENCES organizations(id)
+- setting_key VARCHAR NOT NULL              -- 'ai_model', 'email_limits', 'features'
+- setting_value JSONB NOT NULL              -- Valeur configuration
 - is_active BOOLEAN DEFAULT true
+- updated_by UUID REFERENCES users(id)
 - created_at, updated_at TIMESTAMPTZ
 ```
 
-**scheduled_emails** - Emails programmés (legacy, remplacé par QStash)
-```sql
-- id UUID PRIMARY KEY
-- organization_id UUID
-- prospect_data JSONB NOT NULL
-- email_type VARCHAR NOT NULL
-- scheduled_for TIMESTAMPTZ NOT NULL
-- status VARCHAR DEFAULT 'pending'
-- sent_at TIMESTAMPTZ
-- error_message TEXT
-- created_at TIMESTAMPTZ DEFAULT now()
-```
-
-### Tables Agent (Automatisation)
-
-**agent_ideas** - Idées générées par l'agent
-```sql
-- id UUID PRIMARY KEY
-- title VARCHAR NOT NULL
-- description TEXT
-- source VARCHAR DEFAULT 'auto'
-- priority INTEGER DEFAULT 50
-- status VARCHAR DEFAULT 'pending'
-- telegram_message_id BIGINT
-- created_at TIMESTAMP DEFAULT now()
-```
-
-**agent_tasks** - Tâches de l'agent
-```sql
-- id UUID PRIMARY KEY
-- idea_id UUID REFERENCES agent_ideas(id)
-- status VARCHAR DEFAULT 'pending'
-- prompt TEXT NOT NULL
-- branch_name, commit_hash, pr_url VARCHAR
-- started_at, completed_at TIMESTAMP
-- error_message TEXT
-- created_at TIMESTAMP DEFAULT now()
-```
-
-**agent_runs** - Exécutions de l'agent
-```sql
-- id UUID PRIMARY KEY
-- task_id UUID REFERENCES agent_tasks(id)
-- agent VARCHAR
-- status VARCHAR
-- logs TEXT
-- tokens_input, tokens_output, duration_seconds INTEGER
-- created_at TIMESTAMP DEFAULT now()
-```
-
 ---
 
-## 🔌 INTERFACES & SERVICES BI-MODE
-
-### Interfaces (`src/lib/services/interfaces/index.ts`)
-
-```typescript
-// Format unifié pour les prospects
-export interface ProspectData {
-  id: string;
-  firstName: string;
-  lastName: string;
-  email: string;
-  phone?: string;
-  source?: string;
-  age?: number;
-  situationPro?: string;
-  revenusMensuels?: number;
-  patrimoine?: number;
-  besoins?: string;
-  notesAppel?: string;
-  
-  stage: string;                          // 'nouveau', 'contacte', etc.
-  qualification: 'CHAUD' | 'TIEDE' | 'FROID' | 'NON_QUALIFIE' | null;
-  scoreIa?: number;
-  justificationIa?: string;
-  
-  dateRdv?: string;
-  rappelSouhaite?: string;
-  mailPlaquetteEnvoye?: boolean;
-  mailSyntheseEnvoye?: boolean;
-  mailRappelEnvoye?: boolean;
-  
-  emailConseiller?: string;
-  assignedTo?: string;
-  createdAt: string;
-  updatedAt?: string;
-}
-
-export interface IProspectService {
-  getAll(filters?: ProspectFilters): Promise<ProspectData[]>;
-  getById(id: string): Promise<ProspectData | null>;
-  create(data: Partial<ProspectData>): Promise<ProspectData>;
-  update(id: string, data: Partial<ProspectData>): Promise<ProspectData>;
-  delete(id: string): Promise<void>;
-  updateStage(id: string, stage: string): Promise<ProspectData>;
-  getByStage(): Promise<Record<string, ProspectData[]>>;
-  getStats(): Promise<{ total: number; byQualification: Record<string, number>; byStage: Record<string, number>; }>;
-}
-
-export interface IPlanningService {
-  getAll(filters?: PlanningFilters): Promise<PlanningEvent[]>;
-  getById(id: string): Promise<PlanningEvent | null>;
-  create(event: Partial<PlanningEvent>): Promise<PlanningEvent>;
-  update(id: string, data: Partial<PlanningEvent>): Promise<PlanningEvent>;
-  delete(id: string): Promise<void>;
-  markComplete(id: string): Promise<PlanningEvent>;
-  markIncomplete(id: string): Promise<PlanningEvent>;
-  getByProspect(prospectId: string): Promise<PlanningEvent[]>;
-}
-
-export interface Organization {
-  id: string;
-  name: string;
-  data_mode: 'sheet' | 'crm';
-  google_sheet_id?: string;
-}
-```
-
-### Factory Pattern
-
-```typescript
-// src/lib/services/factories/prospect-factory.ts
-export function getProspectService(organization: Organization): IProspectService {
-  if (organization.data_mode === 'sheet') {
-    return new SheetProspectService(organization.id);
-  }
-  return new CrmProspectService(organization.id);
-}
-
-// src/lib/services/factories/planning-factory.ts
-export function getPlanningService(organization: Organization, userId: string): IPlanningService {
-  if (organization.data_mode === 'sheet') {
-    return new SheetPlanningService(organization.id, userId);
-  }
-  return new CrmPlanningService(organization.id, userId);
-}
-```
-
-### Mapping Sheet → CRM
-
-| Champ Sheet (Google) | Champ Unifié | Champ CRM (Supabase) |
-|---------------------|--------------|---------------------|
-| nom | lastName | last_name |
-| prenom | firstName | first_name |
-| email | email | email |
-| telephone | phone | phone |
-| statutAppel | stage | stage_slug |
-| qualificationIA | qualification | qualification |
-| scoreIA | scoreIa | score_ia |
-| justificationIA | justificationIa | analyse_ia |
-| revenus | revenusMensuels | revenus_annuels / 12 |
-| patrimoine | patrimoine | patrimoine_estime |
-
-### Mapping Statut Appel → Stage
-
-| Statut Sheet | Stage Pipeline |
-|--------------|----------------|
-| "" / "Nouveau" | nouveau |
-| "Contacté", "Appelé", "Rappeler", "Plaquette" | contacte |
-| "RDV Validé" | rdv_valide |
-| "RDV Effectué", "Après RDV" | proposition |
-| "Proposition", "Négociation" | negociation |
-| "Gagné" | gagne |
-| "Refusé", "Perdu" | perdu |
-
----
-
-## 🔗 APIs
-
-### APIs Unifiées (Bi-Mode)
-
-| Endpoint | Méthodes | Description |
-|----------|----------|-------------|
-| `/api/prospects/unified` | GET, POST | Liste/Créer prospects |
-| `/api/prospects/unified/stats` | GET | Statistiques |
-| `/api/prospects/unified/by-stage` | GET | Prospects groupés par stage |
-| `/api/prospects/unified/[id]` | GET, PATCH, DELETE | CRUD prospect |
-| `/api/prospects/unified/[id]/stage` | PATCH | Update stage (drag&drop) |
-| `/api/planning` | GET, POST | Liste/Créer événements |
-| `/api/planning/[id]` | GET, PATCH, DELETE | CRUD événement |
-| `/api/planning/[id]/complete` | POST | Marquer complété |
-
-### APIs CRM (Direct Supabase)
-
-| Endpoint | Usage |
-|----------|-------|
-| `/api/crm/prospects` | Liste avec relations (stage, assigned_user) |
-| `/api/crm/prospects/[id]` | Détail prospect avec vue 360° |
-| `/api/crm/stages` | Liste des stages pipeline |
-| `/api/crm/activities` | Historique interactions |
-| `/api/crm/tasks` | Tâches (legacy, utiliser planning) |
-| `/api/crm/import` | Import CSV |
-
-### APIs Google Sheets
-
-| Endpoint | Usage |
-|----------|-------|
-| `/api/sheets/prospects` | Lit les prospects de la Sheet |
-| `/api/sheets/stats` | Calcule stats depuis la Sheet |
-| `/api/sheets/test` | Teste la connexion |
-
-### Utilisation dans les composants
-
-| Composant | API utilisée | Mode |
-|-----------|--------------|------|
-| DashboardContent | /api/prospects/unified/stats + /api/prospects/unified | Bi-Mode ✅ |
-| ProspectsContent | /api/prospects/unified | Bi-Mode ✅ |
-| PipelineKanban | /api/crm/stages + /api/crm/prospects | CRM only (à migrer) |
-| /prospects/[id] | /api/crm/prospects/[id] | CRM only |
-| PlanningContent | /api/planning | Bi-Mode ✅ |
-
----
-
-## 🔐 AUTHENTIFICATION & SÉCURITÉ
-
-### getCurrentUserAndOrganization()
-
-```typescript
-// src/lib/services/get-organization.ts
-export async function getCurrentUserAndOrganization(): Promise<{
-  user: { id: string; email: string };
-  organization: Organization;
-} | null> {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  
-  if (!user) return null;
-  
-  const adminClient = createAdminClient();
-  
-  const { data: userData } = await adminClient
-    .from('users')
-    .select('id, email, organization_id')
-    .eq('auth_id', user.id)
-    .single();
-    
-  const { data: orgData } = await adminClient
-    .from('organizations')
-    .select('id, name, data_mode, google_sheet_id')
-    .eq('id', userData.organization_id)
-    .single();
-    
-  return { user: userData, organization: orgData };
-}
-```
-
-### Pattern des APIs Unifiées
-
-```typescript
-export async function GET(request: NextRequest) {
-  const context = await getCurrentUserAndOrganization();
-  
-  if (!context) {
-    return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
-  }
-
-  const service = getProspectService(context.organization);
-  const data = await service.getAll();
-  
-  return NextResponse.json(data);
-}
-```
-
-### createAdminClient() - Bypass RLS
-
-```typescript
-// src/lib/supabase-admin.ts
-export function createAdminClient() {
-  return createClient(supabaseUrl, supabaseServiceKey, {
-    auth: { autoRefreshToken: false, persistSession: false },
-  });
-}
-```
-
----
-
-## 🔐 VARIABLES D'ENVIRONNEMENT
-
-```env
-# Supabase
-NEXT_PUBLIC_SUPABASE_URL=https://xxx.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=xxx
-SUPABASE_SERVICE_ROLE_KEY=xxx
-
-# Google OAuth
-GOOGLE_CLIENT_ID=xxx
-GOOGLE_CLIENT_SECRET=xxx
-
-# App URL
-NEXT_PUBLIC_APP_URL=http://localhost:3000  # ou https://ultron-murex.vercel.app
-
-# Anthropic (Claude AI)
-ANTHROPIC_API_KEY=sk-ant-xxx
-
-# Upstash QStash
-QSTASH_TOKEN=xxx
-QSTASH_CURRENT_SIGNING_KEY=xxx
-QSTASH_NEXT_SIGNING_KEY=xxx
-```
-
----
-
-## 👥 GESTION MULTI-CONSEILLERS
-
-### Architecture
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                    ENTREPRISE (Organization)                    │
-│                                                                 │
-│  data_mode: 'sheet' | 'crm'                                    │
-│  Google Credentials (Sheets + Drive)                            │
-│  ↓                                                              │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐             │
-│  │ Conseiller A│  │ Conseiller B│  │ Conseiller C│             │
-│  │ Gmail A     │  │ Gmail B     │  │ Gmail C     │             │
-│  │ (admin)     │  │ (conseiller)│  │ (conseiller)│             │
-│  └─────────────┘  └─────────────┘  └─────────────┘             │
-│                                                                 │
-│  Mode Sheet: Google Sheet partagée (colonne Z = Email)          │
-│  Mode CRM: assigned_to dans crm_prospects                       │
-└─────────────────────────────────────────────────────────────────┘
-```
-
-### OAuth Google - Deux types
-
-| Type | URL | Stockage | Usage |
-|------|-----|----------|-------|
-| Organization | `/api/google/auth?type=organization` | organizations.google_credentials | Sheets, Drive |
-| Gmail | `/api/google/auth?type=gmail` | users.gmail_credentials | Envoi emails |
-
----
-
-## 🔄 WORKFLOWS AUTOMATISÉS
-
-### 1. Qualification (/api/webhooks/qualification)
-- Déclenché par Apps Script quand statut change
-- Analyse le prospect avec Claude
-- Retourne : qualification (CHAUD/TIEDE/FROID), score (0-100), priorité, justification
-- Update colonnes Q, R, S, T de la Sheet
-
-### 2. RDV Validé (/api/webhooks/rdv-valide)
-- Déclenché quand statut = "RDV Validé"
-- Qualifie le prospect si pas déjà fait
-- Génère et envoie mail de synthèse
-- Programme rappel 24h via QStash
-- Update colonne X (Mail Synthèse = Oui)
-
-### 3. Plaquette (/api/webhooks/plaquette)
-- Déclenché quand statut = "À rappeler - Plaquette"
-- Génère mail sobre + télécharge PDF depuis Drive
-- Envoie avec pièce jointe
-- Update colonne W (Mail Plaquette = Oui)
-
-### 4. Rappel 24h (/api/webhooks/send-rappel)
-- Appelé par QStash 24h avant le RDV
-- Génère et envoie mail de rappel
-- Update colonne Y (Mail Rappel 24h = Oui)
-
----
-
-## 🎯 PIPELINE BI-MODE
-
-### Architecture
-```
-Mode CRM  → CrmProspectService  → Supabase (crm_prospects, pipeline_stages)
-Mode Sheet → SheetProspectService → Google Sheets API → Apps Script → Webhooks
-```
-
-### Stages Pipeline (validés)
-
-| Position | Slug | Nom | Couleur | Statut Sheet (Col N) | Subtype |
-|----------|------|-----|---------|---------------------|---------|
-| 0 | nouveau | Nouveau | #6366f1 | *(vide)* | - |
-| 1 | en_attente | En attente | #f59e0b | "À rappeler - Plaquette" | `plaquette` |
-| 1 | en_attente | En attente | #f59e0b | "À rappeler - RDV" | `rappel_differe` |
-| 2 | rdv_pris | RDV Pris | #10b981 | "RDV Validé" | - |
-| 3 | rdv_effectue | RDV Effectué | #3b82f6 | "RDV Effectué" | - |
-| 4 | negociation | Négociation | #8b5cf6 | "Négociation" | - |
-| 5 | gagne | Gagné ✓ | #22c55e | "Gagné" | - |
-| 6 | perdu | Perdu ✗ | #ef4444 | "Refus" | - |
-
-### Modale "En attente"
-Quand un prospect est déplacé vers "En attente", une modale demande :
-- **Plaquette** : Envoie automatiquement le mail + PDF plaquette
-- **Rappel différé** : Programme un rappel (génère lien Calendar via Apps Script)
-
-### APIs Pipeline
-| Route | Description |
-|-------|-------------|
-| GET `/api/stages/unified` | Retourne les stages (CRM: BDD, Sheet: fixes) |
-| PATCH `/api/prospects/unified/[id]/stage` | Change le stage d'un prospect |
-| PATCH `/api/sheets/update-status` | Update colonne N de la Sheet |
-
-### Mapping Functions (src/types/pipeline.ts)
-```typescript
-mapSheetStatusToStage(status) // "RDV Validé" → { slug: 'rdv_pris' }
-mapStageToSheetStatus(slug, subtype) // 'en_attente', 'plaquette' → "À rappeler - Plaquette"
-```
-
----
-
-## 📊 STRUCTURE GOOGLE SHEET (26 COLONNES A-Z)
-
-| Col | Lettre | Nom | Section |
-|-----|--------|-----|---------|
-| 1 | A | ID | Leads |
-| 2 | B | Date Lead | Leads |
-| 3 | C | Nom | Leads |
-| 4 | D | Prénom | Leads |
-| 5 | E | Email | Leads |
-| 6 | F | Téléphone | Leads |
-| 7 | G | Source | Leads |
-| 8 | H | Âge | Leads |
-| 9 | I | Situation Pro | Leads |
-| 10 | J | Revenus Mensuels | Leads |
-| 11 | K | Patrimoine | Leads |
-| 12 | L | Besoins | Conseiller |
-| 13 | M | Notes Appel | Conseiller |
-| 14 | N | Statut Appel | Conseiller |
-| 15 | O | Date RDV | Conseiller |
-| 16 | P | Rappel Souhaité | Conseiller |
-| 17 | Q | Qualification IA | IA |
-| 18 | R | Score IA | IA |
-| 19 | S | Priorité IA | IA |
-| 20 | T | Justification IA | IA |
-| 21 | U | RDV Prévu | IA |
-| 22 | V | Lien Rappel Calendar | IA |
-| 23 | W | Mail Plaquette Envoyé | IA |
-| 24 | X | Mail Synthèse Envoyé | IA |
-| 25 | Y | Mail Rappel 24h Envoyé | IA |
-| 26 | Z | Email Conseiller | IA |
-
----
-
-## 🎨 CONVENTIONS DE CODE
-
-### Style
-- Composants shadcn/ui au maximum
-- Tailwind CSS (pas de CSS custom)
-- Couleur primaire : Indigo (#6366f1)
-- Cards : rounded-xl + shadow-sm
-
-### TypeScript
-- Toujours typer les props
-- Types dans src/types/index.ts et src/types/crm.ts
-- Éviter `any`
-
-### Fichiers
-- Composants : PascalCase (StatsCards.tsx)
-- Services : kebab-case (prospect-service.ts)
-- Hooks : camelCase avec `use` (useUser.ts)
-
-### Imports
-- Alias `@/` pour imports absolus
-- Exemple : `import { Button } from "@/components/ui/button"`
-
-### APIs
-- Toujours `export const dynamic = 'force-dynamic'` pour les routes dynamiques
-- Pattern : getCurrentUserAndOrganization() → Factory → Service
-
----
-
-## 🚀 COMMANDES
+## 🚀 COMMANDES (Enrichies)
 
 ```bash
 npm run dev          # Dev server (localhost:3000)
 npm run build        # Build production
 npm run lint         # Vérifier le code
+npm run typecheck    # Vérification TypeScript
+npm run test         # Tests unitaires (si configurés)
 ```
 
-### Git
+### Git (Enrichi)
 ```bash
 git add .
-git commit -m "type: description"
+git commit -m "feat: nouvelle fonctionnalité"    # feat, fix, style, refactor, docs, chore
 git push origin main
+
+# Branches de fonctionnalités
+git checkout -b feat/extension-chrome
+git checkout -b fix/admin-dashboard
+git checkout -b refactor/api-unified
 ```
 
-Convention commits : feat, fix, style, refactor, docs, chore
-
 ---
 
-## 🔗 LIENS
+## 🔗 LIENS (Mis à jour)
 
-- **Prod** : https://ultron-murex.vercel.app
+- **Production** : https://ultron-murex.vercel.app
 - **GitHub** : https://github.com/martinborgis-lang/Ultron
 - **Supabase** : https://supabase.com/dashboard
-- **Vercel** : https://vercel.com
-- **Anthropic** : https://console.anthropic.com
-- **QStash** : https://console.upstash.com/qstash
+- **Vercel** : https://vercel.com/dashboard
+- **Anthropic Console** : https://console.anthropic.com
+- **QStash Dashboard** : https://console.upstash.com/qstash
+- **Google Cloud Console** : https://console.cloud.google.com (APIs Gmail/Sheets/Calendar)
 
 ---
 
-## ⚠️ NOTES IMPORTANTES
+## ⚠️ NOTES IMPORTANTES (Mises à jour)
 
-1. **Architecture Bi-Mode** : Le mode est défini par `organizations.data_mode`. Les APIs unifiées routent automatiquement vers le bon service.
+### 🎮 Extension Chrome
+- **Authentification** : Token-based avec CORS configuré
+- **Side Panel** : Interface dédiée pour analyse temps réel
+- **Sécurité** : Validation token Supabase sur chaque requête
+- **Performance** : Cache local pour réduire appels API
 
-2. **Limitations Mode Sheet** :
-   - Lecture seule pour les prospects (CRUD désactivé)
-   - Drag & drop non disponible dans le Pipeline
-   - Planning non encore implémenté (TODO: Google Calendar)
+### 🎯 Dashboard Admin
+- **Accès restreint** : Role 'admin' requis
+- **Métriques temps réel** : Mise à jour automatique
+- **Export données** : Fonctionnalité intégrée graphiques
+- **Alertes configurables** : Seuils personnalisables par organisation
 
-3. **Migration Pipeline** : Le composant PipelineKanban utilise encore les APIs `/api/crm/*` directement. À migrer vers `/api/prospects/unified/*`.
+### 🤖 IA Assistant
+- **Modèle** : Claude Sonnet 4 (plus puissant que Claude 3.5)
+- **Sécurité SQL** : Requêtes filtrées et validées
+- **Context aware** : Accès contexte utilisateur/organisation
+- **Rate limiting** : Protection contre abus
 
-4. **RLS Bypass** : Les services utilisent `createAdminClient()` pour contourner RLS après vérification de l'auth.
+### 📹 Meetings & Transcription
+- **Formats supportés** : MP3, WAV, M4A pour transcription
+- **Langue** : Français optimisé pour contexte CGP
+- **Stockage** : Transcriptions chiffrées en base
+- **Export PDF** : Rapports professionnels avec branding
 
-5. **Multi-tenant** : Chaque org a ses propres credentials Google et chaque conseiller son Gmail.
+### 🛍️ Gestion Produits
+- **Types flexibles** : Fixe vs Commission adaptés métier CGP
+- **Calculs automatiques** : Commissions calculées en temps réel
+- **Multi-conseillers** : Taux différenciés par conseiller/produit
+- **Historique** : Traçabilité complète ventes et commissions
 
-6. **QStash** : Remplace le CRON Vercel pour les rappels 24h.
+### 🔄 Architecture Bi-Mode
+- **Mode Sheet** : Lecture seule prospects + planning Google Calendar
+- **Mode CRM** : CRUD complet + fonctionnalités avancées
+- **Migration** : Possible de CRM vers Sheet (pas l'inverse)
+- **Compatibilité** : APIs unifiées garantissent fonctionnement identique
 
-7. **Colonne Z** : Email du conseiller dans la Sheet pour identifier l'expéditeur.
+### 🚀 Performance & Monitoring
+- **Lazy loading** : Composants chargés à la demande
+- **Caching** : Redis pour requêtes fréquentes (production)
+- **Monitoring** : Logs détaillés et métriques performance
+- **Scaling** : Architecture préparée montée en charge
 
 ---
 
-## 📋 TODO / Prochaines étapes
+## 📋 ROADMAP & PROCHAINES ÉTAPES
 
-### Sprint 1 : Pipeline bi-mode (PRIORITÉ)
-1. [ ] Créer `src/types/pipeline.ts` avec mapping stage ↔ statut
-2. [ ] Créer `/api/stages/unified` (stages CRM ou fixes Sheet)
-3. [ ] Créer `/api/sheets/update-status` (update colonne N)
-4. [ ] Implémenter `SheetProspectService.updateStage()`
-5. [ ] Créer modale `WaitingReasonModal` (plaquette vs rappel)
-6. [ ] Migrer `/pipeline/page.tsx` vers APIs unifiées
-7. [ ] Créer `/api/prospects/unified/[id]/stage`
+### 🎯 Priorité 1 : Extension Chrome (En cours)
+- [ ] Finaliser side panel avec toutes les APIs
+- [ ] Tests utilisateurs et optimisations
+- [ ] Publication Chrome Web Store
+- [ ] Documentation utilisateur
 
-### Sprint 2 : Workflows CRM
-1. [ ] Ajouter `workflow_config` dans organizations
-2. [ ] Créer `/api/crm/workflows/process`
-3. [ ] Implémenter handlers (rdv_pris, en_attente_plaquette, etc.)
-4. [ ] Page Settings > Automatisations
-5. [ ] Boutons d'action dans fiche prospect
+### 📊 Priorité 2 : Analytics Avancés
+- [ ] Tableaux de bord prédictifs avec ML
+- [ ] Alertes intelligentes basées sur patterns
+- [ ] Export données pour outils BI externes
+- [ ] API publique pour intégrations
 
-### Sprint 3 : Planning avec Calendar
-1. [ ] Ajouter scope Calendar à OAuth
-2. [ ] Implémenter CrmPlanningService avec sync Calendar
-3. [ ] Implémenter SheetPlanningService avec Calendar
-4. [ ] UI Planning avec création Meet auto
+### 🤖 Priorité 3 : IA Avancée
+- [ ] Assistant vocal pour calls en temps réel
+- [ ] Analyse sentiment client pendant meetings
+- [ ] Recommandations produits automatiques
+- [ ] Prédiction probabilité closing
 
-### À faire dans la Google Sheet
-- [ ] Ajouter "Négociation" dans les options de la colonne N
-- [ ] Ajouter "Gagné" dans les options de la colonne N
+### 🔧 Priorité 4 : Intégrations
+- [ ] Zapier pour workflows externes
+- [ ] Calendly pour prise RDV automatique
+- [ ] WhatsApp Business API
+- [ ] Intégration CRM externes (Salesforce, HubSpot)
+
+### 📱 Priorité 5 : Mobile
+- [ ] Application mobile React Native
+- [ ] Push notifications prospects chauds
+- [ ] Mode offline pour consultations terrain
+- [ ] Widget iOS/Android pour accès rapide
+
+---
+
+## 🏆 FONCTIONNALITÉS DÉVELOPPÉES NON DOCUMENTÉES (Récapitulatif)
+
+✅ **Extension Chrome avec Side Panel**
+✅ **Dashboard Admin Complet**
+✅ **IA Assistant Conversationnel**
+✅ **Système de Meetings & Transcription**
+✅ **Gestion Avancée de Produits**
+✅ **Landing Page Moderne**
+✅ **Système de Scoring Configurable**
+✅ **Planning avec Google Calendar**
+✅ **Analytics & Métriques Avancées**
+✅ **Alertes Proactives Configurables**
+✅ **APIs Extension Sécurisées**
+✅ **Modals Personnalisées Ultron**
+✅ **Architecture Bi-Mode Complète**
+✅ **Workflow Commissions Automatisé**
+
+Le projet Ultron est maintenant une plateforme SaaS complète et avancée pour la gestion de patrimoine, avec des fonctionnalités enterprise et une architecture scalable prête pour la production.
