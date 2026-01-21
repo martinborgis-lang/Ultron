@@ -160,7 +160,7 @@ export function ProductsManager({ organizationId }: ProductsManagerProps) {
     try {
       const payload = {
         user_id: commissionForm.user_id,
-        product_id: commissionForm.product_id || null,
+        product_id: commissionForm.product_id === 'all' || !commissionForm.product_id ? null : commissionForm.product_id,
         commission_rate: parseFloat(commissionForm.commission_rate),
         is_default: commissionForm.is_default
       };
@@ -487,7 +487,7 @@ export function ProductsManager({ organizationId }: ProductsManagerProps) {
                           <SelectValue placeholder="Tous les produits (par défaut)" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">Tous les produits (par défaut)</SelectItem>
+                          <SelectItem value="all">Tous les produits (par défaut)</SelectItem>
                           {products.filter(p => p.is_active).map((product) => (
                             <SelectItem key={product.id} value={product.id}>
                               {product.name}
