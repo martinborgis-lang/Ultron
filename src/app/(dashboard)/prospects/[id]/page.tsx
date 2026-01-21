@@ -85,7 +85,7 @@ export default function ProspectDetailPage() {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      // Use unified API which works for both CRM and Sheet modes
+      // ✅ OPTIMISATION N+1: Regrouper toutes les requêtes initiales en parallèle
       const [prospectRes, stagesRes] = await Promise.all([
         fetch(`/api/prospects/unified/${prospectId}`),
         fetch('/api/stages/unified'),
@@ -96,8 +96,10 @@ export default function ProspectDetailPage() {
         return;
       }
 
-      const prospectData = await prospectRes.json();
-      const stagesData = await stagesRes.json();
+      const [prospectData, stagesData] = await Promise.all([
+        prospectRes.json(),
+        stagesRes.json()
+      ]);
 
       // Detect Sheet mode by checking if ID starts with 'sheet-' or has rowNumber
       const sheetMode = prospectId.startsWith('sheet-') || prospectData.rowNumber !== undefined;
@@ -152,36 +154,66 @@ export default function ProspectDetailPage() {
       setFormData(crmProspect);
       setStages(stagesData);
 
-      // Only fetch activities and tasks in CRM mode
+      // ✅ OPTIMISATION : Regrouper les requêtes secondaires en parallèle selon le mode
+      const prospectEmail = sheetMode ? prospectData.email : crmProspect.email;
+
       if (!sheetMode) {
-        const [activitiesRes, tasksRes] = await Promise.all([
+        // Mode CRM: Fetch activities, tasks, et emails en parallèle
+        const secondaryRequests = [
           fetch(`/api/crm/activities?prospect_id=${prospectId}`),
           fetch(`/api/crm/tasks?prospect_id=${prospectId}`),
-        ]);
-        const activitiesData = await activitiesRes.json();
-        const tasksData = await tasksRes.json();
-        setActivities(activitiesData);
-        setTasks(tasksData);
-      } else {
-        setActivities([]);
-        setTasks([]);
-      }
+        ];
 
-      // Fetch email history if prospect has an email
-      const prospectEmail = sheetMode ? prospectData.email : crmProspect.email;
-      if (prospectEmail) {
+        // Ajouter la requête emails si l'email existe
+        if (prospectEmail) {
+          secondaryRequests.push(
+            fetch(`/api/crm/emails?prospect_email=${encodeURIComponent(prospectEmail)}`)
+          );
+        }
+
         try {
-          const emailsRes = await fetch(`/api/crm/emails?prospect_email=${encodeURIComponent(prospectEmail)}`);
-          if (emailsRes.ok) {
-            const emailsData = await emailsRes.json();
-            setEmails(emailsData);
-          }
+          const responses = await Promise.all(secondaryRequests);
+          const results = await Promise.all(
+            responses.map(async (res, index) => {
+              if (!res.ok) {
+                console.warn(`Secondary request ${index} failed:`, res.status);
+                return null;
+              }
+              return res.json();
+            })
+          );
+
+          const [activitiesData, tasksData, emailsData] = results;
+          setActivities(activitiesData || []);
+          setTasks(tasksData || []);
+          setEmails(emailsData || []);
         } catch (err) {
-          console.error('Error fetching emails:', err);
+          console.error('Error fetching secondary CRM data:', err);
+          setActivities([]);
+          setTasks([]);
           setEmails([]);
         }
       } else {
-        setEmails([]);
+        // Mode Sheet: Seulement emails si nécessaire
+        setActivities([]);
+        setTasks([]);
+
+        if (prospectEmail) {
+          try {
+            const emailsRes = await fetch(`/api/crm/emails?prospect_email=${encodeURIComponent(prospectEmail)}`);
+            if (emailsRes.ok) {
+              const emailsData = await emailsRes.json();
+              setEmails(emailsData);
+            } else {
+              setEmails([]);
+            }
+          } catch (err) {
+            console.error('Error fetching emails:', err);
+            setEmails([]);
+          }
+        } else {
+          setEmails([]);
+        }
       }
     } catch (error) {
       console.error('Error fetching data:', error);

@@ -152,31 +152,57 @@ export default function PipelinePage() {
     }
   };
 
-  // Initial fetch - only once on mount
+  // ✅ OPTIMISATION N+1: Initial fetch - regrouper TOUTES les requêtes en parallèle
   useEffect(() => {
     if (hasFetched.current) return;
     hasFetched.current = true;
-    fetchData();
 
-    // Fetch team members
-    fetch('/api/team')
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.members) {
-          setTeamMembers(data.members);
-        }
-      })
-      .catch((err) => console.error('Error fetching team:', err));
+    // ✅ Regrouper toutes les requêtes initiales en parallèle
+    const fetchInitialData = async () => {
+      try {
+        const [stagesRes, prospectsRes, teamRes, userRes] = await Promise.all([
+          fetch('/api/stages/unified'),
+          fetch('/api/prospects/unified'),
+          fetch('/api/team'),
+          fetch('/api/user/me'),
+        ]);
 
-    // Fetch current user
-    fetch('/api/user/me')
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.id) {
-          setCurrentUserId(data.id);
+        // Handle stages
+        if (stagesRes.ok) {
+          const stagesData: UnifiedStage[] = await stagesRes.json();
+          setStages(stagesData.map(unifiedStageToPipelineStage));
         }
-      })
-      .catch((err) => console.error('Error fetching current user:', err));
+
+        // Handle prospects
+        if (prospectsRes.ok) {
+          const prospectsData: ProspectData[] = await prospectsRes.json();
+          setProspects(prospectsData.map(prospectDataToCrmProspect));
+        }
+
+        // Handle team members
+        if (teamRes.ok) {
+          const teamData = await teamRes.json();
+          if (teamData.members) {
+            setTeamMembers(teamData.members);
+          }
+        }
+
+        // Handle current user
+        if (userRes.ok) {
+          const userData = await userRes.json();
+          if (userData.id) {
+            setCurrentUserId(userData.id);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching initial data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    setLoading(true);
+    fetchInitialData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

@@ -1,5 +1,6 @@
 import { createAdminClient } from '@/lib/supabase-admin';
 import { IProspectService, ProspectData, ProspectFilters } from '../interfaces';
+import { validateStage, validateQualification, createSafeSearchPattern, validateUUID } from '@/lib/validation/sql-injection-protection';
 
 export class CrmProspectService implements IProspectService {
   private supabase = createAdminClient();
@@ -41,16 +42,28 @@ export class CrmProspectService implements IProspectService {
       .eq('organization_id', this.organizationId)
       .order('created_at', { ascending: false });
 
+    // ✅ SÉCURITÉ: Validation des filtres
     if (filters?.stage) {
-      query = query.eq('stage_slug', filters.stage);
+      const safeStage = validateStage(filters.stage);
+      if (safeStage) {
+        query = query.eq('stage_slug', safeStage);
+      }
     }
+
     if (filters?.qualification) {
-      query = query.eq('qualification', filters.qualification);
+      const safeQualification = validateQualification(filters.qualification);
+      if (safeQualification) {
+        query = query.eq('qualification', safeQualification);
+      }
     }
+
     if (filters?.search) {
-      query = query.or(
-        `first_name.ilike.%${filters.search}%,last_name.ilike.%${filters.search}%,email.ilike.%${filters.search}%`
-      );
+      const searchPattern = createSafeSearchPattern(filters.search);
+      if (searchPattern !== '%%') { // Éviter les recherches vides
+        query = query.or(
+          `first_name.ilike.${searchPattern},last_name.ilike.${searchPattern},email.ilike.${searchPattern}`
+        );
+      }
     }
 
     const { data, error } = await query;
@@ -64,10 +77,17 @@ export class CrmProspectService implements IProspectService {
   }
 
   async getById(id: string): Promise<ProspectData | null> {
+    // ✅ SÉCURITÉ: Validation UUID
+    const safeId = validateUUID(id);
+    if (!safeId) {
+      throw new Error('Invalid prospect ID format');
+    }
+
     const { data, error } = await this.supabase
       .from('crm_prospects')
       .select('*')
-      .eq('id', id)
+      .eq('id', safeId)
+      .eq('organization_id', this.organizationId) // Double vérification organisation
       .single();
 
     if (error) {
