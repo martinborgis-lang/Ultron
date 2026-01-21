@@ -23,9 +23,7 @@ export function UserDebug() {
             <div className="space-y-1">
               <div><strong>User ID:</strong> {user.id}</div>
               <div><strong>Email:</strong> {user.email}</div>
-              <div><strong>Full Name:</strong> {user.full_name || 'None'}</div>
               <div><strong>Role:</strong> <span className="font-bold text-red-600">{user.role}</span></div>
-              <div><strong>Organization ID:</strong> {user.organization_id}</div>
             </div>
           )}
         </div>

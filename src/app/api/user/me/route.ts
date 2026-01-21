@@ -1,43 +1,34 @@
-import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
+import { getCurrentUserAndOrganization } from '@/lib/services/get-organization';
 
 export const dynamic = 'force-dynamic';
 
-// GET /api/user/me - Get current user info
 export async function GET() {
   try {
-    const supabase = await createClient();
+    const context = await getCurrentUserAndOrganization();
 
-    const { data: { user: authUser } } = await supabase.auth.getUser();
-
-    if (!authUser) {
-      return NextResponse.json({ error: 'Non authentifie' }, { status: 401 });
+    if (!context) {
+      return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
     }
 
-    const { data: user, error } = await supabase
-      .from('users')
-      .select('id, email, full_name, role, organization_id, gmail_credentials, is_active')
-      .eq('auth_id', authUser.id)
-      .single();
-
-    if (error || !user) {
-      console.error('User not found:', error);
-      return NextResponse.json({ error: 'Utilisateur non trouve' }, { status: 404 });
-    }
-
+    // Retourner les infos de l'utilisateur avec le rôle
     return NextResponse.json({
-      id: user.id,
-      email: user.email,
-      full_name: user.full_name,
-      role: user.role,
-      organization_id: user.organization_id,
-      gmail_connected: !!user.gmail_credentials,
-      is_active: user.is_active,
+      user: {
+        id: context.user.id,
+        email: context.user.email,
+        role: context.user.role,
+      },
+      organization: {
+        id: context.organization.id,
+        name: context.organization.name,
+        data_mode: context.organization.data_mode,
+      }
     });
+
   } catch (error) {
-    console.error('Get current user error:', error);
+    console.error('Erreur API user/me:', error);
     return NextResponse.json(
-      { error: 'Erreur lors de la recuperation de l\'utilisateur' },
+      { error: 'Erreur serveur' },
       { status: 500 }
     );
   }
