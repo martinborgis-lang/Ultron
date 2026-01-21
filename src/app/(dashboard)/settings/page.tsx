@@ -8,7 +8,7 @@ import { PromptsEditor } from '@/components/settings/PromptsEditor';
 import { ThemeSelector } from '@/components/settings/ThemeSelector';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
-import { FileSpreadsheet, Users, Sparkles, Palette, Database } from 'lucide-react';
+import { FileSpreadsheet, Users, Sparkles, Palette, Database, Settings } from 'lucide-react';
 import Link from 'next/link';
 
 async function getOrganizationData() {
@@ -22,7 +22,7 @@ async function getOrganizationData() {
 
   const { data: user } = await supabase
     .from('users')
-    .select('organization_id')
+    .select('organization_id, role')
     .eq('auth_id', authUser.id)
     .single();
 
@@ -36,7 +36,7 @@ async function getOrganizationData() {
     .eq('id', user.organization_id)
     .single();
 
-  return org;
+  return { org, userRole: user.role };
 }
 
 function GoogleSheetsConfigSkeleton() {
@@ -50,11 +50,12 @@ function GoogleSheetsConfigSkeleton() {
 }
 
 export default async function SettingsPage() {
-  const org = await getOrganizationData();
+  const data = await getOrganizationData();
 
-  const isGoogleConnected = !!org?.google_credentials;
-  const sheetId = org?.google_sheet_id || null;
-  const plaquetteId = org?.plaquette_url || null;
+  const isGoogleConnected = !!data?.org?.google_credentials;
+  const sheetId = data?.org?.google_sheet_id || null;
+  const plaquetteId = data?.org?.plaquette_url || null;
+  const userRole = data?.userRole || 'conseiller';
 
   return (
     <div className="space-y-6">
@@ -90,13 +91,25 @@ export default async function SettingsPage() {
                   Choisissez entre le mode CRM (base Supabase) ou Google Sheet pour stocker vos prospects et taches.
                 </p>
               </div>
-              <Link
-                href="/settings/data-source"
-                className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
-              >
-                <Database className="w-4 h-4" />
-                Configurer la source de donnees
-              </Link>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <Link
+                  href="/settings/data-source"
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+                >
+                  <Database className="w-4 h-4" />
+                  Configurer la source de donnees
+                </Link>
+
+                {userRole === 'admin' && (
+                  <Link
+                    href="/settings/thresholds"
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg transition-colors"
+                  >
+                    <Settings className="w-4 h-4" />
+                    Seuils Dashboard Admin
+                  </Link>
+                )}
+              </div>
             </div>
           </TabsContent>
           <TabsContent value="sheets">

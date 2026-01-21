@@ -130,8 +130,10 @@ export function ConversionFunnelChart({ period }: ConversionFunnelChartProps) {
                     <span className="font-medium">{stage.count}</span>
                     {index > 0 && (
                       <span className={`font-medium ${
-                        stage.conversion_rate > 70 ? 'text-green-600 dark:text-green-400' :
-                        stage.conversion_rate > 40 ? 'text-yellow-600 dark:text-yellow-400' : 'text-red-600 dark:text-red-400'
+                        stage.conversion_rate > 65 ? 'text-green-600 dark:text-green-400' :
+                        stage.conversion_rate > 50 ? 'text-lime-600 dark:text-lime-400' :
+                        stage.conversion_rate > 35 ? 'text-orange-600 dark:text-orange-400' :
+                        stage.conversion_rate > 20 ? 'text-red-500 dark:text-red-400' : 'text-red-700 dark:text-red-600'
                       }`}>
                         {stage.conversion_rate.toFixed(1)}%
                       </span>
@@ -144,9 +146,13 @@ export function ConversionFunnelChart({ period }: ConversionFunnelChartProps) {
                   <div className="h-12 bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden border border-border">
                     <div
                       className={`h-full transition-all duration-500 ${
-                        index === 0 ? 'bg-blue-500 dark:bg-blue-400' :
-                        stage.conversion_rate > 70 ? 'bg-green-500 dark:bg-green-400' :
-                        stage.conversion_rate > 40 ? 'bg-yellow-500 dark:bg-yellow-400' : 'bg-red-500 dark:bg-red-400'
+                        index === 0 ? 'bg-green-500 dark:bg-green-400' : // Premier stage toujours vert
+                        stage.conversion_rate > 80 ? 'bg-green-500 dark:bg-green-400' :  // Excellent: vert foncé
+                        stage.conversion_rate > 65 ? 'bg-green-400 dark:bg-green-500' :  // Très bon: vert
+                        stage.conversion_rate > 50 ? 'bg-lime-400 dark:bg-lime-500' :    // Bon: vert clair
+                        stage.conversion_rate > 35 ? 'bg-orange-400 dark:bg-orange-500' : // Moyen: orange
+                        stage.conversion_rate > 20 ? 'bg-red-400 dark:bg-red-500' :      // Faible: rouge clair
+                        'bg-red-600 dark:bg-red-700'                                      // Très faible: rouge foncé
                       }`}
                       style={{ width: `${width}%` }}
                     />
@@ -192,8 +198,10 @@ export function ConversionFunnelChart({ period }: ConversionFunnelChartProps) {
                         <div className="text-muted-foreground">{stage.stage_name}</div>
                         {stageIndex > 0 && (
                           <div className={`mt-1 font-medium ${
-                            stage.conversion_rate > 70 ? 'text-green-600 dark:text-green-400' :
-                            stage.conversion_rate > 40 ? 'text-yellow-600 dark:text-yellow-400' : 'text-red-600 dark:text-red-400'
+                            stage.conversion_rate > 65 ? 'text-green-600 dark:text-green-400' :
+                            stage.conversion_rate > 50 ? 'text-lime-600 dark:text-lime-400' :
+                            stage.conversion_rate > 35 ? 'text-orange-600 dark:text-orange-400' :
+                            stage.conversion_rate > 20 ? 'text-red-500 dark:text-red-400' : 'text-red-700 dark:text-red-600'
                           }`}>
                             {stage.conversion_rate.toFixed(0)}%
                           </div>

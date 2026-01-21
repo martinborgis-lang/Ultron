@@ -5,6 +5,37 @@ import type { AdminDashboardStats, AdvisorStats, AdminFilters } from '@/types/cr
 
 export const dynamic = 'force-dynamic';
 
+// Fonction pour calculer la croissance des prospects
+async function calculateProspectsGrowth(
+  adminClient: any,
+  organizationId: string,
+  current: { start: Date; end: Date },
+  previous?: { start: Date; end: Date }
+): Promise<number> {
+  if (!previous) return 0;
+
+  // Prospects période actuelle
+  const { data: currentProspects } = await adminClient
+    .from('crm_prospects')
+    .select('id')
+    .eq('organization_id', organizationId)
+    .gte('created_at', current.start.toISOString())
+    .lte('created_at', current.end.toISOString()) as any;
+
+  // Prospects période précédente
+  const { data: previousProspects } = await adminClient
+    .from('crm_prospects')
+    .select('id')
+    .eq('organization_id', organizationId)
+    .gte('created_at', previous.start.toISOString())
+    .lte('created_at', previous.end.toISOString()) as any;
+
+  const currentCount = currentProspects?.length || 0;
+  const previousCount = previousProspects?.length || 0;
+
+  return previousCount > 0 ? ((currentCount - previousCount) / previousCount) * 100 : 0;
+}
+
 // Fonction pour calculer la période précédente
 function getPreviousPeriod(period: string, startDate?: string, endDate?: string) {
   const now = new Date();
@@ -104,30 +135,104 @@ async function calculateAdvisorStats(
   const emailsActivity = activities?.filter((a: any) => a.type === 'email').length || 0;
   const meetingsActivity = activities?.filter((a: any) => a.type === 'meeting').length || 0;
 
-  // Calculs des taux de conversion (simplifiés pour l'exemple)
+  // Calculs des appels (transitions de stage)
+  const { data: stageTransitions } = await adminClient
+    .from('crm_activities')
+    .select('id, type, metadata')
+    .eq('organization_id', organizationId)
+    .eq('user_id', advisorId)
+    .eq('type', 'stage_change')
+    .gte('created_at', startStr)
+    .lte('created_at', endStr) as any;
+
+  // Compter les appels = transitions depuis "nouveau" vers "contacté", "rdv_pris", "refus"
+  const callsMade = (stageTransitions?.filter((t: any) => {
+    const meta = t.metadata || {};
+    return meta.from_stage === 'nouveau' &&
+           ['contacte', 'rdv_pris', 'refus'].includes(meta.to_stage);
+  }).length || 0) + callsActivity; // + activités de type "call" directes
+
+  // Nouveaux taux de conversion selon la demande
+  const conversionRdvToDeals = rdvScheduled > 0 ? (wonDeals / rdvScheduled) * 100 : 0; // RDV → Deals (principal)
+  const conversionCallsToRdv = callsMade > 0 ? (rdvScheduled / callsMade) * 100 : 0; // Appels → RDV (informatif)
+  const conversionCallsToDeals = callsMade > 0 ? (wonDeals / callsMade) * 100 : 0; // Appels → Deals (informatif)
+
+  // Autres conversions utiles
   const conversionFirstRdv = totalProspects > 0 ? (rdvScheduled / totalProspects) * 100 : 0;
   const conversionProposal = rdvCompleted > 0 ? (prospectsInNegotiation / rdvCompleted) * 100 : 0;
   const conversionClosing = prospectsInNegotiation > 0 ? (wonDeals / prospectsInNegotiation) * 100 : 0;
-  const conversionOverall = totalProspects > 0 ? (wonDeals / totalProspects) * 100 : 0;
 
   // Jours actifs (jours où il y a eu au least une activité)
   const activeDates = new Set(activities?.map((a: any) => a.created_at.split('T')[0]) || []);
   const activeDays = activeDates.size;
 
-  // Temps de réponse moyen (simulé pour l'exemple)
-  const averageResponseTime = Math.random() * 24 + 1; // Entre 1 et 25 heures
+  // Temps de réponse moyen calculé depuis les activités email
+  const emailActivities = activities?.filter((a: any) => a.type === 'email') || [];
+  let averageResponseTime = 0;
 
-  // Stats de la période précédente pour calcul de croissance (simplifié)
+  if (emailActivities.length > 0) {
+    // Calculer le temps moyen entre création prospect et premier email
+    const responseTimes = await Promise.all(emailActivities.map(async (activity: any) => {
+      const { data: prospect } = await adminClient
+        .from('crm_prospects')
+        .select('created_at')
+        .eq('id', activity.prospect_id)
+        .single();
+
+      if (prospect) {
+        const prospectDate = new Date(prospect.created_at);
+        const emailDate = new Date(activity.created_at);
+        return (emailDate.getTime() - prospectDate.getTime()) / (1000 * 60 * 60); // en heures
+      }
+      return 0;
+    }));
+
+    const validTimes = responseTimes.filter(t => t > 0 && t < 168); // Moins de 7 jours
+    averageResponseTime = validTimes.length > 0
+      ? validTimes.reduce((sum, t) => sum + t, 0) / validTimes.length
+      : 0;
+  }
+
+  // Stats de la période précédente pour calcul de croissance (réel)
   let rdvGrowth = 0;
   let conversionGrowth = 0;
   let revenueGrowth = 0;
 
   if (previousPeriod) {
-    // Ici on devrait faire les mêmes calculs pour la période précédente
-    // Pour l'exemple, on simule
-    rdvGrowth = Math.random() * 40 - 20; // Entre -20% et +20%
-    conversionGrowth = Math.random() * 30 - 15;
-    revenueGrowth = Math.random() * 50 - 25;
+    // Calculs réels pour la période précédente
+    const prevStartStr = previousPeriod.start.toISOString();
+    const prevEndStr = previousPeriod.end.toISOString();
+
+    // RDV période précédente
+    const { data: prevMeetings } = await adminClient
+      .from('crm_events')
+      .select('id')
+      .eq('organization_id', organizationId)
+      .eq('assigned_to', advisorId)
+      .eq('type', 'meeting')
+      .gte('start_date', prevStartStr)
+      .lte('start_date', prevEndStr) as any;
+
+    // Revenue période précédente
+    const { data: prevProspects } = await adminClient
+      .from('crm_prospects')
+      .select('deal_value, stage_slug')
+      .eq('organization_id', organizationId)
+      .eq('assigned_to', advisorId)
+      .gte('created_at', prevStartStr)
+      .lte('created_at', prevEndStr) as any;
+
+    const prevRdvCount = prevMeetings?.length || 0;
+    const prevRevenue = prevProspects?.reduce((sum: number, p: any) => sum + (p.deal_value || 0), 0) || 0;
+    const prevWonDeals = prevProspects?.filter((p: any) =>
+      p.stage_slug === 'gagne' || p.stage_slug === 'signe'
+    ).length || 0;
+    const prevConversion = prevRdvCount > 0 ? (prevWonDeals / prevRdvCount) * 100 : 0;
+
+    // Calculs de croissance
+    rdvGrowth = prevRdvCount > 0 ? ((rdvScheduled - prevRdvCount) / prevRdvCount) * 100 : 0;
+    conversionGrowth = prevConversion > 0 ? ((conversionRdvToDeals - prevConversion) / prevConversion) * 100 : 0;
+    revenueGrowth = prevRevenue > 0 ? ((totalDealValue - prevRevenue) / prevRevenue) * 100 : 0;
   }
 
   return {
@@ -147,7 +252,12 @@ async function calculateAdvisorStats(
     conversion_rate_first_rdv: conversionFirstRdv,
     conversion_rate_proposal: conversionProposal,
     conversion_rate_closing: conversionClosing,
-    conversion_rate_overall: conversionOverall,
+    conversion_rate_overall: conversionRdvToDeals, // Nouveau : RDV → Deals
+
+    // Nouvelles métriques informatives
+    conversion_calls_to_rdv: conversionCallsToRdv, // Appels → RDV (informatif)
+    conversion_calls_to_deals: conversionCallsToDeals, // Appels → Deals (informatif)
+    calls_made_total: callsMade, // Total appels effectués
 
     calls_made: callsActivity,
     emails_sent: emailsActivity,
@@ -331,7 +441,7 @@ export async function GET(request: NextRequest) {
         rdv_growth: advisorStats.reduce((sum, a) => sum + a.rdv_growth, 0) / totalAdvisors,
         conversion_growth: advisorStats.reduce((sum, a) => sum + a.conversion_growth, 0) / totalAdvisors,
         revenue_growth: advisorStats.reduce((sum, a) => sum + a.revenue_growth, 0) / totalAdvisors,
-        prospects_growth: Math.random() * 30 - 15 // Simulé
+        prospects_growth: await calculateProspectsGrowth(adminClient, context.organization.id, current, compareWithPrevious ? previous : undefined)
       },
 
       top_performers: {

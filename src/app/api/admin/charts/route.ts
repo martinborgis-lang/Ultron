@@ -47,19 +47,54 @@ export async function GET(request: NextRequest) {
       const performanceCharts: AdvisorPerformanceChart[] = [];
 
       for (const advisor of advisors || []) {
-        // Générer des données journalières pour la période
+        // Calculer des données réelles journalières depuis la BDD
         const data = [];
         for (let i = 0; i < days; i++) {
           const date = new Date(startDate.getTime() + i * 24 * 60 * 60 * 1000);
           const dateStr = date.toISOString().split('T')[0];
+          const nextDayStr = new Date(date.getTime() + 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
-          // Simuler des données réalistes (en production, calculer depuis la BDD)
+          // RDV programmés ce jour
+          const { data: rdvData } = await adminClient
+            .from('crm_events')
+            .select('id')
+            .eq('organization_id', context.organization.id)
+            .eq('assigned_to', advisor.id)
+            .eq('type', 'meeting')
+            .gte('start_date', `${dateStr}T00:00:00`)
+            .lt('start_date', `${nextDayStr}T00:00:00`) as any;
+
+          // Prospects créés ce jour qui sont maintenant gagnés
+          const { data: prospectsData } = await adminClient
+            .from('crm_prospects')
+            .select('deal_value, stage_slug, created_at')
+            .eq('organization_id', context.organization.id)
+            .eq('assigned_to', advisor.id)
+            .gte('created_at', `${dateStr}T00:00:00`)
+            .lt('created_at', `${nextDayStr}T00:00:00`) as any;
+
+          // Prospects gagnés ce jour (won_date)
+          const { data: wonProspects } = await adminClient
+            .from('crm_prospects')
+            .select('deal_value')
+            .eq('organization_id', context.organization.id)
+            .eq('assigned_to', advisor.id)
+            .gte('won_date', `${dateStr}T00:00:00`)
+            .lt('won_date', `${nextDayStr}T00:00:00`) as any;
+
+          const rdvCount = rdvData?.length || 0;
+          const dealsClosedToday = wonProspects?.length || 0;
+          const revenueToday = wonProspects?.reduce((sum: number, p: any) => sum + (p.deal_value || 0), 0) || 0;
+
+          // Calculer le taux de conversion du jour (RDV → deals)
+          const conversionRate = rdvCount > 0 ? (dealsClosedToday / rdvCount) * 100 : 0;
+
           data.push({
             date: dateStr,
-            rdv_count: Math.floor(Math.random() * 3), // 0-2 RDV par jour
-            deals_closed: Math.random() < 0.1 ? 1 : 0, // 10% chance de deal par jour
-            conversion_rate: Math.random() * 30 + 10, // 10-40%
-            revenue: Math.random() * 10000 + 1000 // 1k-11k €
+            rdv_count: rdvCount,
+            deals_closed: dealsClosedToday,
+            conversion_rate: conversionRate,
+            revenue: revenueToday
           });
         }
 

@@ -216,7 +216,12 @@ export interface AdvisorStats {
   conversion_rate_first_rdv: number;    // % prospects qui passent du contact au 1er RDV
   conversion_rate_proposal: number;     // % qui passent du 1er RDV à la proposition
   conversion_rate_closing: number;      // % qui passent de la proposition au closing
-  conversion_rate_overall: number;      // % global du contact au deal signé
+  conversion_rate_overall: number;      // % RDV → Deals signés (métrique principale)
+
+  // Métriques informatives de conversion
+  conversion_calls_to_rdv: number;      // % appels → RDV (informatif)
+  conversion_calls_to_deals: number;    // % appels → Deals (informatif)
+  calls_made_total: number;             // Total d'appels effectués (transitions de stage + activités)
 
   // Activité
   calls_made: number;

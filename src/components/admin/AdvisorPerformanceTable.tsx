@@ -256,6 +256,69 @@ export function AdvisorPerformanceTable({ advisors, period }: AdvisorPerformance
             Aucune donnée de conseiller disponible pour cette période.
           </div>
         )}
+
+        {/* Section métriques informatives de conversion */}
+        {sortedAdvisors.length > 0 && (
+          <div className="mt-8 pt-6 border-t border-border">
+            <h4 className="font-medium mb-4">Détails de Conversion par Conseiller</h4>
+            <div className="space-y-4">
+              {sortedAdvisors.map((advisor) => (
+                <div key={`conversion-${advisor.id}`}
+                     className="p-4 bg-gray-50/50 dark:bg-gray-900/20 rounded-lg border border-gray-200 dark:border-gray-800">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-3">
+                      <Avatar className="h-8 w-8">
+                        <AvatarImage src={advisor.avatar_url} />
+                        <AvatarFallback>
+                          {advisor.full_name.substring(0, 2).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <span className="font-medium">{advisor.full_name}</span>
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                      {advisor.calls_made_total} appels effectués
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                    {/* RDV → Deals (principal) */}
+                    <div className="text-center p-3 bg-blue-50/50 dark:bg-blue-900/20 rounded border border-blue-200 dark:border-blue-800">
+                      <div className="text-lg font-bold text-blue-700 dark:text-blue-300">
+                        {advisor.conversion_rate_overall.toFixed(1)}%
+                      </div>
+                      <div className="text-xs text-blue-600 dark:text-blue-400">RDV → Deals</div>
+                      <div className="text-xs text-muted-foreground mt-1">
+                        {advisor.rdv_scheduled_count} RDV → {advisor.won_deals} deals
+                      </div>
+                    </div>
+
+                    {/* Appels → RDV (informatif) */}
+                    <div className="text-center p-3 bg-green-50/50 dark:bg-green-900/20 rounded border border-green-200 dark:border-green-800">
+                      <div className="text-lg font-bold text-green-700 dark:text-green-300">
+                        {advisor.conversion_calls_to_rdv.toFixed(1)}%
+                      </div>
+                      <div className="text-xs text-green-600 dark:text-green-400">Appels → RDV</div>
+                      <div className="text-xs text-muted-foreground mt-1">
+                        {advisor.calls_made_total} appels → {advisor.rdv_scheduled_count} RDV
+                      </div>
+                    </div>
+
+                    {/* Appels → Deals (informatif) */}
+                    <div className="text-center p-3 bg-purple-50/50 dark:bg-purple-900/20 rounded border border-purple-200 dark:border-purple-800">
+                      <div className="text-lg font-bold text-purple-700 dark:text-purple-300">
+                        {advisor.conversion_calls_to_deals.toFixed(1)}%
+                      </div>
+                      <div className="text-xs text-purple-600 dark:text-purple-400">Appels → Deals</div>
+                      <div className="text-xs text-muted-foreground mt-1">
+                        {advisor.calls_made_total} appels → {advisor.won_deals} deals
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
