@@ -81,7 +81,7 @@ export interface ProductForm {
   type: 'fixed' | 'commission';
   fixed_value?: number;
   commission_rate?: number;
-  category: string;
+  category?: string; // Optionnel, libre
 }
 
 export interface DealProductForm {
@@ -140,25 +140,4 @@ export interface RevenueBreakdown {
   }[];
 }
 
-// Catégories de produits par défaut
-export const PRODUCT_CATEGORIES = {
-  // CGP
-  assurance_vie: 'Assurance Vie',
-  pea: 'PEA',
-  compte_titre: 'Compte Titre',
-  immobilier: 'Immobilier',
-  scpi: 'SCPI',
-  private_equity: 'Private Equity',
-
-  // Énergie
-  pompe_chaleur: 'Pompe à Chaleur',
-  panneaux_solaires: 'Panneaux Solaires',
-  isolation: 'Isolation',
-
-  // Autres
-  formation: 'Formation',
-  conseil: 'Conseil',
-  autre: 'Autre'
-} as const;
-
-export type ProductCategory = keyof typeof PRODUCT_CATEGORIES;
+// Suppression des catégories prédéfinies - chaque organisation crée ses propres produits

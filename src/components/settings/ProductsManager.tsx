@@ -16,7 +16,6 @@ import {
   Users, Settings, Package, TrendingUp
 } from 'lucide-react';
 import type { Product, AdvisorCommission } from '@/types/products';
-import { PRODUCT_CATEGORIES } from '@/types/products';
 
 interface ProductsManagerProps {
   organizationId: string;
@@ -39,10 +38,10 @@ export function ProductsManager({ organizationId }: ProductsManagerProps) {
 
   const [showProductDialog, setShowProductDialog] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-  const [productForm, setProductForm] = useState<ProductForm>({
+  const [productForm, setProductForm] = useState({
     name: '',
     description: '',
-    type: 'commission',
+    type: 'commission' as 'fixed' | 'commission',
     fixed_value: '',
     commission_rate: '',
     category: ''
@@ -289,21 +288,11 @@ export function ProductsManager({ organizationId }: ProductsManagerProps) {
 
                     <div>
                       <Label>Catégorie</Label>
-                      <Select
-                        value={productForm.category}
-                        onValueChange={(value) => setProductForm({...productForm, category: value})}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Sélectionnez une catégorie" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {Object.entries(PRODUCT_CATEGORIES).map(([key, label]) => (
-                            <SelectItem key={key} value={key}>
-                              {label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <Input
+                        value={productForm.category || ''}
+                        onChange={(e) => setProductForm({...productForm, category: e.target.value})}
+                        placeholder="Ex: Assurance Vie, Pompe à Chaleur, Formation..."
+                      />
                     </div>
 
                     <div>
@@ -367,9 +356,11 @@ export function ProductsManager({ organizationId }: ProductsManagerProps) {
                   <div className="flex-1">
                     <div className="flex items-center gap-3">
                       <h4 className="font-medium">{product.name}</h4>
-                      <Badge variant="secondary">
-                        {PRODUCT_CATEGORIES[product.category as keyof typeof PRODUCT_CATEGORIES] || product.category}
-                      </Badge>
+                      {product.category && (
+                        <Badge variant="secondary">
+                          {product.category}
+                        </Badge>
+                      )}
                       <Badge variant={product.type === 'fixed' ? 'default' : 'outline'}>
                         {product.type === 'fixed' ? (
                           <><Euro className="h-3 w-3 mr-1" />Fixe</>
