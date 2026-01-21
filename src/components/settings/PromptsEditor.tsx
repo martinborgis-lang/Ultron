@@ -10,6 +10,8 @@ import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertTriangle, Save, RotateCcw, Play, Loader2 } from 'lucide-react';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { AlertDialogCustom } from '@/components/ui/alert-dialog-custom';
 import { useOrganization } from '@/hooks/useOrganization';
 
 interface PromptConfig {
@@ -117,6 +119,13 @@ export function PromptsEditor() {
   const [testResult, setTestResult] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('synthese');
 
+  // États pour les modales
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [resetTarget, setResetTarget] = useState<'synthese' | 'rappel' | 'plaquette' | null>(null);
+  const [showSuccessAlert, setShowSuccessAlert] = useState(false);
+  const [showErrorAlert, setShowErrorAlert] = useState(false);
+  const [alertMessage, setAlertMessage] = useState('');
+
   useEffect(() => {
     fetchPrompts();
   }, []);
@@ -165,26 +174,35 @@ export function PromptsEditor() {
       });
 
       if (response.ok) {
-        alert('Prompt sauvegardé !');
+        setAlertMessage('Prompt sauvegardé !');
+        setShowSuccessAlert(true);
       } else {
         const data = await response.json();
-        alert('Erreur: ' + (data.error || 'Erreur lors de la sauvegarde'));
+        setAlertMessage('Erreur: ' + (data.error || 'Erreur lors de la sauvegarde'));
+        setShowErrorAlert(true);
       }
     } catch (error) {
       console.error('Erreur save:', error);
-      alert('Erreur lors de la sauvegarde');
+      setAlertMessage('Erreur lors de la sauvegarde');
+      setShowErrorAlert(true);
     }
     setSaving(false);
   };
 
   const handleReset = (type: 'synthese' | 'rappel' | 'plaquette') => {
-    if (!confirm('Réinitialiser ce prompt aux valeurs par défaut ?')) return;
+    setResetTarget(type);
+    setShowResetConfirm(true);
+  };
 
-    const promptKey = `prompt_${type}` as keyof OrganizationPrompts;
-    setPrompts((prev) => ({
-      ...prev,
-      [promptKey]: DEFAULT_PROMPTS[type],
-    }));
+  const confirmReset = () => {
+    if (resetTarget) {
+      const promptKey = `prompt_${resetTarget}` as keyof OrganizationPrompts;
+      setPrompts((prev) => ({
+        ...prev,
+        [promptKey]: DEFAULT_PROMPTS[resetTarget],
+      }));
+      setResetTarget(null);
+    }
   };
 
   const handleTest = async (type: 'synthese' | 'rappel' | 'plaquette') => {
@@ -420,6 +438,7 @@ Cordialement,`}
   }
 
   return (
+    <>
     <div className="space-y-6">
       <div>
         <h2 className="text-2xl font-bold tracking-tight">
@@ -463,5 +482,38 @@ Cordialement,`}
         </TabsContent>
       </Tabs>
     </div>
+
+      {/* Modale de confirmation de réinitialisation */}
+      <ConfirmDialog
+        open={showResetConfirm}
+        onOpenChange={setShowResetConfirm}
+        title="Réinitialiser le prompt"
+        description={`Êtes-vous sûr de vouloir réinitialiser le prompt ${resetTarget} aux valeurs par défaut ? Cette action effacera vos modifications personnalisées.`}
+        confirmText="Réinitialiser"
+        cancelText="Annuler"
+        variant="destructive"
+        onConfirm={confirmReset}
+      />
+
+      {/* Modale de succès */}
+      <AlertDialogCustom
+        open={showSuccessAlert}
+        onOpenChange={setShowSuccessAlert}
+        title="Succès"
+        description={alertMessage}
+        variant="success"
+        buttonText="Parfait"
+      />
+
+      {/* Modale d'erreur */}
+      <AlertDialogCustom
+        open={showErrorAlert}
+        onOpenChange={setShowErrorAlert}
+        title="Erreur"
+        description={alertMessage}
+        variant="error"
+        buttonText="Compris"
+      />
+    </>
   );
 }

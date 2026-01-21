@@ -26,6 +26,8 @@ import {
   Video,
 } from 'lucide-react';
 import { useOrganization } from '@/hooks/useOrganization';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { AlertDialogCustom } from '@/components/ui/alert-dialog-custom';
 
 interface CalendarEvent {
   id: string;
