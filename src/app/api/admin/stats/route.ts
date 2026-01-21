@@ -171,15 +171,25 @@ async function calculateAdvisorStats(
 export async function GET(request: NextRequest) {
   try {
     const context = await getCurrentUserAndOrganization();
+    console.log('🔍 Admin API Debug - Context:', context);
 
     if (!context) {
+      console.log('❌ Admin API - No context');
       return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
     }
 
+    console.log('🔍 Admin API Debug - User role:', context.user.role);
+
     // Vérifier que l'utilisateur est admin
     if (context.user.role !== 'admin') {
-      return NextResponse.json({ error: 'Accès refusé - Admin requis' }, { status: 403 });
+      console.log('❌ Admin API - Access denied, role:', context.user.role);
+      return NextResponse.json({
+        error: 'Accès refusé - Admin requis',
+        debug: { userRole: context.user.role, userId: context.user.id }
+      }, { status: 403 });
     }
+
+    console.log('✅ Admin API - Access granted');
 
     const { searchParams } = new URL(request.url);
     const period = (searchParams.get('period') || '30d') as AdminFilters['period'];
