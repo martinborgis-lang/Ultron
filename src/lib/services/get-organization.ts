@@ -3,7 +3,7 @@ import { createAdminClient } from '@/lib/supabase-admin';
 import { Organization } from './interfaces';
 
 export async function getCurrentUserAndOrganization(): Promise<{
-  user: { id: string; email: string };
+  user: { id: string; email: string; role: 'admin' | 'conseiller' };
   organization: Organization;
 } | null> {
   try {
@@ -16,10 +16,10 @@ export async function getCurrentUserAndOrganization(): Promise<{
 
     const adminClient = createAdminClient();
 
-    // Recuperer l'user
+    // Recuperer l'user avec le rôle
     const { data: userData, error: userError } = await adminClient
       .from('users')
-      .select('id, email, organization_id')
+      .select('id, email, role, organization_id')
       .eq('auth_id', user.id)
       .single();
 
@@ -44,6 +44,7 @@ export async function getCurrentUserAndOrganization(): Promise<{
       user: {
         id: userData.id,
         email: userData.email,
+        role: userData.role || 'conseiller',
       },
       organization: {
         id: orgData.id,

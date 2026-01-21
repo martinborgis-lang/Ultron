@@ -4,9 +4,10 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { cn } from '@/lib/utils';
-import { Bot, LayoutDashboard, Users, Settings, LogOut, Calculator, Calendar, Sliders, LayoutGrid, CheckSquare, Upload, MessageSquare, Video } from 'lucide-react';
+import { Bot, LayoutDashboard, Users, Settings, LogOut, Calculator, Calendar, Sliders, LayoutGrid, CheckSquare, Upload, MessageSquare, Video, Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
+import { useUser } from '@/hooks/useUser';
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
@@ -31,6 +32,7 @@ interface SidebarProps {
 export function Sidebar({ userName }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
+  const { user } = useUser();
 
   const handleLogout = async () => {
     const supabase = createClient();
@@ -94,6 +96,27 @@ export function Sidebar({ userName }: SidebarProps) {
             );
           })}
         </div>
+
+        {/* Admin section - only for admin users */}
+        {user?.role === 'admin' && (
+          <div className="pt-4">
+            <p className="px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+              Administration
+            </p>
+            <Link
+              href="/admin"
+              className={cn(
+                'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
+                pathname === '/admin' || pathname.startsWith('/admin/')
+                  ? 'bg-red-50 text-red-600 dark:bg-red-950 dark:text-red-400 border border-red-200'
+                  : 'text-muted-foreground hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950 dark:hover:text-red-400'
+              )}
+            >
+              <Shield className="h-5 w-5" />
+              Dashboard Admin
+            </Link>
+          </div>
+        )}
       </nav>
 
       {/* User section */}

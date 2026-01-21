@@ -194,3 +194,146 @@ export interface DashboardStats {
   tasks_overdue: number;
   tasks_due_today: number;
 }
+
+// Types pour les stats administrateur
+export interface AdvisorStats {
+  id: string;
+  full_name: string;
+  email: string;
+  avatar_url?: string;
+
+  // RDV et activité
+  rdv_scheduled_count: number;
+  rdv_completed_count: number;
+  rdv_no_show_count: number;
+
+  // Pipeline et négociation
+  prospects_in_negotiation: number;
+  total_deal_value: number;
+  weighted_forecast: number;
+
+  // Taux de conversion
+  conversion_rate_first_rdv: number;    // % prospects qui passent du contact au 1er RDV
+  conversion_rate_proposal: number;     // % qui passent du 1er RDV à la proposition
+  conversion_rate_closing: number;      // % qui passent de la proposition au closing
+  conversion_rate_overall: number;      // % global du contact au deal signé
+
+  // Activité
+  calls_made: number;
+  emails_sent: number;
+  meetings_held: number;
+  tasks_completed: number;
+
+  // Performance temporelle
+  average_response_time: number;        // En heures
+  active_days: number;                  // Jours actifs dans la période
+
+  created_prospects: number;
+  qualified_prospects: number;
+  won_deals: number;
+  lost_deals: number;
+
+  // Évolution (comparaison avec période précédente)
+  rdv_growth: number;                   // % d'évolution
+  conversion_growth: number;
+  revenue_growth: number;
+}
+
+export interface AdminDashboardStats {
+  // Vue d'ensemble du cabinet
+  total_advisors: number;
+  active_advisors: number;
+  total_prospects: number;
+  total_revenue: number;
+
+  // Performance globale
+  average_conversion_rate: number;
+  total_rdv_scheduled: number;
+  total_rdv_completed: number;
+  total_deals_won: number;
+  total_deals_lost: number;
+
+  // Répartition des prospects par conseiller
+  prospects_by_advisor: {
+    advisor_id: string;
+    advisor_name: string;
+    count: number;
+    percentage: number;
+  }[];
+
+  // Répartition du CA par conseiller
+  revenue_by_advisor: {
+    advisor_id: string;
+    advisor_name: string;
+    revenue: number;
+    percentage: number;
+  }[];
+
+  // Stats par période (comparaison)
+  period_comparison: {
+    rdv_growth: number;
+    conversion_growth: number;
+    revenue_growth: number;
+    prospects_growth: number;
+  };
+
+  // Top performers
+  top_performers: {
+    by_rdv: AdvisorStats;
+    by_conversion: AdvisorStats;
+    by_revenue: AdvisorStats;
+  };
+
+  // Alertes et insights
+  alerts: {
+    type: 'low_conversion' | 'inactive_advisor' | 'missed_rdv' | 'overdue_tasks';
+    advisor_id?: string;
+    advisor_name?: string;
+    message: string;
+    severity: 'low' | 'medium' | 'high';
+  }[];
+}
+
+export interface AdminFilters {
+  period: '7d' | '30d' | '90d' | '6m' | '1y' | 'custom';
+  start_date?: string;
+  end_date?: string;
+  advisor_ids?: string[];
+  compare_with_previous?: boolean;
+}
+
+// Types pour les graphiques avancés
+export interface AdvisorPerformanceChart {
+  advisor_id: string;
+  advisor_name: string;
+  data: {
+    date: string;
+    rdv_count: number;
+    deals_closed: number;
+    conversion_rate: number;
+    revenue: number;
+  }[];
+}
+
+export interface ConversionFunnelData {
+  advisor_id: string;
+  advisor_name: string;
+  stages: {
+    stage: 'contact' | 'first_rdv' | 'proposal' | 'negotiation' | 'closed_won';
+    stage_name: string;
+    count: number;
+    conversion_rate: number;
+  }[];
+}
+
+export interface ActivityHeatmapData {
+  advisor_id: string;
+  advisor_name: string;
+  daily_activity: {
+    date: string;
+    calls: number;
+    emails: number;
+    meetings: number;
+    total_score: number;
+  }[];
+}

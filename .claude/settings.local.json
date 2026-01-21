@@ -18,7 +18,9 @@
       "Bash(node create-icons.js:*)",
       "Bash(git diff:*)",
       "Bash(git checkout:*)",
-      "Bash(gh pr create:*)"
+      "Bash(gh pr create:*)",
+      "Bash(rm:*)",
+      "Bash(git restore:*)"
     ]
   }
 }
