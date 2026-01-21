@@ -7,9 +7,11 @@ import { PipelineKanban } from '@/components/crm/PipelineKanban';
 import { ProspectForm } from '@/components/crm/ProspectForm';
 import { WaitingReasonModal } from '@/components/crm/WaitingReasonModal';
 import { RdvNotesModal } from '@/components/crm/RdvNotesModal';
+import { DealProductSelector } from '@/components/crm/DealProductSelector';
 import { PipelineStage, CrmProspect } from '@/types/crm';
 import { UnifiedStage } from '@/types/pipeline';
 import { ProspectData } from '@/lib/services/interfaces';
+import type { DealProductForm } from '@/types/products';
 import { Plus, Search, RefreshCw } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
@@ -113,6 +115,13 @@ export default function PipelinePage() {
     prospectName: string;
     targetStageSlug: string;
     currentAssignedTo?: string;
+  } | null>(null);
+
+  // State for deal product selector
+  const [showDealProductModal, setShowDealProductModal] = useState(false);
+  const [pendingDeal, setPendingDeal] = useState<{
+    prospectId: string;
+    prospectName: string;
   } | null>(null);
 
   // Ref to prevent double fetch on mount
@@ -323,6 +332,67 @@ export default function PipelinePage() {
     setShowRdvModal(true);
   };
 
+  // Called when dropping on won stage - show product selector
+  const handleWonDrop = (prospectId: string, prospectName: string) => {
+    setPendingDeal({ prospectId, prospectName });
+    setShowDealProductModal(true);
+  };
+
+  // Called when user confirms the product selection
+  const handleDealProductConfirm = async (dealData: DealProductForm) => {
+    if (!pendingDeal) return;
+
+    const { prospectId } = pendingDeal;
+
+    try {
+      // Create the deal with product information
+      const response = await fetch('/api/deal-products', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...dealData,
+          prospect_id: prospectId,
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to create deal');
+      }
+
+      const result = await response.json();
+
+      // Update prospect's deal_value and move to won stage
+      await fetch(`/api/prospects/unified/${prospectId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          dealValue: dealData.client_amount,
+        }),
+      });
+
+      // Move to won stage (this should trigger any won workflows)
+      await handleProspectMove(prospectId, 'gagne');
+
+      toast({
+        title: 'Deal configuré avec succès',
+        description: `Le produit "${result.deal.product.name}" a été configuré pour ce deal.`,
+      });
+
+      await fetchData(search);
+    } catch (error) {
+      console.error('Error creating deal:', error);
+      toast({
+        title: 'Erreur',
+        description: 'Impossible de configurer le deal',
+        variant: 'destructive',
+      });
+    } finally {
+      setShowDealProductModal(false);
+      setPendingDeal(null);
+    }
+  };
+
   // Called when user confirms the RDV with notes
   const handleRdvConfirm = async (notes: string, rdvDate: Date, assignedTo?: string) => {
     if (!pendingRdvMove) return;
@@ -469,6 +539,7 @@ export default function PipelinePage() {
           onProspectMove={handleProspectMove}
           onWaitingDrop={handleWaitingDrop}
           onRdvDrop={handleRdvDrop}
+          onWonDrop={handleWonDrop}
         />
       )}
 
@@ -506,6 +577,18 @@ export default function PipelinePage() {
         teamMembers={teamMembers}
         currentUserId={currentUserId}
         onConfirm={handleRdvConfirm}
+      />
+
+      {/* Deal Product Selector Modal */}
+      <DealProductSelector
+        open={showDealProductModal}
+        onClose={() => {
+          setShowDealProductModal(false);
+          setPendingDeal(null);
+        }}
+        onConfirm={handleDealProductConfirm}
+        prospectId={pendingDeal?.prospectId || ''}
+        prospectName={pendingDeal?.prospectName || ''}
       />
     </div>
   );

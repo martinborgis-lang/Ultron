@@ -28,11 +28,12 @@ interface PipelineKanbanProps {
   ) => Promise<void>;
   onWaitingDrop?: (prospectId: string, prospectName: string) => void;
   onRdvDrop?: (prospectId: string, prospectName: string, targetStageSlug: string) => void;
+  onWonDrop?: (prospectId: string, prospectName: string) => void;
 }
 
-// Slugs qui déclenchent la modale "En attente"
-// Slug unifié pour les deux modes (CRM et Sheet)
+// Slugs qui déclenchent des modales spéciales
 const WAITING_STAGE_SLUGS = ['en_attente'];
+const WON_STAGE_SLUGS = ['gagne', 'won', 'signe']; // Stages "gagné"
 
 // Slugs qui déclenchent la modale "RDV Notes"
 // Slug unifié pour les deux modes (CRM et Sheet)
@@ -45,6 +46,7 @@ export function PipelineKanban({
   onProspectMove,
   onWaitingDrop,
   onRdvDrop,
+  onWonDrop,
 }: PipelineKanbanProps) {
   const [activeProspect, setActiveProspect] = useState<CrmProspect | null>(null);
   const [localProspects, setLocalProspects] = useState(prospects);
@@ -144,6 +146,17 @@ export function PipelineKanban({
 
       console.log('Opening RDV notes modal for:', prospectName);
       onRdvDrop(prospectId, prospectName, newStageSlug);
+      return;
+    }
+
+    // Check if this is a "won" stage that should trigger the product selector
+    if (WON_STAGE_SLUGS.includes(newStageSlug) && onWonDrop) {
+      const prospectName = [prospect.first_name, prospect.last_name]
+        .filter(Boolean)
+        .join(' ') || 'Ce prospect';
+
+      console.log('Opening product selector for won deal:', prospectName);
+      onWonDrop(prospectId, prospectName);
       return;
     }
 

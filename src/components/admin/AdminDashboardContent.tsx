@@ -23,6 +23,7 @@ import { ActivityHeatmap } from './ActivityHeatmap';
 import { TopPerformers } from './TopPerformers';
 import { AlertsPanel } from './AlertsPanel';
 import { RevenueExplanation } from './RevenueExplanation';
+import { RevenueBreakdownDashboard } from './RevenueBreakdownDashboard';
 
 interface PeriodFilter {
   value: '7d' | '30d' | '90d' | '6m' | '1y' | 'custom';
@@ -311,12 +312,7 @@ export function AdminDashboardContent() {
         </TabsContent>
 
         <TabsContent value="revenue" className="space-y-6">
-          <RevenueExplanation
-            totalRevenue={dashboardStats.total_revenue}
-            totalDealsWon={dashboardStats.total_deals_won}
-            className="mb-6"
-          />
-          <RevenueChart period={selectedPeriod} />
+          <RevenueBreakdownDashboard />
         </TabsContent>
       </Tabs>
 
