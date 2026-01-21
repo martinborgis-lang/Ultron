@@ -22,7 +22,6 @@ export async function GET(request: NextRequest) {
       .from('products')
       .select('*')
       .eq('organization_id', context.organization.id)
-      .order('category', { ascending: true })
       .order('name', { ascending: true });
 
     if (!includeInactive) {
@@ -57,12 +56,12 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { name, description, type, fixed_value, commission_rate, category } = body;
+    const { name, description, type, fixed_value, commission_rate } = body;
 
     // Validation
-    if (!name || !type || !category) {
+    if (!name || !type) {
       return NextResponse.json({
-        error: 'Champs requis : name, type, category'
+        error: 'Champs requis : name, type'
       }, { status: 400 });
     }
 
@@ -99,7 +98,6 @@ export async function POST(request: NextRequest) {
       name,
       description,
       type,
-      category,
       created_by: context.user.id,
       is_active: true
     };

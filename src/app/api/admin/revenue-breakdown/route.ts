@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
       .from('deal_products')
       .select(`
         *,
-        product:products(id, name, type, category),
+        product:products(id, name, type),
         prospect:crm_prospects(id, first_name, last_name, email, stage_slug),
         advisor:users(id, full_name, email),
         advisor_commission:advisor_commissions!inner(commission_rate)
@@ -53,7 +53,6 @@ export async function GET(request: NextRequest) {
       totalAdvisorCommissions: 0,
       byProduct: {} as Record<string, {
         name: string;
-        category: string;
         dealCount: number;
         enterpriseCA: number;
         advisorCommissions: number;
@@ -85,7 +84,6 @@ export async function GET(request: NextRequest) {
       if (!metrics.byProduct[productId]) {
         metrics.byProduct[productId] = {
           name: deal.product.name,
-          category: deal.product.category || '',
           dealCount: 0,
           enterpriseCA: 0,
           advisorCommissions: 0

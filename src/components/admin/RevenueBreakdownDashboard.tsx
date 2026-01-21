@@ -29,7 +29,6 @@ interface RevenueData {
   averageCommissionRate: number;
   byProduct: Array<{
     name: string;
-    category: string;
     dealCount: number;
     enterpriseCA: number;
     advisorCommissions: number;
@@ -51,7 +50,7 @@ interface RevenueData {
     company_revenue: number;
     advisor_commission_amount: number;
     closed_at: string;
-    product: { name: string; type: string; category: string };
+    product: { name: string; type: string };
     advisor: { full_name: string };
   }>;
 }
@@ -293,7 +292,6 @@ export function RevenueBreakdownDashboard() {
               <Card key={index}>
                 <CardHeader>
                   <CardTitle className="text-base">{product.name}</CardTitle>
-                  <Badge variant="outline">{product.category}</Badge>
                 </CardHeader>
                 <CardContent className="space-y-2">
                   <div className="flex justify-between text-sm">
@@ -523,9 +521,6 @@ export function RevenueBreakdownDashboard() {
                       <div className="text-sm text-muted-foreground">
                         {deal.advisor.full_name} • {new Date(deal.closed_at).toLocaleDateString('fr-FR')}
                       </div>
-                      <Badge variant="outline" className="mt-1">
-                        {deal.product.category}
-                      </Badge>
                     </div>
                     <div className="text-right space-y-1">
                       <div className="text-sm">

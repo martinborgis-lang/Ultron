@@ -16,7 +16,6 @@ CREATE TABLE IF NOT EXISTS products (
   commission_rate NUMERIC, -- Pourcentage de commission (ex: 2.5 pour 2.5%)
 
   -- Métadata
-  category VARCHAR, -- 'energie', 'assurance_vie', 'pea', 'immobilier', etc.
   is_active BOOLEAN DEFAULT true,
   created_by UUID REFERENCES users(id),
   created_at TIMESTAMPTZ DEFAULT now(),

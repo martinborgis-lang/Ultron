@@ -43,8 +43,7 @@ export function ProductsManager({ organizationId }: ProductsManagerProps) {
     description: '',
     type: 'commission' as 'fixed' | 'commission',
     fixed_value: '',
-    commission_rate: '',
-    category: ''
+    commission_rate: ''
   });
 
   const [showCommissionDialog, setShowCommissionDialog] = useState(false);
@@ -97,7 +96,6 @@ export function ProductsManager({ organizationId }: ProductsManagerProps) {
         name: productForm.name,
         description: productForm.description,
         type: productForm.type,
-        category: productForm.category,
         ...(productForm.type === 'fixed' ? {
           fixed_value: parseFloat(productForm.fixed_value)
         } : {
@@ -192,8 +190,7 @@ export function ProductsManager({ organizationId }: ProductsManagerProps) {
       description: '',
       type: 'commission',
       fixed_value: '',
-      commission_rate: '',
-      category: ''
+      commission_rate: ''
     });
   };
 
@@ -213,8 +210,7 @@ export function ProductsManager({ organizationId }: ProductsManagerProps) {
       description: product.description || '',
       type: product.type,
       fixed_value: product.fixed_value?.toString() || '',
-      commission_rate: product.commission_rate?.toString() || '',
-      category: product.category || ''
+      commission_rate: product.commission_rate?.toString() || ''
     });
     setShowProductDialog(true);
   };
@@ -286,14 +282,6 @@ export function ProductsManager({ organizationId }: ProductsManagerProps) {
                       />
                     </div>
 
-                    <div>
-                      <Label>Catégorie</Label>
-                      <Input
-                        value={productForm.category || ''}
-                        onChange={(e) => setProductForm({...productForm, category: e.target.value})}
-                        placeholder="Ex: Assurance Vie, Pompe à Chaleur, Formation..."
-                      />
-                    </div>
 
                     <div>
                       <Label>Type de rémunération</Label>
@@ -356,11 +344,6 @@ export function ProductsManager({ organizationId }: ProductsManagerProps) {
                   <div className="flex-1">
                     <div className="flex items-center gap-3">
                       <h4 className="font-medium">{product.name}</h4>
-                      {product.category && (
-                        <Badge variant="secondary">
-                          {product.category}
-                        </Badge>
-                      )}
                       <Badge variant={product.type === 'fixed' ? 'default' : 'outline'}>
                         {product.type === 'fixed' ? (
                           <><Euro className="h-3 w-3 mr-1" />Fixe</>

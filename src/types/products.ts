@@ -13,7 +13,6 @@ export interface Product {
   // Pour produits à commission
   commission_rate?: number;
 
-  category?: string;
   is_active: boolean;
   created_by?: string;
   created_at: string;
@@ -81,7 +80,6 @@ export interface ProductForm {
   type: 'fixed' | 'commission';
   fixed_value?: number;
   commission_rate?: number;
-  category?: string; // Optionnel, libre
 }
 
 export interface DealProductForm {
