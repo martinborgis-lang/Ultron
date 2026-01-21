@@ -11,6 +11,8 @@ import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { AlertDialogCustom } from '@/components/ui/alert-dialog-custom';
 import { toast } from 'sonner';
 import {
   ShoppingCart, Plus, Edit, Trash2, Euro, Percent,
@@ -54,6 +56,12 @@ export function ProductsManager({ organizationId }: ProductsManagerProps) {
     commission_rate: '',
     is_default: false
   });
+
+  // États pour les modales personnalisées
+  const [showConfirmDelete, setShowConfirmDelete] = useState(false);
+  const [showConflictAlert, setShowConflictAlert] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<{ type: 'product' | 'commission', item: any } | null>(null);
+  const [conflictDetails, setConflictDetails] = useState<string[]>([]);
 
   useEffect(() => {
     fetchData();
@@ -133,9 +141,12 @@ export function ProductsManager({ organizationId }: ProductsManagerProps) {
     }
   };
 
-  const handleDeleteProduct = async (product: Product) => {
-    if (!confirm(`Supprimer le produit "${product.name}" ?`)) return;
+  const handleDeleteProduct = (product: Product) => {
+    setDeleteTarget({ type: 'product', item: product });
+    setShowConfirmDelete(true);
+  };
 
+  const confirmDeleteProduct = async (product: Product) => {
     try {
       const response = await fetch(`/api/products/${product.id}`, {
         method: 'DELETE'
@@ -182,13 +193,20 @@ export function ProductsManager({ organizationId }: ProductsManagerProps) {
         }
       }
 
-      // Si des conflits sont détectés, afficher un message d'erreur détaillé
+      // Si des conflits sont détectés, afficher une modale d'erreur personnalisée
       if (conflicts.length > 0) {
-        const conflictDetails = conflicts.map(c =>
+        const details = conflicts.map(c =>
           `• ${c.advisorName} a déjà une commission de ${c.currentRate}% pour "${c.productName}"`
-        ).join('\n');
+        );
 
-        alert(`Conflits détectés :\n\n${conflictDetails}\n\nVeuillez supprimer ces commissions existantes avant d'en créer de nouvelles.`);
+        setConflictDetails([
+          'Conflits détectés :',
+          '',
+          ...details,
+          '',
+          'Veuillez supprimer ces commissions existantes avant d\'en créer de nouvelles.'
+        ]);
+        setShowConflictAlert(true);
         return;
       }
 
@@ -240,9 +258,12 @@ export function ProductsManager({ organizationId }: ProductsManagerProps) {
     });
   };
 
-  const handleDeleteCommission = async (commission: AdvisorCommission) => {
-    if (!confirm(`Supprimer la commission de ${commission.user?.full_name} (${commission.commission_rate}%) ?`)) return;
+  const handleDeleteCommission = (commission: AdvisorCommission) => {
+    setDeleteTarget({ type: 'commission', item: commission });
+    setShowConfirmDelete(true);
+  };
 
+  const confirmDeleteCommission = async (commission: AdvisorCommission) => {
     try {
       const response = await fetch(`/api/advisor-commissions/${commission.id}`, {
         method: 'DELETE'
@@ -258,6 +279,17 @@ export function ProductsManager({ organizationId }: ProductsManagerProps) {
       fetchData();
     } catch (error: any) {
       toast.error(error.message || 'Erreur lors de la suppression');
+    }
+  };
+
+  const handleConfirmAction = () => {
+    if (deleteTarget) {
+      if (deleteTarget.type === 'product') {
+        confirmDeleteProduct(deleteTarget.item);
+      } else if (deleteTarget.type === 'commission') {
+        confirmDeleteCommission(deleteTarget.item);
+      }
+      setDeleteTarget(null);
     }
   };
 
@@ -306,6 +338,7 @@ export function ProductsManager({ organizationId }: ProductsManagerProps) {
   }
 
   return (
+    <>
     <Tabs defaultValue="products" className="space-y-6">
       <TabsList className="grid w-full grid-cols-2">
         <TabsTrigger value="products" className="flex items-center gap-2">
@@ -648,5 +681,36 @@ export function ProductsManager({ organizationId }: ProductsManagerProps) {
         </Card>
       </TabsContent>
     </Tabs>
+
+      {/* Modale de confirmation de suppression */}
+      <ConfirmDialog
+        open={showConfirmDelete}
+        onOpenChange={setShowConfirmDelete}
+        title={
+          deleteTarget?.type === 'product'
+            ? 'Supprimer le produit'
+            : 'Supprimer la commission'
+        }
+        description={
+          deleteTarget?.type === 'product'
+            ? `Êtes-vous sûr de vouloir supprimer le produit "${deleteTarget.item?.name}" ? Cette action est irréversible.`
+            : `Êtes-vous sûr de vouloir supprimer la commission de ${deleteTarget?.item?.user?.full_name} (${deleteTarget?.item?.commission_rate}%) ? Cette action est irréversible.`
+        }
+        confirmText="Supprimer"
+        cancelText="Annuler"
+        variant="destructive"
+        onConfirm={handleConfirmAction}
+      />
+
+      {/* Modale d'alerte pour les conflits */}
+      <AlertDialogCustom
+        open={showConflictAlert}
+        onOpenChange={setShowConflictAlert}
+        title="Conflits détectés"
+        description={conflictDetails}
+        variant="error"
+        buttonText="Compris"
+      />
+    </>
   );
 }
