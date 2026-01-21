@@ -45,27 +45,27 @@ export function AlertsPanel({ alerts }: AlertsPanelProps) {
   const getSeverityColor = (severity: string) => {
     switch (severity) {
       case 'high':
-        return 'text-red-600';
+        return 'text-red-600 dark:text-red-400';
       case 'medium':
-        return 'text-yellow-600';
+        return 'text-yellow-600 dark:text-yellow-400';
       case 'low':
-        return 'text-blue-600';
+        return 'text-blue-600 dark:text-blue-400';
       default:
-        return 'text-gray-600';
+        return 'text-gray-600 dark:text-gray-400';
     }
   };
 
   if (alerts.length === 0) {
     return (
-      <Card className="border-green-200 bg-green-50">
+      <Card className="border-green-500 dark:border-green-400 bg-card">
         <CardContent className="p-6">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-green-100 rounded-full">
-              <AlertCircle className="h-5 w-5 text-green-600" />
+            <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-full border border-green-200 dark:border-green-800">
+              <AlertCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
             </div>
             <div>
-              <h3 className="font-medium text-green-900">Tout va bien !</h3>
-              <p className="text-sm text-green-700">
+              <h3 className="font-medium text-green-900 dark:text-green-100">Tout va bien !</h3>
+              <p className="text-sm text-green-700 dark:text-green-300">
                 Aucune alerte critique détectée dans votre cabinet.
               </p>
             </div>
@@ -80,7 +80,7 @@ export function AlertsPanel({ alerts }: AlertsPanelProps) {
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2">
-            <AlertTriangle className="h-5 w-5 text-orange-500" />
+            <AlertTriangle className="h-5 w-5 text-orange-500 dark:text-orange-400" />
             Alertes & Points d'Attention
             <Badge variant="destructive" className="ml-2">
               {alerts.filter(a => a.severity === 'high').length}
@@ -149,32 +149,32 @@ export function AlertsPanel({ alerts }: AlertsPanelProps) {
         </div>
 
         {/* Résumé des alertes par type */}
-        <div className="mt-6 pt-4 border-t">
+        <div className="mt-6 pt-4 border-t border-border">
           <h4 className="font-medium mb-3">Résumé</h4>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-            <div className="p-3 bg-red-50 rounded-lg">
-              <div className="text-lg font-bold text-red-700">
+            <div className="p-3 bg-red-50/50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
+              <div className="text-lg font-bold text-red-700 dark:text-red-300">
                 {alerts.filter(a => a.severity === 'high').length}
               </div>
-              <div className="text-xs text-red-600">Critiques</div>
+              <div className="text-xs text-red-600 dark:text-red-400">Critiques</div>
             </div>
-            <div className="p-3 bg-yellow-50 rounded-lg">
-              <div className="text-lg font-bold text-yellow-700">
+            <div className="p-3 bg-yellow-50/50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
+              <div className="text-lg font-bold text-yellow-700 dark:text-yellow-300">
                 {alerts.filter(a => a.severity === 'medium').length}
               </div>
-              <div className="text-xs text-yellow-600">Importantes</div>
+              <div className="text-xs text-yellow-600 dark:text-yellow-400">Importantes</div>
             </div>
-            <div className="p-3 bg-blue-50 rounded-lg">
-              <div className="text-lg font-bold text-blue-700">
+            <div className="p-3 bg-blue-50/50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+              <div className="text-lg font-bold text-blue-700 dark:text-blue-300">
                 {alerts.filter(a => a.severity === 'low').length}
               </div>
-              <div className="text-xs text-blue-600">Informations</div>
+              <div className="text-xs text-blue-600 dark:text-blue-400">Informations</div>
             </div>
-            <div className="p-3 bg-gray-50 rounded-lg">
-              <div className="text-lg font-bold text-gray-700">
+            <div className="p-3 bg-gray-50/50 dark:bg-gray-900/20 rounded-lg border border-gray-200 dark:border-gray-800">
+              <div className="text-lg font-bold text-gray-700 dark:text-gray-300">
                 {new Set(alerts.filter(a => a.advisor_id).map(a => a.advisor_id)).size}
               </div>
-              <div className="text-xs text-gray-600">Conseillers concernés</div>
+              <div className="text-xs text-gray-600 dark:text-gray-400">Conseillers concernés</div>
             </div>
           </div>
         </div>

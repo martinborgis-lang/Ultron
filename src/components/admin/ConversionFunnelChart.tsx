@@ -177,7 +177,7 @@ export function ConversionFunnelChart({ period }: ConversionFunnelChartProps) {
               })
               .slice(0, 3)
               .map((advisor, advisorIndex) => (
-                <div key={advisor.advisor_id} className="p-4 bg-gray-50 rounded-lg">
+                <div key={advisor.advisor_id} className="p-4 bg-gray-50/50 dark:bg-gray-900/20 rounded-lg border border-gray-200 dark:border-gray-800">
                   <div className="flex items-center justify-between mb-3">
                     <h5 className="font-medium">{advisor.advisor_name}</h5>
                     <Badge variant={advisorIndex === 0 ? 'default' : 'secondary'}>
@@ -192,8 +192,8 @@ export function ConversionFunnelChart({ period }: ConversionFunnelChartProps) {
                         <div className="text-muted-foreground">{stage.stage_name}</div>
                         {stageIndex > 0 && (
                           <div className={`mt-1 font-medium ${
-                            stage.conversion_rate > 70 ? 'text-green-600' :
-                            stage.conversion_rate > 40 ? 'text-yellow-600' : 'text-red-600'
+                            stage.conversion_rate > 70 ? 'text-green-600 dark:text-green-400' :
+                            stage.conversion_rate > 40 ? 'text-yellow-600 dark:text-yellow-400' : 'text-red-600 dark:text-red-400'
                           }`}>
                             {stage.conversion_rate.toFixed(0)}%
                           </div>
@@ -207,15 +207,15 @@ export function ConversionFunnelChart({ period }: ConversionFunnelChartProps) {
         </div>
 
         {/* Insights et recommandations */}
-        <div className="mt-8 pt-6 border-t">
+        <div className="mt-8 pt-6 border-t border-border">
           <h4 className="font-medium mb-4">Insights</h4>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
             {globalStages.slice(1).map((stage, index) => {
               if (stage.conversion_rate < 40) {
                 return (
-                  <div key={stage.stage} className="p-3 bg-red-50 border border-red-200 rounded">
-                    <div className="font-medium text-red-800">⚠️ Attention: {stage.stage_name}</div>
-                    <div className="text-red-700">
+                  <div key={stage.stage} className="p-3 bg-red-50/50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded">
+                    <div className="font-medium text-red-800 dark:text-red-300">⚠️ Attention: {stage.stage_name}</div>
+                    <div className="text-red-700 dark:text-red-400">
                       Seulement {stage.conversion_rate.toFixed(1)}% de conversion.
                       Considérez une formation ou un audit du processus.
                     </div>
@@ -226,9 +226,9 @@ export function ConversionFunnelChart({ period }: ConversionFunnelChartProps) {
             })}
 
             {globalStages.every(stage => stage.conversion_rate > 70 || stage.stage === 'contact') && (
-              <div className="p-3 bg-green-50 border border-green-200 rounded">
-                <div className="font-medium text-green-800">✅ Excellent processus</div>
-                <div className="text-green-700">
+              <div className="p-3 bg-green-50/50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded">
+                <div className="font-medium text-green-800 dark:text-green-300">✅ Excellent processus</div>
+                <div className="text-green-700 dark:text-green-400">
                   Toutes les étapes de conversion sont au-dessus de 70%.
                   Continuez sur cette lancée !
                 </div>

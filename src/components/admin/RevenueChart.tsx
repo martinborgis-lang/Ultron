@@ -102,12 +102,12 @@ export function RevenueChart({ period }: RevenueChartProps) {
       <CardContent>
         {/* Métriques globales */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-          <div className="p-4 bg-green-50 rounded-lg border border-green-200">
+          <div className="p-4 bg-green-50/50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
             <div className="flex items-center gap-2 mb-2">
-              <Euro className="h-4 w-4 text-green-600" />
-              <span className="text-sm font-medium text-green-800">CA Total</span>
+              <Euro className="h-4 w-4 text-green-600 dark:text-green-400" />
+              <span className="text-sm font-medium text-green-800 dark:text-green-300">CA Total</span>
             </div>
-            <div className="text-2xl font-bold text-green-900">
+            <div className="text-2xl font-bold text-green-900 dark:text-green-100">
               {new Intl.NumberFormat('fr-FR', {
                 style: 'currency',
                 currency: 'EUR',
@@ -116,20 +116,20 @@ export function RevenueChart({ period }: RevenueChartProps) {
             </div>
           </div>
 
-          <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+          <div className="p-4 bg-blue-50/50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
             <div className="flex items-center gap-2 mb-2">
-              <BarChart3 className="h-4 w-4 text-blue-600" />
-              <span className="text-sm font-medium text-blue-800">Deals Signés</span>
+              <BarChart3 className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+              <span className="text-sm font-medium text-blue-800 dark:text-blue-300">Deals Signés</span>
             </div>
-            <div className="text-2xl font-bold text-blue-900">{totalDeals}</div>
+            <div className="text-2xl font-bold text-blue-900 dark:text-blue-100">{totalDeals}</div>
           </div>
 
-          <div className="p-4 bg-purple-50 rounded-lg border border-purple-200">
+          <div className="p-4 bg-purple-50/50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-800">
             <div className="flex items-center gap-2 mb-2">
-              <TrendingUp className="h-4 w-4 text-purple-600" />
-              <span className="text-sm font-medium text-purple-800">Ticket Moyen</span>
+              <TrendingUp className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+              <span className="text-sm font-medium text-purple-800 dark:text-purple-300">Ticket Moyen</span>
             </div>
-            <div className="text-2xl font-bold text-purple-900">
+            <div className="text-2xl font-bold text-purple-900 dark:text-purple-100">
               {new Intl.NumberFormat('fr-FR', {
                 style: 'currency',
                 currency: 'EUR',
@@ -155,7 +155,7 @@ export function RevenueChart({ period }: RevenueChartProps) {
             const trend = firstWeekRevenue > 0 ? ((lastWeekRevenue - firstWeekRevenue) / firstWeekRevenue) * 100 : 0;
 
             return (
-              <div key={advisor.advisor_id} className="p-4 border rounded-lg">
+              <div key={advisor.advisor_id} className="p-4 border border-border rounded-lg bg-card">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-3">
                     <div className={`w-3 h-3 rounded-full ${
@@ -179,7 +179,7 @@ export function RevenueChart({ period }: RevenueChartProps) {
                       }).format(totalAdvisorRevenue)}
                     </div>
                     <div className={`text-sm flex items-center gap-1 ${
-                      trend > 0 ? 'text-green-600' : trend < 0 ? 'text-red-600' : 'text-gray-600'
+                      trend > 0 ? 'text-green-600 dark:text-green-400' : trend < 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-600 dark:text-gray-400'
                     }`}>
                       <TrendingUp className={`h-3 w-3 ${trend < 0 ? 'rotate-180' : ''}`} />
                       {trend > 0 ? '+' : ''}{trend.toFixed(1)}%
@@ -212,7 +212,7 @@ export function RevenueChart({ period }: RevenueChartProps) {
                 </div>
 
                 {/* Graphique simple en barres pour les 7 derniers jours */}
-                <div className="mt-4 pt-4 border-t">
+                <div className="mt-4 pt-4 border-t border-border">
                   <div className="text-xs text-muted-foreground mb-2">7 derniers jours</div>
                   <div className="flex items-end gap-1 h-16">
                     {advisor.data.slice(-7).map((point, dayIndex) => {
@@ -223,7 +223,7 @@ export function RevenueChart({ period }: RevenueChartProps) {
                         <div key={dayIndex} className="flex-1 flex flex-col items-center">
                           <div
                             className={`w-full rounded-t transition-all ${
-                              point.revenue > 0 ? 'bg-green-500' : 'bg-gray-200'
+                              point.revenue > 0 ? 'bg-green-500 dark:bg-green-400' : 'bg-gray-200 dark:bg-gray-700'
                             }`}
                             style={{ height: `${Math.max(height, 2)}%` }}
                             title={`${new Date(point.date).toLocaleDateString('fr-FR')}: ${
@@ -248,14 +248,14 @@ export function RevenueChart({ period }: RevenueChartProps) {
         </div>
 
         {/* Insights */}
-        <div className="mt-8 pt-6 border-t">
+        <div className="mt-8 pt-6 border-t border-border">
           <h4 className="font-medium mb-4">Insights Revenus</h4>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
             {/* Top performer */}
             {sortedAdvisors.length > 0 && (
-              <div className="p-3 bg-green-50 border border-green-200 rounded">
-                <div className="font-medium text-green-800">🏆 Top Performer</div>
-                <div className="text-green-700">
+              <div className="p-3 bg-green-50/50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded">
+                <div className="font-medium text-green-800 dark:text-green-300">🏆 Top Performer</div>
+                <div className="text-green-700 dark:text-green-400">
                   {sortedAdvisors[0].advisor_name} génère{' '}
                   {((sortedAdvisors[0].data.reduce((s, p) => s + p.revenue, 0) / totalRevenue) * 100).toFixed(0)}%
                   {' '}du CA total
@@ -265,9 +265,9 @@ export function RevenueChart({ period }: RevenueChartProps) {
 
             {/* Concentration du CA */}
             {sortedAdvisors.length > 2 && (
-              <div className="p-3 bg-blue-50 border border-blue-200 rounded">
-                <div className="font-medium text-blue-800">📊 Concentration</div>
-                <div className="text-blue-700">
+              <div className="p-3 bg-blue-50/50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded">
+                <div className="font-medium text-blue-800 dark:text-blue-300">📊 Concentration</div>
+                <div className="text-blue-700 dark:text-blue-400">
                   Les 3 premiers conseillers génèrent{' '}
                   {(
                     (sortedAdvisors.slice(0, 3).reduce((sum, advisor) =>

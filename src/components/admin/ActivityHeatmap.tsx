@@ -86,12 +86,12 @@ export function ActivityHeatmap({ period }: ActivityHeatmapProps) {
 
   const getIntensityColor = (score: number) => {
     const intensity = score / maxScore;
-    if (intensity === 0) return 'bg-gray-100';
-    if (intensity <= 0.2) return 'bg-green-100';
-    if (intensity <= 0.4) return 'bg-green-200';
-    if (intensity <= 0.6) return 'bg-green-300';
-    if (intensity <= 0.8) return 'bg-green-400';
-    return 'bg-green-500';
+    if (intensity === 0) return 'bg-gray-100 dark:bg-gray-800';
+    if (intensity <= 0.2) return 'bg-green-100 dark:bg-green-900/30';
+    if (intensity <= 0.4) return 'bg-green-200 dark:bg-green-900/50';
+    if (intensity <= 0.6) return 'bg-green-300 dark:bg-green-800/70';
+    if (intensity <= 0.8) return 'bg-green-400 dark:bg-green-700';
+    return 'bg-green-500 dark:bg-green-600';
   };
 
   const getActivityLevel = (score: number) => {
@@ -115,7 +115,7 @@ export function ActivityHeatmap({ period }: ActivityHeatmapProps) {
       </CardHeader>
       <CardContent>
         {/* Légende */}
-        <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+        <div className="mb-6 p-4 bg-gray-50/50 dark:bg-gray-900/20 rounded-lg border border-gray-200 dark:border-gray-800">
           <div className="flex items-center justify-between mb-2">
             <h4 className="font-medium text-sm">Niveau d'activité</h4>
             <div className="text-xs text-muted-foreground">
@@ -126,16 +126,16 @@ export function ActivityHeatmap({ period }: ActivityHeatmapProps) {
             <span className="text-xs">Faible</span>
             <div className="flex gap-1">
               {[
-                'bg-gray-100',
-                'bg-green-100',
-                'bg-green-200',
-                'bg-green-300',
-                'bg-green-400',
-                'bg-green-500'
+                'bg-gray-100 dark:bg-gray-800',
+                'bg-green-100 dark:bg-green-900/30',
+                'bg-green-200 dark:bg-green-900/50',
+                'bg-green-300 dark:bg-green-800/70',
+                'bg-green-400 dark:bg-green-700',
+                'bg-green-500 dark:bg-green-600'
               ].map((color, index) => (
                 <div
                   key={index}
-                  className={`w-3 h-3 rounded ${color} border border-gray-300`}
+                  className={`w-3 h-3 rounded ${color} border border-gray-300 dark:border-gray-600`}
                 />
               ))}
             </div>
@@ -185,12 +185,12 @@ export function ActivityHeatmap({ period }: ActivityHeatmapProps) {
                 {advisor.daily_activity.slice(-daysToShow).map((day, index) => (
                   <div
                     key={index}
-                    className={`flex-1 h-12 rounded border border-gray-300 ${getIntensityColor(day.total_score)}
+                    className={`flex-1 h-12 rounded border border-gray-300 dark:border-gray-600 ${getIntensityColor(day.total_score)}
                       cursor-pointer transition-all hover:scale-110 hover:z-10 relative group`}
                     title={`${new Date(day.date).toLocaleDateString('fr-FR')}\n${day.calls} appels, ${day.emails} emails, ${day.meetings} meetings\nScore: ${day.total_score}`}
                   >
                     {/* Tooltip au hover */}
-                    <div className="invisible group-hover:visible absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-black text-white text-xs rounded whitespace-nowrap z-20">
+                    <div className="invisible group-hover:visible absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-black dark:bg-gray-900 text-white text-xs rounded whitespace-nowrap z-20 border border-gray-600">
                       <div>{new Date(day.date).toLocaleDateString('fr-FR')}</div>
                       <div>{day.calls} appels • {day.emails} emails • {day.meetings} RDV</div>
                       <div>Score: {day.total_score}</div>
@@ -217,39 +217,39 @@ export function ActivityHeatmap({ period }: ActivityHeatmapProps) {
         </div>
 
         {/* Stats globales */}
-        <div className="mt-8 pt-6 border-t">
+        <div className="mt-8 pt-6 border-t border-border">
           <h4 className="font-medium mb-4">Statistiques d'Activité</h4>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="p-4 bg-blue-50 rounded-lg text-center">
-              <Phone className="h-5 w-5 text-blue-600 mx-auto mb-2" />
-              <div className="text-lg font-bold text-blue-900">
+            <div className="p-4 bg-blue-50/50 dark:bg-blue-900/20 rounded-lg text-center border border-blue-200 dark:border-blue-800">
+              <Phone className="h-5 w-5 text-blue-600 dark:text-blue-400 mx-auto mb-2" />
+              <div className="text-lg font-bold text-blue-900 dark:text-blue-100">
                 {sortedAdvisors.reduce((sum, a) => sum + a.totalCalls, 0)}
               </div>
-              <div className="text-sm text-blue-700">Appels Total</div>
+              <div className="text-sm text-blue-700 dark:text-blue-300">Appels Total</div>
             </div>
 
-            <div className="p-4 bg-green-50 rounded-lg text-center">
-              <Mail className="h-5 w-5 text-green-600 mx-auto mb-2" />
-              <div className="text-lg font-bold text-green-900">
+            <div className="p-4 bg-green-50/50 dark:bg-green-900/20 rounded-lg text-center border border-green-200 dark:border-green-800">
+              <Mail className="h-5 w-5 text-green-600 dark:text-green-400 mx-auto mb-2" />
+              <div className="text-lg font-bold text-green-900 dark:text-green-100">
                 {sortedAdvisors.reduce((sum, a) => sum + a.totalEmails, 0)}
               </div>
-              <div className="text-sm text-green-700">Emails Total</div>
+              <div className="text-sm text-green-700 dark:text-green-300">Emails Total</div>
             </div>
 
-            <div className="p-4 bg-purple-50 rounded-lg text-center">
-              <Calendar className="h-5 w-5 text-purple-600 mx-auto mb-2" />
-              <div className="text-lg font-bold text-purple-900">
+            <div className="p-4 bg-purple-50/50 dark:bg-purple-900/20 rounded-lg text-center border border-purple-200 dark:border-purple-800">
+              <Calendar className="h-5 w-5 text-purple-600 dark:text-purple-400 mx-auto mb-2" />
+              <div className="text-lg font-bold text-purple-900 dark:text-purple-100">
                 {sortedAdvisors.reduce((sum, a) => sum + a.totalMeetings, 0)}
               </div>
-              <div className="text-sm text-purple-700">Meetings Total</div>
+              <div className="text-sm text-purple-700 dark:text-purple-300">Meetings Total</div>
             </div>
 
-            <div className="p-4 bg-yellow-50 rounded-lg text-center">
-              <Activity className="h-5 w-5 text-yellow-600 mx-auto mb-2" />
-              <div className="text-lg font-bold text-yellow-900">
+            <div className="p-4 bg-yellow-50/50 dark:bg-yellow-900/20 rounded-lg text-center border border-yellow-200 dark:border-yellow-800">
+              <Activity className="h-5 w-5 text-yellow-600 dark:text-yellow-400 mx-auto mb-2" />
+              <div className="text-lg font-bold text-yellow-900 dark:text-yellow-100">
                 {(sortedAdvisors.reduce((sum, a) => sum + a.avgDailyScore, 0) / sortedAdvisors.length).toFixed(1)}
               </div>
-              <div className="text-sm text-yellow-700">Score Moyen/Jour</div>
+              <div className="text-sm text-yellow-700 dark:text-yellow-300">Score Moyen/Jour</div>
             </div>
           </div>
         </div>
@@ -258,9 +258,9 @@ export function ActivityHeatmap({ period }: ActivityHeatmapProps) {
         <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
           {/* Conseiller le plus actif */}
           {sortedAdvisors.length > 0 && (
-            <div className="p-3 bg-green-50 border border-green-200 rounded">
-              <div className="font-medium text-green-800">🏆 Plus Actif</div>
-              <div className="text-green-700">
+            <div className="p-3 bg-green-50/50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded">
+              <div className="font-medium text-green-800 dark:text-green-300">🏆 Plus Actif</div>
+              <div className="text-green-700 dark:text-green-400">
                 {sortedAdvisors[0].advisor_name} avec un score de {sortedAdvisors[0].totalScore}
               </div>
             </div>
@@ -268,9 +268,9 @@ export function ActivityHeatmap({ period }: ActivityHeatmapProps) {
 
           {/* Constance d'activité */}
           {sortedAdvisors.length > 0 && (
-            <div className="p-3 bg-blue-50 border border-blue-200 rounded">
-              <div className="font-medium text-blue-800">📅 Plus Constant</div>
-              <div className="text-blue-700">
+            <div className="p-3 bg-blue-50/50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded">
+              <div className="font-medium text-blue-800 dark:text-blue-300">📅 Plus Constant</div>
+              <div className="text-blue-700 dark:text-blue-400">
                 {sortedAdvisors
                   .sort((a, b) => b.activeDays - a.activeDays)[0]
                   ?.advisor_name} avec {sortedAdvisors
