@@ -1,3 +1,36 @@
+/**
+ * Footer simplifié pour les emails Ultron
+ * Les emails Ultron sont des échanges relationnels conseiller-prospect
+ * et non du mass mailing marketing. Le lien de désinscription n'est donc pas obligatoire.
+ */
+
+/**
+ * Footer simple et professionnel (optionnel)
+ * Le conseiller peut ajouter sa propre signature professionnelle
+ */
+export function getSimpleEmailFooter(): string {
+  return `
+<div style="margin-top: 30px; padding-top: 15px; border-top: 1px solid #e5e7eb; font-size: 11px; color: #9ca3af; text-align: center;">
+  <a href="https://ultron-murex.vercel.app/privacy" style="color: #9ca3af; text-decoration: none;">Politique de confidentialité</a>
+</div>`;
+}
+
+/**
+ * Footer texte simple (pour emails plain text)
+ */
+export function getSimpleEmailFooterText(): string {
+  return `
+---
+Politique de confidentialité : https://ultron-murex.vercel.app/privacy`;
+}
+
+// ============================================================================
+// ANCIENNES FONCTIONS CONSERVÉES POUR RÉFÉRENCE (DÉSACTIVÉES)
+// Ces fonctions ne sont plus utilisées car les emails Ultron sont des
+// échanges relationnels et non du mass mailing
+// ============================================================================
+
+/*
 import { generateUnsubscribeUrl } from './unsubscribe-token';
 
 interface FooterParams {
@@ -6,9 +39,7 @@ interface FooterParams {
   organizationId: string;
 }
 
-/**
- * Génère le footer RGPD obligatoire pour les emails
- */
+// Fonction désactivée - Plus utilisée
 export function generateEmailFooter(params: FooterParams): string {
   const unsubscribeUrl = generateUnsubscribeUrl(params);
 
@@ -28,9 +59,7 @@ export function generateEmailFooter(params: FooterParams): string {
 </div>`;
 }
 
-/**
- * Version texte pour emails plain text
- */
+// Fonction désactivée - Plus utilisée
 export function generateEmailFooterText(params: FooterParams): string {
   const unsubscribeUrl = generateUnsubscribeUrl(params);
 
@@ -41,3 +70,4 @@ Se désinscrire : ${unsubscribeUrl}
 Politique de confidentialité : https://ultron-murex.vercel.app/privacy
 Martin Borgis – 42 rue Gilbert Cesbron, 75017 Paris`;
 }
+*/

@@ -38,10 +38,6 @@ export default function PlanningPage() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchEvents();
-  }, [filter, view]);
-
   const fetchEvents = async () => {
     setLoading(true);
     try {
@@ -58,6 +54,10 @@ export default function PlanningPage() {
     }
     setLoading(false);
   };
+
+  useEffect(() => {
+    fetchEvents();
+  }, [filter, view]);
 
   const handleComplete = async (id: string, completed: boolean) => {
     try {

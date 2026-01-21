@@ -1,5 +1,6 @@
 import { createAdminClient } from '@/lib/supabase-admin';
 import { IPlanningService, PlanningEvent, PlanningFilters } from '../interfaces';
+import type { PlanningEventDbRecord } from '@/types/database';
 import {
   createCalendarEvent,
   updateCalendarEvent,
@@ -15,7 +16,7 @@ export class CrmPlanningService implements IPlanningService {
     private userId: string
   ) {}
 
-  private mapDbToEvent(row: any): PlanningEvent {
+  private mapDbToEvent(row: PlanningEventDbRecord): PlanningEvent {
     return {
       id: row.id,
       type: row.type || 'task',
@@ -249,7 +250,7 @@ export class CrmPlanningService implements IPlanningService {
   }
 
   async update(id: string, data: Partial<PlanningEvent>): Promise<PlanningEvent> {
-    const updateData: Record<string, any> = {
+    const updateData: Record<string, unknown> = {
       updated_at: new Date().toISOString(),
     };
 

@@ -5,7 +5,7 @@ import { getCurrentUserAndOrganization } from '@/lib/services/get-organization';
 
 export const dynamic = 'force-dynamic';
 import { ThresholdConfigForm } from '@/components/settings/ThresholdConfigForm';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Settings, AlertTriangle } from 'lucide-react';
 

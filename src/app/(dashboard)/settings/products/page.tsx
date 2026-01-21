@@ -2,7 +2,7 @@ import { Suspense } from 'react';
 import { getCurrentUserAndOrganization } from '@/lib/services/get-organization';
 import { redirect } from 'next/navigation';
 import { ProductsManager } from '@/components/settings/ProductsManager';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ShoppingCart, AlertTriangle } from 'lucide-react';
 

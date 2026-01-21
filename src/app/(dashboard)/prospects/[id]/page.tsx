@@ -29,6 +29,7 @@ import {
 import { ActivityTimeline } from '@/components/crm/ActivityTimeline';
 import { ProspectTasks } from '@/components/crm/ProspectTasks';
 import { CrmProspect, CrmActivity, CrmTask, PipelineStage } from '@/types/crm';
+import { EmailLog } from '@/types/email';
 import {
   ArrowLeft,
   Mail,
@@ -74,7 +75,7 @@ export default function ProspectDetailPage() {
   const [activities, setActivities] = useState<CrmActivity[]>([]);
   const [tasks, setTasks] = useState<CrmTask[]>([]);
   const [stages, setStages] = useState<PipelineStage[]>([]);
-  const [emails, setEmails] = useState<any[]>([]);
+  const [emails, setEmails] = useState<EmailLog[]>([]);
   const [expandedEmails, setExpandedEmails] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -298,8 +299,8 @@ export default function ProspectDetailPage() {
 
   // Calculate revenus mensuels from revenus annuels
   const getRevenusMensuels = () => {
-    if ((prospect as any)?.revenus_mensuels) {
-      return (prospect as any).revenus_mensuels;
+    if (prospect && 'revenus_mensuels' in prospect) {
+      return prospect.revenus_mensuels as number;
     }
     if (prospect?.revenus_annuels) {
       return Math.round(prospect.revenus_annuels / 12);

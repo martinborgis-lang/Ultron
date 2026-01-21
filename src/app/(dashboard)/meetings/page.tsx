@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
 import { FileText, Clock, User, Calendar, ChevronRight, Download, Trash2, Search, X, Bot } from 'lucide-react';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { cn } from '@/lib/utils';
@@ -49,10 +48,6 @@ export default function MeetingsPage() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchTranscripts();
-  }, []);
-
   const fetchTranscripts = async () => {
     setLoading(true);
     try {
@@ -66,6 +61,10 @@ export default function MeetingsPage() {
     }
     setLoading(false);
   };
+
+  useEffect(() => {
+    fetchTranscripts();
+  }, []);
 
   const loadTranscriptDetail = async (id: string) => {
     setLoadingDetail(true);

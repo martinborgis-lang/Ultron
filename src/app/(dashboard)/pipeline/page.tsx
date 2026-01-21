@@ -203,7 +203,6 @@ export default function PipelinePage() {
 
     setLoading(true);
     fetchInitialData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Debounced search
@@ -215,8 +214,7 @@ export default function PipelinePage() {
     }, 500);
 
     return () => clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search]);
+  }, [search, fetchData]);
 
   const handleRefresh = () => {
     fetchData(search);
@@ -332,7 +330,7 @@ export default function PipelinePage() {
 
       // Refresh to sync with server
       await fetchData(search);
-    } catch (error) {
+    } catch (_error) {
       // Rollback on error - refresh to get actual state
       await fetchData(search);
       toast({
@@ -489,7 +487,7 @@ export default function PipelinePage() {
       });
 
       await fetchData(search);
-    } catch (error) {
+    } catch (_error) {
       await fetchData(search);
       toast({
         title: 'Erreur',

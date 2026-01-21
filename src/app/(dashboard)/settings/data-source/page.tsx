@@ -13,10 +13,6 @@ export default function DataSourceSettings() {
   const [originalMode, setOriginalMode] = useState<'sheet' | 'crm'>('crm');
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
-  useEffect(() => {
-    fetchCurrentSettings();
-  }, []);
-
   const fetchCurrentSettings = async () => {
     try {
       const res = await fetch('/api/settings/data-source');
@@ -31,6 +27,10 @@ export default function DataSourceSettings() {
     }
     setLoading(false);
   };
+
+  useEffect(() => {
+    fetchCurrentSettings();
+  }, []);
 
   const handleSave = async () => {
     setSaving(true);
@@ -53,7 +53,7 @@ export default function DataSourceSettings() {
         const error = await res.json();
         setMessage({ type: 'error', text: error.error || 'Erreur lors de la sauvegarde' });
       }
-    } catch (error) {
+    } catch (_error) {
       setMessage({ type: 'error', text: 'Erreur de connexion' });
     }
 

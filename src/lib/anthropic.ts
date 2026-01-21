@@ -6,7 +6,7 @@ import {
   validateProspectForPrompt
 } from '@/lib/validation/prompt-injection-protection';
 import EmailSecurityValidator from '@/lib/validation/email-security';
-import { generateEmailFooter } from '@/lib/gdpr/email-footer';
+// import { generateEmailFooter } from '@/lib/gdpr/email-footer'; // Retiré - échanges relationnels, pas du mass mailing
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
@@ -587,15 +587,9 @@ export async function generateEmailWithConfig(
 
     const email = await generateEmail(systemPrompt, userPrompt);
 
-    // Add GDPR footer if parameters provided
-    if (gdprParams && prospectData.email) {
-      return addGDPRFooterToEmail(
-        email,
-        gdprParams.prospectId,
-        prospectData.email,
-        gdprParams.organizationId
-      );
-    }
+    // Pas de footer de désinscription automatique
+    // Les emails Ultron sont des échanges relationnels, pas du mass mailing
+    // Le conseiller ajoute sa propre signature professionnelle
 
     return email;
   }
@@ -606,15 +600,8 @@ export async function generateEmailWithConfig(
     corps: replaceVariables(promptConfig.fixedEmailBody, variables),
   };
 
-  // Add GDPR footer if parameters provided
-  if (gdprParams && prospectData.email) {
-    return addGDPRFooterToEmail(
-      email,
-      gdprParams.prospectId,
-      prospectData.email,
-      gdprParams.organizationId
-    );
-  }
+  // Pas de footer de désinscription automatique
+  // Les emails Ultron sont des échanges relationnels conseiller-prospect
 
   // ✅ SÉCURITÉ EMAIL: Validation finale avant retour de l'email généré
   const emailValidation = EmailSecurityValidator.validateFullEmail({
@@ -658,7 +645,8 @@ Retourne uniquement le JSON.`;
 }
 
 /**
- * Ajoute automatiquement le footer RGPD à un email
+ * Fonction simplifiée - Plus de footer de désinscription
+ * Les emails Ultron sont des échanges relationnels, pas du mass mailing
  */
 export function addGDPRFooterToEmail(
   email: EmailGenerated,
@@ -666,20 +654,14 @@ export function addGDPRFooterToEmail(
   prospectEmail: string,
   organizationId: string
 ): EmailGenerated {
-  const footer = generateEmailFooter({
-    prospectId,
-    email: prospectEmail,
-    organizationId,
-  });
-
-  return {
-    objet: email.objet,
-    corps: email.corps + footer,
-  };
+  // Pas de footer de désinscription pour les échanges relationnels
+  // Le conseiller ajoute sa propre signature professionnelle
+  return email;
 }
 
 /**
- * Génère un email avec footer RGPD automatique
+ * Génère un email sans footer de désinscription
+ * (échanges relationnels conseiller-prospect)
  */
 export async function generateEmailWithGDPR(
   systemPrompt: string,
@@ -688,6 +670,6 @@ export async function generateEmailWithGDPR(
   prospectEmail: string,
   organizationId: string
 ): Promise<EmailGenerated> {
-  const email = await generateEmail(systemPrompt, userPrompt);
-  return addGDPRFooterToEmail(email, prospectId, prospectEmail, organizationId);
+  // Pas de footer GDPR automatique pour les échanges relationnels
+  return await generateEmail(systemPrompt, userPrompt);
 }

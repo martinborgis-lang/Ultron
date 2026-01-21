@@ -1,13 +1,14 @@
 import { createAdminClient } from '@/lib/supabase-admin';
 import { IProspectService, ProspectData, ProspectFilters } from '../interfaces';
 import { validateStage, validateQualification, createSafeSearchPattern, validateUUID } from '@/lib/validation/sql-injection-protection';
+import type { CrmProspectDbRecord } from '@/types/database';
 
 export class CrmProspectService implements IProspectService {
   private supabase = createAdminClient();
 
   constructor(private organizationId: string) {}
 
-  private mapDbToProspect(row: any): ProspectData {
+  private mapDbToProspect(row: CrmProspectDbRecord): ProspectData {
     return {
       id: row.id,
       firstName: row.first_name || '',
