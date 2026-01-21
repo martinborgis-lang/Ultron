@@ -1,6 +1,8 @@
 import { google } from 'googleapis';
 import { GoogleCredentials, getValidCredentials } from './google';
 import { createAdminClient } from './supabase/admin';
+import EmailSecurityValidator from './validation/email-security';
+import EmailRateLimiter from './validation/email-rate-limiting';
 
 export interface EmailCredentialsResult {
   credentials: GoogleCredentials;
@@ -272,17 +274,38 @@ export interface EmailWithBufferAttachmentOptions extends EmailOptions {
 function createEmailMessage(options: EmailOptions): string {
   const { to, subject, body, from } = options;
 
+  // ✅ SÉCURITÉ EMAIL: Validation complète avant création du message
+  const emailValidation = EmailSecurityValidator.validateFullEmail({
+    to,
+    from,
+    subject,
+    body,
+  }, {
+    allowHtml: true,
+    maxLength: 50000,
+    strictMode: false,
+    checkPhishing: true,
+  });
+
+  if (!emailValidation.isValid) {
+    const report = EmailSecurityValidator.generateSecurityReport(emailValidation);
+    throw new Error(`Email security validation failed:\n${report}`);
+  }
+
+  // Utiliser les valeurs sécurisées
+  const sanitizedEmail = JSON.parse(emailValidation.sanitizedValue);
+
   // Build headers (filter out empty optional headers like From)
   const headers = [
-    `To: ${to}`,
-    from ? `From: ${from}` : null,
+    `To: ${sanitizedEmail.to}`,
+    sanitizedEmail.from ? `From: ${sanitizedEmail.from}` : null,
     'Content-Type: text/html; charset=utf-8',
     'MIME-Version: 1.0',
-    `Subject: =?UTF-8?B?${Buffer.from(subject).toString('base64')}?=`,
+    `Subject: =?UTF-8?B?${Buffer.from(sanitizedEmail.subject).toString('base64')}?=`,
   ].filter(Boolean);
 
   // MIME format requires blank line between headers and body
-  const email = headers.join('\r\n') + '\r\n\r\n' + body.replace(/\n/g, '<br>');
+  const email = headers.join('\r\n') + '\r\n\r\n' + sanitizedEmail.body.replace(/\n/g, '<br>');
   return Buffer.from(email).toString('base64url');
 }
 
@@ -291,6 +314,39 @@ async function createEmailWithAttachment(
 ): Promise<string> {
   const { to, subject, body, from, attachmentUrl, attachmentName } = options;
 
+  // ✅ SÉCURITÉ EMAIL: Validation complète avec attachement
+  const emailValidation = EmailSecurityValidator.validateFullEmail({
+    to,
+    from,
+    subject,
+    body,
+    attachmentName,
+  }, {
+    allowHtml: true,
+    maxLength: 50000,
+    strictMode: false,
+    checkPhishing: true,
+    allowAttachments: true,
+  });
+
+  if (!emailValidation.isValid) {
+    const report = EmailSecurityValidator.generateSecurityReport(emailValidation);
+    throw new Error(`Email security validation failed:\n${report}`);
+  }
+
+  // Utiliser les valeurs sécurisées
+  const sanitizedEmail = JSON.parse(emailValidation.sanitizedValue);
+
+  // ✅ VALIDATION URL ATTACHMENT: Vérifier que l'URL n'est pas malveillante
+  try {
+    const urlValidation = new URL(attachmentUrl);
+    if (!['https:', 'http:'].includes(urlValidation.protocol)) {
+      throw new Error('Invalid attachment URL protocol');
+    }
+  } catch {
+    throw new Error('Invalid attachment URL format');
+  }
+
   // Fetch the attachment
   const response = await fetch(attachmentUrl);
   if (!response.ok) {
@@ -298,6 +354,12 @@ async function createEmailWithAttachment(
   }
 
   const attachmentBuffer = await response.arrayBuffer();
+
+  // ✅ VALIDATION TAILLE ATTACHMENT
+  if (attachmentBuffer.byteLength > 25 * 1024 * 1024) { // 25MB limite Gmail
+    throw new Error('Attachment too large (max 25MB)');
+  }
+
   const attachmentBase64 = Buffer.from(attachmentBuffer).toString('base64');
   const mimeType = response.headers.get('content-type') || 'application/pdf';
 
@@ -305,15 +367,15 @@ async function createEmailWithAttachment(
 
   // Build headers (filter out empty optional headers like From)
   const headers = [
-    `To: ${to}`,
-    from ? `From: ${from}` : null,
+    `To: ${sanitizedEmail.to}`,
+    sanitizedEmail.from ? `From: ${sanitizedEmail.from}` : null,
     'MIME-Version: 1.0',
-    `Subject: =?UTF-8?B?${Buffer.from(subject).toString('base64')}?=`,
+    `Subject: =?UTF-8?B?${Buffer.from(sanitizedEmail.subject).toString('base64')}?=`,
     `Content-Type: multipart/mixed; boundary="${boundary}"`,
   ].filter(Boolean);
 
   // Build multipart body with proper MIME structure
-  const bodyContent = body.replace(/\n/g, '<br>');
+  const bodyContent = sanitizedEmail.body.replace(/\n/g, '<br>');
   const multipartBody = [
     `--${boundary}`,
     'Content-Type: text/html; charset=utf-8',
@@ -321,9 +383,9 @@ async function createEmailWithAttachment(
     bodyContent,
     '',
     `--${boundary}`,
-    `Content-Type: ${mimeType}; name="${attachmentName}"`,
+    `Content-Type: ${mimeType}; name="${sanitizedEmail.attachmentName}"`,
     'Content-Transfer-Encoding: base64',
-    `Content-Disposition: attachment; filename="${attachmentName}"`,
+    `Content-Disposition: attachment; filename="${sanitizedEmail.attachmentName}"`,
     '',
     attachmentBase64,
     '',
@@ -337,8 +399,36 @@ async function createEmailWithAttachment(
 
 export async function sendEmail(
   credentials: GoogleCredentials,
-  options: EmailOptions
+  options: EmailOptions,
+  organizationId?: string,
+  userId?: string
 ): Promise<{ messageId: string }> {
+  // ✅ RATE LIMITING: Vérifier les limites avant envoi
+  if (organizationId && options.from) {
+    const rateLimitResult = EmailRateLimiter.checkRateLimit(
+      organizationId,
+      options.from,
+      options.to
+    );
+
+    if (!rateLimitResult.allowed) {
+      throw new Error(`Rate limit dépassé: ${rateLimitResult.reason}. Réessayez dans ${
+        rateLimitResult.resetTime ? Math.ceil((rateLimitResult.resetTime - Date.now()) / 1000) : 60
+      } secondes.`);
+    }
+  }
+
+  // ✅ PROTECTION SPAM: Détecter contenu spam
+  const spamDetection = EmailRateLimiter.detectSpamContent(options.subject, options.body);
+  if (spamDetection.isSpam) {
+    throw new Error(`Contenu détecté comme spam (score: ${spamDetection.score}): ${spamDetection.reasons.join(', ')}`);
+  }
+
+  // ✅ BLACKLIST: Vérifier si destinataire est blacklisté
+  if (EmailRateLimiter.isEmailBlacklisted(options.to)) {
+    throw new Error(`Adresse email blacklistée: ${options.to}`);
+  }
+
   const validCredentials = await getValidCredentials(credentials);
 
   const oauth2Client = new google.auth.OAuth2(
@@ -360,13 +450,46 @@ export async function sendEmail(
     requestBody: { raw },
   });
 
+  // ✅ ENREGISTREMENT: Enregistrer l'email envoyé pour rate limiting
+  if (organizationId && options.from) {
+    EmailRateLimiter.recordEmailSent(organizationId, options.from, options.to, userId);
+  }
+
   return { messageId: result.data.id || '' };
 }
 
 export async function sendEmailWithAttachment(
   credentials: GoogleCredentials,
-  options: EmailWithAttachmentOptions
+  options: EmailWithAttachmentOptions,
+  organizationId?: string,
+  userId?: string
 ): Promise<{ messageId: string }> {
+  // ✅ RATE LIMITING: Vérifier les limites avant envoi
+  if (organizationId && options.from) {
+    const rateLimitResult = EmailRateLimiter.checkRateLimit(
+      organizationId,
+      options.from,
+      options.to
+    );
+
+    if (!rateLimitResult.allowed) {
+      throw new Error(`Rate limit dépassé: ${rateLimitResult.reason}. Réessayez dans ${
+        rateLimitResult.resetTime ? Math.ceil((rateLimitResult.resetTime - Date.now()) / 1000) : 60
+      } secondes.`);
+    }
+  }
+
+  // ✅ PROTECTION SPAM: Détecter contenu spam
+  const spamDetection = EmailRateLimiter.detectSpamContent(options.subject, options.body);
+  if (spamDetection.isSpam) {
+    throw new Error(`Contenu détecté comme spam (score: ${spamDetection.score}): ${spamDetection.reasons.join(', ')}`);
+  }
+
+  // ✅ BLACKLIST: Vérifier si destinataire est blacklisté
+  if (EmailRateLimiter.isEmailBlacklisted(options.to)) {
+    throw new Error(`Adresse email blacklistée: ${options.to}`);
+  }
+
   const validCredentials = await getValidCredentials(credentials);
 
   const oauth2Client = new google.auth.OAuth2(
@@ -388,6 +511,11 @@ export async function sendEmailWithAttachment(
     requestBody: { raw },
   });
 
+  // ✅ ENREGISTREMENT: Enregistrer l'email envoyé pour rate limiting
+  if (organizationId && options.from) {
+    EmailRateLimiter.recordEmailSent(organizationId, options.from, options.to, userId);
+  }
+
   return { messageId: result.data.id || '' };
 }
 
@@ -396,20 +524,68 @@ function createEmailWithBufferAttachment(
 ): string {
   const { to, subject, body, from, attachmentBuffer, attachmentName, attachmentMimeType } = options;
 
+  // ✅ SÉCURITÉ EMAIL: Validation complète avec buffer attachment
+  const emailValidation = EmailSecurityValidator.validateFullEmail({
+    to,
+    from,
+    subject,
+    body,
+    attachmentName,
+  }, {
+    allowHtml: true,
+    maxLength: 50000,
+    strictMode: false,
+    checkPhishing: true,
+    allowAttachments: true,
+  });
+
+  if (!emailValidation.isValid) {
+    const report = EmailSecurityValidator.generateSecurityReport(emailValidation);
+    throw new Error(`Email security validation failed:\n${report}`);
+  }
+
+  // Utiliser les valeurs sécurisées
+  const sanitizedEmail = JSON.parse(emailValidation.sanitizedValue);
+
+  // ✅ VALIDATION TAILLE BUFFER
+  if (attachmentBuffer.length > 25 * 1024 * 1024) { // 25MB limite Gmail
+    throw new Error('Attachment too large (max 25MB)');
+  }
+
+  // ✅ VALIDATION MIME TYPE
+  const allowedMimeTypes = [
+    'application/pdf',
+    'text/plain',
+    'text/csv',
+    'application/vnd.ms-excel',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'application/vnd.ms-powerpoint',
+    'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'image/jpeg',
+    'image/png',
+    'image/gif',
+  ];
+
+  if (!allowedMimeTypes.includes(attachmentMimeType)) {
+    throw new Error(`Unsafe MIME type: ${attachmentMimeType}`);
+  }
+
   const attachmentBase64 = attachmentBuffer.toString('base64');
   const boundary = `boundary_${Date.now()}`;
 
   // Build headers (filter out empty optional headers like From)
   const headers = [
-    `To: ${to}`,
-    from ? `From: ${from}` : null,
+    `To: ${sanitizedEmail.to}`,
+    sanitizedEmail.from ? `From: ${sanitizedEmail.from}` : null,
     'MIME-Version: 1.0',
-    `Subject: =?UTF-8?B?${Buffer.from(subject).toString('base64')}?=`,
+    `Subject: =?UTF-8?B?${Buffer.from(sanitizedEmail.subject).toString('base64')}?=`,
     `Content-Type: multipart/mixed; boundary="${boundary}"`,
   ].filter(Boolean);
 
   // Build multipart body with proper MIME structure
-  const bodyContent = body.replace(/\n/g, '<br>');
+  const bodyContent = sanitizedEmail.body.replace(/\n/g, '<br>');
   const multipartBody = [
     `--${boundary}`,
     'Content-Type: text/html; charset=utf-8',
@@ -417,9 +593,9 @@ function createEmailWithBufferAttachment(
     bodyContent,
     '',
     `--${boundary}`,
-    `Content-Type: ${attachmentMimeType}; name="${attachmentName}"`,
+    `Content-Type: ${attachmentMimeType}; name="${sanitizedEmail.attachmentName}"`,
     'Content-Transfer-Encoding: base64',
-    `Content-Disposition: attachment; filename="${attachmentName}"`,
+    `Content-Disposition: attachment; filename="${sanitizedEmail.attachmentName}"`,
     '',
     attachmentBase64,
     '',
@@ -433,8 +609,36 @@ function createEmailWithBufferAttachment(
 
 export async function sendEmailWithBufferAttachment(
   credentials: GoogleCredentials,
-  options: EmailWithBufferAttachmentOptions
+  options: EmailWithBufferAttachmentOptions,
+  organizationId?: string,
+  userId?: string
 ): Promise<{ messageId: string }> {
+  // ✅ RATE LIMITING: Vérifier les limites avant envoi
+  if (organizationId && options.from) {
+    const rateLimitResult = EmailRateLimiter.checkRateLimit(
+      organizationId,
+      options.from,
+      options.to
+    );
+
+    if (!rateLimitResult.allowed) {
+      throw new Error(`Rate limit dépassé: ${rateLimitResult.reason}. Réessayez dans ${
+        rateLimitResult.resetTime ? Math.ceil((rateLimitResult.resetTime - Date.now()) / 1000) : 60
+      } secondes.`);
+    }
+  }
+
+  // ✅ PROTECTION SPAM: Détecter contenu spam
+  const spamDetection = EmailRateLimiter.detectSpamContent(options.subject, options.body);
+  if (spamDetection.isSpam) {
+    throw new Error(`Contenu détecté comme spam (score: ${spamDetection.score}): ${spamDetection.reasons.join(', ')}`);
+  }
+
+  // ✅ BLACKLIST: Vérifier si destinataire est blacklisté
+  if (EmailRateLimiter.isEmailBlacklisted(options.to)) {
+    throw new Error(`Adresse email blacklistée: ${options.to}`);
+  }
+
   const validCredentials = await getValidCredentials(credentials);
 
   const oauth2Client = new google.auth.OAuth2(
@@ -455,6 +659,11 @@ export async function sendEmailWithBufferAttachment(
     userId: 'me',
     requestBody: { raw },
   });
+
+  // ✅ ENREGISTREMENT: Enregistrer l'email envoyé pour rate limiting
+  if (organizationId && options.from) {
+    EmailRateLimiter.recordEmailSent(organizationId, options.from, options.to, userId);
+  }
 
   return { messageId: result.data.id || '' };
 }

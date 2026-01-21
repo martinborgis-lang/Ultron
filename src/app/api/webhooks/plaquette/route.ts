@@ -160,10 +160,11 @@ export async function POST(request: NextRequest) {
       to: prospect.email,
       subject: email.objet,
       body: email.corps,
+      from: emailCredentialsResult.userEmail || conseillerEmail,
       attachmentBuffer: plaquetteFile.data,
       attachmentName: plaquetteFile.fileName,
       attachmentMimeType: plaquetteFile.mimeType,
-    });
+    }, org.id, emailCredentialsResult.userId);
 
     // Update column W (Mail Plaquette Envoyé = Oui)
     if (payload.row_number) {

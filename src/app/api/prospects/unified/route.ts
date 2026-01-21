@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUserAndOrganization } from '@/lib/services/get-organization';
 import { getProspectService } from '@/lib/services/factories/prospect-factory';
+import PaginationHelper, { COMMON_SORT_FIELDS } from '@/lib/pagination/pagination-helper';
 
 export const dynamic = 'force-dynamic';
 
@@ -15,13 +16,65 @@ export async function GET(request: NextRequest) {
     const { organization } = context;
     const service = getProspectService(organization);
 
+    // ✅ PAGINATION : Parse des paramètres standardisés
+    const paginationParams = PaginationHelper.parseParams(request.nextUrl.searchParams);
+
+    // Validation du champ de tri pour la sécurité
+    const safeSort = PaginationHelper.validateSortField(
+      paginationParams.sort || 'created_at',
+      [...COMMON_SORT_FIELDS.PROSPECTS]
+    );
+
+    // Paramètres de filtrage existants
     const stage = request.nextUrl.searchParams.get('stage') || undefined;
     const qualification = request.nextUrl.searchParams.get('qualification') || undefined;
     const search = request.nextUrl.searchParams.get('search') || undefined;
 
-    const prospects = await service.getAll({ stage, qualification, search });
+    // Récupérer les prospects avec pagination
+    const filters = {
+      stage,
+      qualification,
+      search,
+      // Ajouter les paramètres de pagination aux filtres
+      limit: paginationParams.limit,
+      offset: paginationParams.offset,
+      sort: safeSort,
+      order: paginationParams.order
+    };
 
+    const prospects = await service.getAll(filters);
+
+    // ✅ PAGINATION : Pour les services qui ne supportent pas encore la pagination native,
+    // on applique la pagination en mémoire (temporaire pour Sheet mode)
+    if (organization.data_mode === 'sheet') {
+      const paginatedResult = PaginationHelper.paginateInMemory(prospects, paginationParams);
+
+      return NextResponse.json({
+        ...paginatedResult,
+        meta: {
+          dataMode: organization.data_mode,
+          filters: { stage, qualification, search }
+        }
+      });
+    }
+
+    // Pour le mode CRM, si le service retourne déjà un format paginé
+    if (Array.isArray(prospects)) {
+      // Pagination en mémoire pour rétrocompatibilité
+      const paginatedResult = PaginationHelper.paginateInMemory(prospects, paginationParams);
+
+      return NextResponse.json({
+        ...paginatedResult,
+        meta: {
+          dataMode: organization.data_mode,
+          filters: { stage, qualification, search }
+        }
+      });
+    }
+
+    // Si le service retourne déjà un format avec total/count (futur)
     return NextResponse.json(prospects);
+
   } catch (error) {
     console.error('GET /api/prospects/unified error:', error);
     return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 });

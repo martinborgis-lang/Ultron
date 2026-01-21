@@ -5,6 +5,8 @@ import {
   wrapUserDataForPrompt,
   validateProspectForPrompt
 } from '@/lib/validation/prompt-injection-protection';
+import EmailSecurityValidator from '@/lib/validation/email-security';
+import { generateEmailFooter } from '@/lib/gdpr/email-footer';
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
@@ -13,6 +15,14 @@ const anthropic = new Anthropic({
 export interface EmailGenerated {
   objet: string;
   corps: string;
+}
+
+export interface EmailWithGDPRFooter {
+  objet: string;
+  corps: string;
+  prospectId?: string;
+  email?: string;
+  organizationId?: string;
 }
 
 export interface QualificationResult {
@@ -217,6 +227,32 @@ export async function generateEmail(
 
     if (!parsed.objet || !parsed.corps) {
       throw new Error('Invalid email format');
+    }
+
+    // ✅ SÉCURITÉ EMAIL: Validation de l'email généré par l'IA
+    const emailValidation = EmailSecurityValidator.validateFullEmail({
+      to: 'placeholder@example.com',  // Placeholder pour validation
+      subject: parsed.objet,
+      body: parsed.corps,
+    }, {
+      allowHtml: true,
+      maxLength: 50000,
+      strictMode: false,
+      checkPhishing: true,
+    });
+
+    if (!emailValidation.isValid && emailValidation.riskLevel === 'CRITICAL') {
+      const report = EmailSecurityValidator.generateSecurityReport(emailValidation);
+      throw new Error(`Email généré par IA non sécurisé:\n${report}`);
+    }
+
+    // Si des menaces non-critiques, utiliser la version sanitisée
+    if (emailValidation.threats.length > 0) {
+      const sanitizedEmail = JSON.parse(emailValidation.sanitizedValue);
+      return {
+        objet: sanitizedEmail.subject,
+        corps: sanitizedEmail.body,
+      };
     }
 
     return {
@@ -527,6 +563,10 @@ export async function generateEmailWithConfig(
     besoins?: string;
     notes_appel?: string;
     date_rdv?: string;
+  },
+  gdprParams?: {
+    prospectId: string;
+    organizationId: string;
   }
 ): Promise<EmailGenerated> {
   const variables: Record<string, string> = {
@@ -545,14 +585,64 @@ export async function generateEmailWithConfig(
     const userPromptTemplate = promptConfig?.userPromptTemplate || buildDefaultUserPromptTemplate();
     const userPrompt = replaceVariables(userPromptTemplate, variables);
 
-    return await generateEmail(systemPrompt, userPrompt);
+    const email = await generateEmail(systemPrompt, userPrompt);
+
+    // Add GDPR footer if parameters provided
+    if (gdprParams && prospectData.email) {
+      return addGDPRFooterToEmail(
+        email,
+        gdprParams.prospectId,
+        prospectData.email,
+        gdprParams.organizationId
+      );
+    }
+
+    return email;
   }
 
   // Fixed email mode - just replace variables
-  return {
+  const email = {
     objet: replaceVariables(promptConfig.fixedEmailSubject, variables),
     corps: replaceVariables(promptConfig.fixedEmailBody, variables),
   };
+
+  // Add GDPR footer if parameters provided
+  if (gdprParams && prospectData.email) {
+    return addGDPRFooterToEmail(
+      email,
+      gdprParams.prospectId,
+      prospectData.email,
+      gdprParams.organizationId
+    );
+  }
+
+  // ✅ SÉCURITÉ EMAIL: Validation finale avant retour de l'email généré
+  const emailValidation = EmailSecurityValidator.validateFullEmail({
+    to: prospectData.email || 'placeholder@example.com',
+    subject: email.objet,
+    body: email.corps,
+  }, {
+    allowHtml: true,
+    maxLength: 50000,
+    strictMode: false,
+    checkPhishing: true,
+  });
+
+  if (!emailValidation.isValid && emailValidation.riskLevel === 'CRITICAL') {
+    const report = EmailSecurityValidator.generateSecurityReport(emailValidation);
+    throw new Error(`Email généré non sécurisé:\n${report}`);
+  }
+
+  // Si des menaces non-critiques, utiliser la version sanitisée
+  if (emailValidation.threats.length > 0) {
+    const sanitizedEmail = JSON.parse(emailValidation.sanitizedValue);
+    return {
+      objet: sanitizedEmail.subject,
+      corps: sanitizedEmail.body,
+    };
+  }
+
+  return email;
 }
 
 function buildDefaultUserPromptTemplate(): string {
@@ -565,4 +655,39 @@ function buildDefaultUserPromptTemplate(): string {
 - Date du RDV : {{date_rdv}}
 
 Retourne uniquement le JSON.`;
+}
+
+/**
+ * Ajoute automatiquement le footer RGPD à un email
+ */
+export function addGDPRFooterToEmail(
+  email: EmailGenerated,
+  prospectId: string,
+  prospectEmail: string,
+  organizationId: string
+): EmailGenerated {
+  const footer = generateEmailFooter({
+    prospectId,
+    email: prospectEmail,
+    organizationId,
+  });
+
+  return {
+    objet: email.objet,
+    corps: email.corps + footer,
+  };
+}
+
+/**
+ * Génère un email avec footer RGPD automatique
+ */
+export async function generateEmailWithGDPR(
+  systemPrompt: string,
+  userPrompt: string,
+  prospectId: string,
+  prospectEmail: string,
+  organizationId: string
+): Promise<EmailGenerated> {
+  const email = await generateEmail(systemPrompt, userPrompt);
+  return addGDPRFooterToEmail(email, prospectId, prospectEmail, organizationId);
 }

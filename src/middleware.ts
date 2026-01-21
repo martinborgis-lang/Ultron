@@ -1,8 +1,25 @@
-import { type NextRequest } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { updateSession } from '@/lib/supabase/middleware';
+import { securityMiddleware } from '@/lib/security/security-middleware';
 
 export async function middleware(request: NextRequest) {
-  return await updateSession(request);
+  // ✅ SÉCURITÉ : Appliquer les protections de sécurité en premier
+  const securityResponse = await securityMiddleware.process(request);
+
+  // Si la sécurité bloque la requête, retourner immédiatement
+  if (securityResponse) {
+    return securityResponse;
+  }
+
+  // Continuer avec l'authentification Supabase
+  const authResponse = await updateSession(request);
+
+  // Ajouter les headers de sécurité à la réponse finale
+  if (authResponse instanceof NextResponse) {
+    securityMiddleware.addSecurityHeaders(authResponse);
+  }
+
+  return authResponse;
 }
 
 export const config = {

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase-admin';
+import PaginationHelper, { COMMON_SORT_FIELDS } from '@/lib/pagination/pagination-helper';
 
 export const dynamic = 'force-dynamic';
 
@@ -24,29 +25,52 @@ export async function GET(request: NextRequest) {
       .eq('auth_id', user.id)
       .single();
 
+    // ✅ PAGINATION : Parse des paramètres standardisés
+    const paginationParams = PaginationHelper.parseParams(request.nextUrl.searchParams);
+
+    // Validation du champ de tri pour la sécurité
+    const safeSort = PaginationHelper.validateSortField(
+      paginationParams.sort || 'created_at',
+      [...COMMON_SORT_FIELDS.ACTIVITIES]
+    );
+
     const searchParams = request.nextUrl.searchParams;
     const prospect_id = searchParams.get('prospect_id');
-    const limit = parseInt(searchParams.get('limit') || '50');
 
     let query = adminClient
       .from('crm_activities')
       .select(`
         *,
         user:users(id, full_name)
-      `)
+      `, { count: 'exact' })
       .eq('organization_id', userData?.organization_id)
-      .order('created_at', { ascending: false })
-      .limit(limit);
+      .order(safeSort, { ascending: paginationParams.order === 'asc' });
 
     if (prospect_id) {
       query = query.eq('prospect_id', prospect_id);
     }
 
-    const { data, error } = await query;
+    // ✅ PAGINATION : Appliquer la pagination à la query Supabase
+    query = PaginationHelper.applyToSupabaseQuery(query, paginationParams);
+
+    const { data, error, count } = await query;
 
     if (error) throw error;
 
-    return NextResponse.json(data);
+    // ✅ PAGINATION : Créer la réponse paginée standardisée
+    const paginatedResponse = PaginationHelper.createResponse(
+      data || [],
+      count || 0,
+      paginationParams
+    );
+
+    return NextResponse.json({
+      ...paginatedResponse,
+      meta: {
+        ...paginatedResponse.pagination,
+        filters: { prospect_id }
+      }
+    });
 
   } catch (error: any) {
     console.error('Error fetching activities:', error);
