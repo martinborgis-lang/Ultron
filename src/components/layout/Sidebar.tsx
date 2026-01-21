@@ -119,6 +119,25 @@ export function Sidebar({ userName }: SidebarProps) {
         )}
       </nav>
 
+      {/* Legal links */}
+      <div className="px-4 py-2">
+        <Separator className="mb-2" />
+        <div className="flex flex-col gap-1">
+          <Link
+            href="/privacy"
+            className="text-xs text-muted-foreground hover:text-foreground transition-colors px-3 py-1"
+          >
+            Confidentialité
+          </Link>
+          <Link
+            href="/legal"
+            className="text-xs text-muted-foreground hover:text-foreground transition-colors px-3 py-1"
+          >
+            Mentions légales
+          </Link>
+        </div>
+      </div>
+
       {/* User section */}
       <div className="p-4 border-t border-border">
         <div className="flex items-center gap-3 px-3 py-2">

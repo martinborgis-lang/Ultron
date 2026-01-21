@@ -54,7 +54,13 @@ export function FooterSection() {
             <Link href="/register" className="hover:text-white transition-colors">
               Inscription
             </Link>
-            <a href="mailto:contact@ultron.ai" className="hover:text-white transition-colors">
+            <Link href="/privacy" className="hover:text-white transition-colors">
+              Confidentialité
+            </Link>
+            <Link href="/legal" className="hover:text-white transition-colors">
+              Mentions légales
+            </Link>
+            <a href="mailto:martin.borgis@gmail.com" className="hover:text-white transition-colors">
               Contact
             </a>
           </div>
