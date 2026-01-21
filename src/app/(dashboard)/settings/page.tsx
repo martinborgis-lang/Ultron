@@ -8,7 +8,7 @@ import { PromptsEditor } from '@/components/settings/PromptsEditor';
 import { ThemeSelector } from '@/components/settings/ThemeSelector';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
-import { FileSpreadsheet, Users, Sparkles, Palette, Database, Settings } from 'lucide-react';
+import { FileSpreadsheet, Users, Sparkles, Palette, Database, Settings, ShoppingCart } from 'lucide-react';
 import Link from 'next/link';
 
 async function getOrganizationData() {
@@ -101,13 +101,22 @@ export default async function SettingsPage() {
                 </Link>
 
                 {userRole === 'admin' && (
-                  <Link
-                    href="/settings/thresholds"
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg transition-colors"
-                  >
-                    <Settings className="w-4 h-4" />
-                    Seuils Dashboard Admin
-                  </Link>
+                  <>
+                    <Link
+                      href="/settings/products"
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
+                    >
+                      <ShoppingCart className="w-4 h-4" />
+                      Gestion des Produits
+                    </Link>
+                    <Link
+                      href="/settings/thresholds"
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg transition-colors"
+                    >
+                      <Settings className="w-4 h-4" />
+                      Seuils Dashboard Admin
+                    </Link>
+                  </>
                 )}
               </div>
             </div>
