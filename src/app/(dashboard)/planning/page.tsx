@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Plus, List, Calendar, CheckCircle2, Circle, Clock, User, Video, ExternalLink, X, Play } from 'lucide-react';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { cn } from '@/lib/utils';
 
 interface PlanningEvent {
@@ -32,6 +33,10 @@ export default function PlanningPage() {
   const [filter, setFilter] = useState<'overdue' | 'today' | 'upcoming' | 'all'>('today');
   const [showNewForm, setShowNewForm] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<PlanningEvent | null>(null);
+
+  // États pour les modales
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
 
   useEffect(() => {
     fetchEvents();
@@ -70,10 +75,17 @@ export default function PlanningPage() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Supprimer cette tâche ?')) return;
+  const handleDelete = (id: string) => {
+    setDeleteTarget(id);
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+
     try {
-      await fetch(`/api/planning/${id}`, { method: 'DELETE' });
+      await fetch(`/api/planning/${deleteTarget}`, { method: 'DELETE' });
+      setDeleteTarget(null);
       fetchEvents();
     } catch (error) {
       console.error('Erreur delete:', error);
@@ -343,6 +355,18 @@ export default function PlanningPage() {
           onUpdate={fetchEvents}
         />
       )}
+
+      {/* Modale de confirmation de suppression */}
+      <ConfirmDialog
+        open={showDeleteConfirm}
+        onOpenChange={setShowDeleteConfirm}
+        title="Supprimer la tâche"
+        description="Êtes-vous sûr de vouloir supprimer cette tâche ? Cette action est irréversible."
+        confirmText="Supprimer"
+        cancelText="Annuler"
+        variant="destructive"
+        onConfirm={confirmDelete}
+      />
     </div>
   );
 }

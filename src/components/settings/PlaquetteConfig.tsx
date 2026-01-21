@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { FileText, Check, Loader2, ExternalLink } from 'lucide-react';
+import { AlertDialogCustom } from '@/components/ui/alert-dialog-custom';
 
 interface PlaquetteConfigProps {
   initialPlaquetteId: string | null;
@@ -16,6 +17,10 @@ export function PlaquetteConfig({ initialPlaquetteId }: PlaquetteConfigProps) {
   const [plaquetteId, setPlaquetteId] = useState(initialPlaquetteId || '');
   const [saving, setSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+
+  // États pour les modales
+  const [showErrorAlert, setShowErrorAlert] = useState(false);
+  const [alertMessage, setAlertMessage] = useState('');
 
   const handleSave = async () => {
     setSaving(true);
@@ -32,10 +37,12 @@ export function PlaquetteConfig({ initialPlaquetteId }: PlaquetteConfigProps) {
         setSaveSuccess(true);
         setTimeout(() => setSaveSuccess(false), 3000);
       } else {
-        alert('Erreur lors de l\'enregistrement');
+        setAlertMessage('Erreur lors de l\'enregistrement');
+        setShowErrorAlert(true);
       }
     } catch {
-      alert('Erreur lors de l\'enregistrement');
+      setAlertMessage('Erreur lors de l\'enregistrement');
+      setShowErrorAlert(true);
     } finally {
       setSaving(false);
     }
@@ -44,6 +51,7 @@ export function PlaquetteConfig({ initialPlaquetteId }: PlaquetteConfigProps) {
   const isConfigured = !!plaquetteId;
 
   return (
+    <>
     <Card className="shadow-sm">
       <CardHeader>
         <div className="flex items-center gap-3">
@@ -118,5 +126,16 @@ export function PlaquetteConfig({ initialPlaquetteId }: PlaquetteConfigProps) {
         </p>
       </CardContent>
     </Card>
+
+    {/* Modale d'erreur */}
+    <AlertDialogCustom
+      open={showErrorAlert}
+      onOpenChange={setShowErrorAlert}
+      title="Erreur"
+      description={alertMessage}
+      variant="error"
+      buttonText="Compris"
+    />
+    </>
   );
 }

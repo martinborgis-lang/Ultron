@@ -66,6 +66,13 @@ export function AgendaContent() {
   });
   const [creating, setCreating] = useState(false);
 
+  // États pour les modales
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+  const [showSuccessAlert, setShowSuccessAlert] = useState(false);
+  const [showErrorAlert, setShowErrorAlert] = useState(false);
+  const [alertMessage, setAlertMessage] = useState('');
+
   // Fonction pour formater une date sans problème de timezone
   const formatDateForInput = (date: Date): string => {
     const year = date.getFullYear();
@@ -242,34 +249,49 @@ export function AgendaContent() {
         if (data.event.hangoutLink) {
           try {
             await navigator.clipboard.writeText(data.event.hangoutLink);
-            alert(`RDV créé ! Lien Google Meet copié dans le presse-papier :\n${data.event.hangoutLink}`);
+            setAlertMessage(`RDV créé ! Lien Google Meet copié dans le presse-papier :\n${data.event.hangoutLink}`);
           } catch {
-            alert(`RDV créé ! Lien Google Meet :\n${data.event.hangoutLink}`);
+            setAlertMessage(`RDV créé ! Lien Google Meet :\n${data.event.hangoutLink}`);
           }
+        } else {
+          setAlertMessage('RDV créé avec succès !');
         }
 
+        setShowSuccessAlert(true);
         setShowCreateModal(false);
         resetNewEventForm();
         fetchEvents();
       } else {
-        alert('Erreur: ' + (data.error || 'Erreur inconnue'));
+        setAlertMessage('Erreur: ' + (data.error || 'Erreur inconnue'));
+        setShowErrorAlert(true);
       }
     } catch (error) {
       console.error('Erreur création événement:', error);
-      alert('Erreur lors de la création');
+      setAlertMessage('Erreur lors de la création');
+      setShowErrorAlert(true);
     }
     setCreating(false);
   };
 
-  const handleDeleteEvent = async (eventId: string) => {
-    if (!confirm('Supprimer cet événement ?')) return;
+  const handleDeleteEvent = (eventId: string) => {
+    setDeleteTarget(eventId);
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDeleteEvent = async () => {
+    if (!deleteTarget) return;
 
     try {
-      await fetch(`/api/calendar/events/${eventId}`, { method: 'DELETE' });
+      await fetch(`/api/calendar/events/${deleteTarget}`, { method: 'DELETE' });
       setSelectedEvent(null);
+      setDeleteTarget(null);
       fetchEvents();
+      setAlertMessage('Événement supprimé avec succès');
+      setShowSuccessAlert(true);
     } catch (error) {
       console.error('Erreur suppression:', error);
+      setAlertMessage('Erreur lors de la suppression');
+      setShowErrorAlert(true);
     }
   };
 
@@ -763,6 +785,38 @@ export function AgendaContent() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Modale de confirmation de suppression */}
+      <ConfirmDialog
+        open={showDeleteConfirm}
+        onOpenChange={setShowDeleteConfirm}
+        title="Supprimer l'événement"
+        description="Êtes-vous sûr de vouloir supprimer cet événement ? Cette action est irréversible."
+        confirmText="Supprimer"
+        cancelText="Annuler"
+        variant="destructive"
+        onConfirm={confirmDeleteEvent}
+      />
+
+      {/* Modale de succès */}
+      <AlertDialogCustom
+        open={showSuccessAlert}
+        onOpenChange={setShowSuccessAlert}
+        title="Succès"
+        description={alertMessage}
+        variant="success"
+        buttonText="Parfait"
+      />
+
+      {/* Modale d'erreur */}
+      <AlertDialogCustom
+        open={showErrorAlert}
+        onOpenChange={setShowErrorAlert}
+        title="Erreur"
+        description={alertMessage}
+        variant="error"
+        buttonText="Compris"
+      />
     </div>
   );
 }

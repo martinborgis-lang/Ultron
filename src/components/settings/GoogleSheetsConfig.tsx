@@ -17,6 +17,8 @@ import {
   Unlink,
   AlertCircle,
 } from 'lucide-react';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { AlertDialogCustom } from '@/components/ui/alert-dialog-custom';
 
 interface GoogleSheetsConfigProps {
   isGoogleConnected: boolean;
@@ -40,6 +42,11 @@ export function GoogleSheetsConfig({ isGoogleConnected, initialSheetId }: Google
   const [disconnecting, setDisconnecting] = useState(false);
   const [googleStatus, setGoogleStatus] = useState<'success' | 'error' | null>(null);
 
+  // États pour les modales
+  const [showDisconnectConfirm, setShowDisconnectConfirm] = useState(false);
+  const [showErrorAlert, setShowErrorAlert] = useState(false);
+  const [alertMessage, setAlertMessage] = useState('');
+
   useEffect(() => {
     const googleParam = searchParams.get('google');
     if (googleParam === 'success') {
@@ -54,9 +61,11 @@ export function GoogleSheetsConfig({ isGoogleConnected, initialSheetId }: Google
     window.location.href = '/api/google/auth';
   };
 
-  const handleDisconnectGoogle = async () => {
-    if (!confirm('Etes-vous sur de vouloir deconnecter Google ?')) return;
+  const handleDisconnectGoogle = () => {
+    setShowDisconnectConfirm(true);
+  };
 
+  const confirmDisconnectGoogle = async () => {
     setDisconnecting(true);
     try {
       const response = await fetch('/api/organization/sheet', {
@@ -66,10 +75,12 @@ export function GoogleSheetsConfig({ isGoogleConnected, initialSheetId }: Google
       if (response.ok) {
         window.location.reload();
       } else {
-        alert('Erreur lors de la deconnexion');
+        setAlertMessage('Erreur lors de la déconnexion');
+        setShowErrorAlert(true);
       }
     } catch {
-      alert('Erreur lors de la deconnexion');
+      setAlertMessage('Erreur lors de la déconnexion');
+      setShowErrorAlert(true);
     } finally {
       setDisconnecting(false);
     }
@@ -90,10 +101,12 @@ export function GoogleSheetsConfig({ isGoogleConnected, initialSheetId }: Google
         setSaveSuccess(true);
         setTimeout(() => setSaveSuccess(false), 3000);
       } else {
-        alert('Erreur lors de l\'enregistrement');
+        setAlertMessage('Erreur lors de l\'enregistrement');
+        setShowErrorAlert(true);
       }
     } catch {
-      alert('Erreur lors de l\'enregistrement');
+      setAlertMessage('Erreur lors de l\'enregistrement');
+      setShowErrorAlert(true);
     } finally {
       setSaving(false);
     }
@@ -121,6 +134,7 @@ export function GoogleSheetsConfig({ isGoogleConnected, initialSheetId }: Google
   };
 
   return (
+    <>
     <Card className="shadow-sm">
       <CardHeader>
         <div className="flex items-center gap-3">
@@ -286,5 +300,28 @@ export function GoogleSheetsConfig({ isGoogleConnected, initialSheetId }: Google
         </div>
       </CardContent>
     </Card>
+
+    {/* Modale de confirmation de déconnexion */}
+    <ConfirmDialog
+      open={showDisconnectConfirm}
+      onOpenChange={setShowDisconnectConfirm}
+      title="Déconnecter Google"
+      description="Êtes-vous sûr de vouloir déconnecter Google ? Vous perdrez l'accès à vos Google Sheets."
+      confirmText="Déconnecter"
+      cancelText="Annuler"
+      variant="destructive"
+      onConfirm={confirmDisconnectGoogle}
+    />
+
+    {/* Modale d'erreur */}
+    <AlertDialogCustom
+      open={showErrorAlert}
+      onOpenChange={setShowErrorAlert}
+      title="Erreur"
+      description={alertMessage}
+      variant="error"
+      buttonText="Compris"
+    />
+    </>
   );
 }

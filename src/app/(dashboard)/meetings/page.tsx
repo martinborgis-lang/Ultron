@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { FileText, Clock, User, Calendar, ChevronRight, Download, Trash2, Search, X, Bot } from 'lucide-react';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { cn } from '@/lib/utils';
 import type { TranscriptSegment, ObjectionDetected } from '@/types/meeting';
 
@@ -44,6 +45,10 @@ export default function MeetingsPage() {
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
+  // États pour les modales
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+
   useEffect(() => {
     fetchTranscripts();
   }, []);
@@ -76,14 +81,21 @@ export default function MeetingsPage() {
     setLoadingDetail(false);
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Supprimer cette transcription ?')) return;
+  const handleDelete = (id: string) => {
+    setDeleteTarget(id);
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+
     try {
-      await fetch(`/api/meeting/transcripts/${id}`, { method: 'DELETE' });
-      setTranscripts(prev => prev.filter(t => t.id !== id));
-      if (selectedTranscript?.id === id) {
+      await fetch(`/api/meeting/transcripts/${deleteTarget}`, { method: 'DELETE' });
+      setTranscripts(prev => prev.filter(t => t.id !== deleteTarget));
+      if (selectedTranscript?.id === deleteTarget) {
         setSelectedTranscript(null);
       }
+      setDeleteTarget(null);
     } catch (error) {
       console.error('Error deleting transcript:', error);
     }
@@ -251,6 +263,18 @@ export default function MeetingsPage() {
           </div>
         </div>
       )}
+
+      {/* Modale de confirmation de suppression */}
+      <ConfirmDialog
+        open={showDeleteConfirm}
+        onOpenChange={setShowDeleteConfirm}
+        title="Supprimer la transcription"
+        description="Êtes-vous sûr de vouloir supprimer cette transcription de réunion ? Cette action est irréversible."
+        confirmText="Supprimer"
+        cancelText="Annuler"
+        variant="destructive"
+        onConfirm={confirmDelete}
+      />
     </div>
   );
 }
