@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { toast } from 'sonner';
@@ -48,7 +49,7 @@ export function ProductsManager({ organizationId }: ProductsManagerProps) {
 
   const [showCommissionDialog, setShowCommissionDialog] = useState(false);
   const [commissionForm, setCommissionForm] = useState({
-    user_id: '',
+    user_ids: [] as string[], // Maintenant on peut sélectionner plusieurs conseillers
     product_id: '',
     commission_rate: '',
     is_default: false
@@ -80,7 +81,7 @@ export function ProductsManager({ organizationId }: ProductsManagerProps) {
 
       if (advisorsRes.ok) {
         const advisorsData = await advisorsRes.json();
-        setAdvisors(advisorsData.advisors?.filter((a: any) => a.role === 'conseiller') || []);
+        setAdvisors(advisorsData.members || []);
       }
     } catch (error) {
       console.error('Erreur récupération données:', error);
@@ -155,26 +156,40 @@ export function ProductsManager({ organizationId }: ProductsManagerProps) {
 
   const handleSaveCommission = async () => {
     try {
-      const payload = {
-        user_id: commissionForm.user_id,
-        product_id: commissionForm.product_id === 'all' || !commissionForm.product_id ? null : commissionForm.product_id,
-        commission_rate: parseFloat(commissionForm.commission_rate),
-        is_default: commissionForm.is_default
-      };
-
-      const response = await fetch('/api/advisor-commissions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error);
+      if (commissionForm.user_ids.length === 0) {
+        toast.error('Veuillez sélectionner au moins un conseiller');
+        return;
       }
 
-      const result = await response.json();
-      toast.success(result.message);
+      // Créer les commissions pour tous les conseillers sélectionnés
+      const commissionPromises = commissionForm.user_ids.map(userId => {
+        const payload = {
+          user_id: userId,
+          product_id: commissionForm.product_id === 'all' || !commissionForm.product_id ? null : commissionForm.product_id,
+          commission_rate: parseFloat(commissionForm.commission_rate),
+          is_default: commissionForm.is_default
+        };
+
+        return fetch('/api/advisor-commissions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+      });
+
+      // Exécuter toutes les requêtes en parallèle
+      const responses = await Promise.all(commissionPromises);
+
+      // Vérifier que toutes les requêtes ont réussi
+      for (let i = 0; i < responses.length; i++) {
+        if (!responses[i].ok) {
+          const error = await responses[i].json();
+          throw new Error(`Erreur pour le conseiller ${i + 1}: ${error.error}`);
+        }
+      }
+
+      const advisorCount = commissionForm.user_ids.length;
+      toast.success(`Commission configurée avec succès pour ${advisorCount} conseiller${advisorCount > 1 ? 's' : ''}`);
 
       setShowCommissionDialog(false);
       resetCommissionForm();
@@ -196,11 +211,30 @@ export function ProductsManager({ organizationId }: ProductsManagerProps) {
 
   const resetCommissionForm = () => {
     setCommissionForm({
-      user_id: '',
+      user_ids: [],
       product_id: '',
       commission_rate: '',
       is_default: false
     });
+  };
+
+  // Gestion de la sélection multiple des conseillers
+  const toggleAdvisor = (advisorId: string) => {
+    setCommissionForm(prev => ({
+      ...prev,
+      user_ids: prev.user_ids.includes(advisorId)
+        ? prev.user_ids.filter(id => id !== advisorId)
+        : [...prev.user_ids, advisorId]
+    }));
+  };
+
+  const toggleAllAdvisors = () => {
+    setCommissionForm(prev => ({
+      ...prev,
+      user_ids: prev.user_ids.length === advisors.length
+        ? []
+        : advisors.map(a => a.id)
+    }));
   };
 
   const openEditProduct = (product: Product) => {
@@ -433,22 +467,38 @@ export function ProductsManager({ organizationId }: ProductsManagerProps) {
 
                   <div className="space-y-4">
                     <div>
-                      <Label>Conseiller</Label>
-                      <Select
-                        value={commissionForm.user_id}
-                        onValueChange={(value) => setCommissionForm({...commissionForm, user_id: value})}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Sélectionnez un conseiller" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {advisors.map((advisor) => (
-                            <SelectItem key={advisor.id} value={advisor.id}>
-                              {advisor.full_name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <div className="flex items-center justify-between mb-3">
+                        <Label>Conseillers ({commissionForm.user_ids.length} sélectionné(s))</Label>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={toggleAllAdvisors}
+                        >
+                          {commissionForm.user_ids.length === advisors.length ? 'Tout désélectionner' : 'Tout sélectionner'}
+                        </Button>
+                      </div>
+                      <div className="max-h-48 overflow-y-auto border rounded-md p-3 space-y-3">
+                        {advisors.length === 0 ? (
+                          <p className="text-sm text-muted-foreground">Aucun conseiller disponible</p>
+                        ) : (
+                          advisors.map((advisor) => (
+                            <div key={advisor.id} className="flex items-center space-x-3">
+                              <Checkbox
+                                id={`advisor-${advisor.id}`}
+                                checked={commissionForm.user_ids.includes(advisor.id)}
+                                onCheckedChange={() => toggleAdvisor(advisor.id)}
+                              />
+                              <label
+                                htmlFor={`advisor-${advisor.id}`}
+                                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                              >
+                                {advisor.full_name || advisor.email}
+                              </label>
+                            </div>
+                          ))
+                        )}
+                      </div>
                     </div>
 
                     <div>
