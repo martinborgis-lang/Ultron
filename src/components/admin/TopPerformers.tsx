@@ -15,8 +15,9 @@ export function TopPerformers({ topPerformers }: TopPerformersProps) {
     {
       title: 'Top RDV',
       icon: Calendar,
-      color: 'text-blue-600',
-      bgColor: 'bg-blue-50',
+      color: 'text-blue-600 dark:text-blue-400',
+      borderColor: 'border-blue-200 dark:border-blue-800',
+      bgColor: 'bg-blue-50/50 dark:bg-blue-900/20',
       advisor: topPerformers.by_rdv,
       metric: topPerformers.by_rdv.rdv_scheduled_count,
       metricLabel: 'RDV programmés',
@@ -25,8 +26,9 @@ export function TopPerformers({ topPerformers }: TopPerformersProps) {
     {
       title: 'Top Conversion',
       icon: Target,
-      color: 'text-green-600',
-      bgColor: 'bg-green-50',
+      color: 'text-green-600 dark:text-green-400',
+      borderColor: 'border-green-200 dark:border-green-800',
+      bgColor: 'bg-green-50/50 dark:bg-green-900/20',
       advisor: topPerformers.by_conversion,
       metric: topPerformers.by_conversion.conversion_rate_overall.toFixed(1) + '%',
       metricLabel: 'Taux de conversion',
@@ -35,8 +37,9 @@ export function TopPerformers({ topPerformers }: TopPerformersProps) {
     {
       title: 'Top CA',
       icon: Euro,
-      color: 'text-yellow-600',
-      bgColor: 'bg-yellow-50',
+      color: 'text-yellow-600 dark:text-yellow-400',
+      borderColor: 'border-yellow-200 dark:border-yellow-800',
+      bgColor: 'bg-yellow-50/50 dark:bg-yellow-900/20',
       advisor: topPerformers.by_revenue,
       metric: new Intl.NumberFormat('fr-FR', {
         style: 'currency',
@@ -52,7 +55,7 @@ export function TopPerformers({ topPerformers }: TopPerformersProps) {
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Trophy className="h-5 w-5 text-yellow-500" />
+          <Trophy className="h-5 w-5 text-yellow-500 dark:text-yellow-400" />
           Top Performers
         </CardTitle>
       </CardHeader>
@@ -60,11 +63,11 @@ export function TopPerformers({ topPerformers }: TopPerformersProps) {
         {performers.map((performer, index) => (
           <div
             key={index}
-            className={`p-4 rounded-lg border ${performer.bgColor} border-gray-200`}
+            className={`p-4 rounded-lg border ${performer.borderColor} ${performer.bgColor} bg-card`}
           >
             <div className="flex items-start justify-between">
               <div className="flex items-center gap-3">
-                <div className={`p-2 rounded-lg bg-white shadow-sm`}>
+                <div className={`p-2 rounded-lg bg-card dark:bg-background shadow-sm border border-border`}>
                   <performer.icon className={`h-5 w-5 ${performer.color}`} />
                 </div>
                 <div className="flex items-center gap-3">
@@ -98,7 +101,7 @@ export function TopPerformers({ topPerformers }: TopPerformersProps) {
             </div>
 
             {/* Métriques additionnelles */}
-            <div className="mt-3 pt-3 border-t border-gray-200/60">
+            <div className="mt-3 pt-3 border-t border-border">
               <div className="grid grid-cols-3 gap-4 text-center">
                 <div>
                   <div className="text-sm font-medium">
@@ -147,7 +150,7 @@ export function TopPerformers({ topPerformers }: TopPerformersProps) {
             </div>
             <div className="flex justify-between items-center">
               <span className="text-muted-foreground">Écart CA</span>
-              <span className="font-medium text-green-600">
+              <span className="font-medium text-green-600 dark:text-green-400">
                 +{new Intl.NumberFormat('fr-FR', {
                   style: 'currency',
                   currency: 'EUR',

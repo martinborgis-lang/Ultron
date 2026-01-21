@@ -253,7 +253,7 @@ export function AdminDashboardContent() {
                             {advisor.count} ({advisor.percentage.toFixed(1)}%)
                           </span>
                           <div
-                            className="h-2 bg-primary rounded-full"
+                            className="h-2 bg-blue-500 dark:bg-blue-400 rounded-full"
                             style={{ width: `${Math.max(advisor.percentage * 2, 8)}px` }}
                           />
                         </div>
@@ -284,7 +284,7 @@ export function AdminDashboardContent() {
                             }).format(advisor.revenue)}
                           </span>
                           <div
-                            className="h-2 bg-green-500 rounded-full"
+                            className="h-2 bg-green-500 dark:bg-green-400 rounded-full"
                             style={{ width: `${Math.max(advisor.percentage * 2, 8)}px` }}
                           />
                         </div>
@@ -328,10 +328,10 @@ export function AdminDashboardContent() {
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {/* Insight taux de conversion */}
-            <div className="p-4 border rounded-lg">
+            <div className="p-4 border border-border rounded-lg bg-card">
               <div className="flex items-start gap-3">
-                <div className="p-2 bg-blue-100 rounded-lg">
-                  <Target className="h-4 w-4 text-blue-600" />
+                <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg border border-blue-200 dark:border-blue-800">
+                  <Target className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                 </div>
                 <div className="flex-1">
                   <h4 className="font-medium text-sm mb-1">Taux de conversion moyen</h4>
@@ -348,10 +348,10 @@ export function AdminDashboardContent() {
             </div>
 
             {/* Insight activité */}
-            <div className="p-4 border rounded-lg">
+            <div className="p-4 border border-border rounded-lg bg-card">
               <div className="flex items-start gap-3">
-                <div className="p-2 bg-green-100 rounded-lg">
-                  <Activity className="h-4 w-4 text-green-600" />
+                <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg border border-green-200 dark:border-green-800">
+                  <Activity className="h-4 w-4 text-green-600 dark:text-green-400" />
                 </div>
                 <div className="flex-1">
                   <h4 className="font-medium text-sm mb-1">Niveau d'activité</h4>
@@ -369,10 +369,10 @@ export function AdminDashboardContent() {
             </div>
 
             {/* Insight RDV */}
-            <div className="p-4 border rounded-lg">
+            <div className="p-4 border border-border rounded-lg bg-card">
               <div className="flex items-start gap-3">
-                <div className="p-2 bg-purple-100 rounded-lg">
-                  <Calendar className="h-4 w-4 text-purple-600" />
+                <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg border border-purple-200 dark:border-purple-800">
+                  <Calendar className="h-4 w-4 text-purple-600 dark:text-purple-400" />
                 </div>
                 <div className="flex-1">
                   <h4 className="font-medium text-sm mb-1">Performance RDV</h4>

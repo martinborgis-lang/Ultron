@@ -28,10 +28,12 @@ function StatCard({
   trendValue?: number;
   variant?: 'default' | 'success' | 'warning' | 'destructive';
 }) {
-  const trendColor = trend === 'up' ? 'text-green-600' : trend === 'down' ? 'text-red-600' : 'text-gray-600';
-  const cardVariant = variant === 'success' ? 'border-green-200 bg-green-50' :
-                     variant === 'warning' ? 'border-yellow-200 bg-yellow-50' :
-                     variant === 'destructive' ? 'border-red-200 bg-red-50' : '';
+  const trendColor = trend === 'up' ? 'text-green-600 dark:text-green-400' :
+                     trend === 'down' ? 'text-red-600 dark:text-red-400' :
+                     'text-gray-600 dark:text-gray-400';
+  const cardVariant = variant === 'success' ? 'border-green-500 dark:border-green-400 bg-card dark:bg-card' :
+                     variant === 'warning' ? 'border-yellow-500 dark:border-yellow-400 bg-card dark:bg-card' :
+                     variant === 'destructive' ? 'border-red-500 dark:border-red-400 bg-card dark:bg-card' : 'bg-card dark:bg-card';
 
   return (
     <Card className={cardVariant}>

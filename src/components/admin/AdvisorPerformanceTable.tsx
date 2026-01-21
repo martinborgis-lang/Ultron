@@ -74,14 +74,14 @@ export function AdvisorPerformanceTable({ advisors, period }: AdvisorPerformance
   );
 
   const getPerformanceBadge = (value: number, thresholds: { high: number; medium: number }) => {
-    if (value >= thresholds.high) return <Badge className="bg-green-500">Excellent</Badge>;
-    if (value >= thresholds.medium) return <Badge variant="secondary">Bon</Badge>;
-    return <Badge variant="destructive">À améliorer</Badge>;
+    if (value >= thresholds.high) return <Badge className="bg-green-600 hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600 text-white">Excellent</Badge>;
+    if (value >= thresholds.medium) return <Badge variant="outline" className="border-blue-500 text-blue-600 dark:border-blue-400 dark:text-blue-400">Bon</Badge>;
+    return <Badge variant="outline" className="border-red-500 text-red-600 dark:border-red-400 dark:text-red-400">À améliorer</Badge>;
   };
 
   const getTrendIcon = (value: number) => {
-    if (value > 5) return <TrendingUp className="h-4 w-4 text-green-600" />;
-    if (value < -5) return <TrendingDown className="h-4 w-4 text-red-600" />;
+    if (value > 5) return <TrendingUp className="h-4 w-4 text-green-600 dark:text-green-400" />;
+    if (value < -5) return <TrendingDown className="h-4 w-4 text-red-600 dark:text-red-400" />;
     return <div className="h-4 w-4" />; // Espace vide pour alignement
   };
 
@@ -189,7 +189,7 @@ export function AdvisorPerformanceTable({ advisors, period }: AdvisorPerformance
                     <div className="flex items-center gap-2">
                       <span className="font-medium">{advisor.prospects_in_negotiation}</span>
                       {advisor.prospects_in_negotiation > 5 && (
-                        <Badge variant="secondary" className="text-xs">Hot</Badge>
+                        <Badge className="text-xs bg-orange-500 hover:bg-orange-600 dark:bg-orange-400 dark:hover:bg-orange-500 text-white">Hot</Badge>
                       )}
                     </div>
                   </TableCell>

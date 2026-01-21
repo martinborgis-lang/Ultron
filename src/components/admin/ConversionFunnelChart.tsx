@@ -130,8 +130,8 @@ export function ConversionFunnelChart({ period }: ConversionFunnelChartProps) {
                     <span className="font-medium">{stage.count}</span>
                     {index > 0 && (
                       <span className={`font-medium ${
-                        stage.conversion_rate > 70 ? 'text-green-600' :
-                        stage.conversion_rate > 40 ? 'text-yellow-600' : 'text-red-600'
+                        stage.conversion_rate > 70 ? 'text-green-600 dark:text-green-400' :
+                        stage.conversion_rate > 40 ? 'text-yellow-600 dark:text-yellow-400' : 'text-red-600 dark:text-red-400'
                       }`}>
                         {stage.conversion_rate.toFixed(1)}%
                       </span>
@@ -141,12 +141,12 @@ export function ConversionFunnelChart({ period }: ConversionFunnelChartProps) {
 
                 {/* Barre de l'entonnoir */}
                 <div className="relative">
-                  <div className="h-12 bg-gray-100 rounded-lg overflow-hidden">
+                  <div className="h-12 bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden border border-border">
                     <div
                       className={`h-full transition-all duration-500 ${
-                        index === 0 ? 'bg-blue-500' :
-                        stage.conversion_rate > 70 ? 'bg-green-500' :
-                        stage.conversion_rate > 40 ? 'bg-yellow-500' : 'bg-red-500'
+                        index === 0 ? 'bg-blue-500 dark:bg-blue-400' :
+                        stage.conversion_rate > 70 ? 'bg-green-500 dark:bg-green-400' :
+                        stage.conversion_rate > 40 ? 'bg-yellow-500 dark:bg-yellow-400' : 'bg-red-500 dark:bg-red-400'
                       }`}
                       style={{ width: `${width}%` }}
                     />
@@ -154,7 +154,7 @@ export function ConversionFunnelChart({ period }: ConversionFunnelChartProps) {
                   {/* Flèche de perte */}
                   {index > 0 && (
                     <div className="absolute -right-2 top-1/2 transform -translate-y-1/2">
-                      <div className="text-xs text-red-500 bg-red-50 px-2 py-1 rounded border">
+                      <div className="text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/30 px-2 py-1 rounded border border-red-200 dark:border-red-800">
                         -{(100 - stage.conversion_rate).toFixed(0)}%
                       </div>
                     </div>
