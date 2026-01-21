@@ -121,8 +121,13 @@ async function calculateAdvisorStats(
   const wonDeals = prospects?.filter((p: any) => p.stage?.is_won).length || 0;
   const lostDeals = prospects?.filter((p: any) => p.stage?.is_lost).length || 0;
 
-  const totalDealValue = prospects?.reduce((sum: number, p: any) => sum + (p.deal_value || 0), 0) || 0;
-  const weightedForecast = prospects?.reduce((sum: number, p: any) =>
+  // CA réalisé = seulement les deals gagnés avec une valeur
+  const wonProspects = prospects?.filter((p: any) => p.stage?.is_won) || [];
+  const totalDealValue = wonProspects.reduce((sum: number, p: any) => sum + (p.deal_value || 0), 0);
+
+  // Prévisionnel = prospects en cours avec probabilité
+  const activeProspects = prospects?.filter((p: any) => !p.stage?.is_won && !p.stage?.is_lost) || [];
+  const weightedForecast = activeProspects.reduce((sum: number, p: any) =>
     sum + (p.deal_value || 0) * (p.close_probability || 0) / 100, 0
   ) || 0;
 
@@ -213,17 +218,21 @@ async function calculateAdvisorStats(
       .gte('start_date', prevStartStr)
       .lte('start_date', prevEndStr) as any;
 
-    // Revenue période précédente
+    // Revenue période précédente (seulement deals gagnés)
     const { data: prevProspects } = await adminClient
       .from('crm_prospects')
-      .select('deal_value, stage_slug')
+      .select(`
+        deal_value, stage_slug, won_date,
+        stage:pipeline_stages(is_won)
+      `)
       .eq('organization_id', organizationId)
       .eq('assigned_to', advisorId)
-      .gte('created_at', prevStartStr)
-      .lte('created_at', prevEndStr) as any;
+      .gte('won_date', prevStartStr)
+      .lte('won_date', prevEndStr) as any;
 
     const prevRdvCount = prevMeetings?.length || 0;
-    const prevRevenue = prevProspects?.reduce((sum: number, p: any) => sum + (p.deal_value || 0), 0) || 0;
+    const prevRevenue = (prevProspects?.filter((p: any) => p.stage?.is_won) || [])
+      .reduce((sum: number, p: any) => sum + (p.deal_value || 0), 0);
     const prevWonDeals = prevProspects?.filter((p: any) =>
       p.stage_slug === 'gagne' || p.stage_slug === 'signe'
     ).length || 0;

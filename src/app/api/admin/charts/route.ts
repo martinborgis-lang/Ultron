@@ -73,18 +73,23 @@ export async function GET(request: NextRequest) {
             .gte('created_at', `${dateStr}T00:00:00`)
             .lt('created_at', `${nextDayStr}T00:00:00`) as any;
 
-          // Prospects gagnés ce jour (won_date)
+          // Prospects gagnés ce jour (won_date) avec leur valeur
           const { data: wonProspects } = await adminClient
             .from('crm_prospects')
-            .select('deal_value')
+            .select(`
+              deal_value, won_date,
+              stage:pipeline_stages(is_won)
+            `)
             .eq('organization_id', context.organization.id)
             .eq('assigned_to', advisor.id)
             .gte('won_date', `${dateStr}T00:00:00`)
             .lt('won_date', `${nextDayStr}T00:00:00`) as any;
 
           const rdvCount = rdvData?.length || 0;
-          const dealsClosedToday = wonProspects?.length || 0;
-          const revenueToday = wonProspects?.reduce((sum: number, p: any) => sum + (p.deal_value || 0), 0) || 0;
+          const dealsClosedToday = wonProspects?.filter((p: any) => p.stage?.is_won).length || 0;
+          const revenueToday = wonProspects
+            ?.filter((p: any) => p.stage?.is_won)
+            .reduce((sum: number, p: any) => sum + (p.deal_value || 0), 0) || 0;
 
           // Calculer le taux de conversion du jour (RDV → deals)
           const conversionRate = rdvCount > 0 ? (dealsClosedToday / rdvCount) * 100 : 0;
