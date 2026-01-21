@@ -111,7 +111,7 @@ export async function GET(request: NextRequest) {
       metrics.byAdvisor[advisorId].commissions += advisorCommission;
 
       // Par type de produit
-      const productType = deal.product.type;
+      const productType = deal.product.type as 'fixed' | 'commission';
       if (productType === 'fixed' || productType === 'commission') {
         metrics.byType[productType].dealCount++;
         metrics.byType[productType].enterpriseCA += enterpriseRevenue;

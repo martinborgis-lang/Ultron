@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic';
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const context = await getCurrentUserAndOrganization();
@@ -20,7 +20,8 @@ export async function PATCH(
     }
 
     const body = await request.json();
-    const productId = params.id;
+    const resolvedParams = await params;
+    const productId = resolvedParams.id;
 
     const adminClient = createAdminClient();
 
@@ -81,7 +82,7 @@ export async function PATCH(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const context = await getCurrentUserAndOrganization();
@@ -94,7 +95,8 @@ export async function DELETE(
       return NextResponse.json({ error: 'Accès refusé - Admin requis' }, { status: 403 });
     }
 
-    const productId = params.id;
+    const resolvedParams = await params;
+    const productId = resolvedParams.id;
     const adminClient = createAdminClient();
 
     // Vérifier si le produit est utilisé dans des deals
