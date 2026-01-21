@@ -161,11 +161,42 @@ export function ProductsManager({ organizationId }: ProductsManagerProps) {
         return;
       }
 
+      // Vérifier les conflits de commissions existantes
+      const productId = commissionForm.product_id === 'all' || !commissionForm.product_id ? null : commissionForm.product_id;
+      const conflicts = [];
+
+      for (const userId of commissionForm.user_ids) {
+        const existingCommission = commissions.find(commission =>
+          commission.user_id === userId &&
+          commission.product_id === productId
+        );
+
+        if (existingCommission) {
+          const advisor = advisors.find(a => a.id === userId);
+          const productName = productId ? products.find(p => p.id === productId)?.name : 'Par défaut';
+          conflicts.push({
+            advisorName: advisor?.full_name || advisor?.email || 'Conseiller inconnu',
+            productName: productName || 'Produit inconnu',
+            currentRate: existingCommission.commission_rate
+          });
+        }
+      }
+
+      // Si des conflits sont détectés, afficher un message d'erreur détaillé
+      if (conflicts.length > 0) {
+        const conflictDetails = conflicts.map(c =>
+          `• ${c.advisorName} a déjà une commission de ${c.currentRate}% pour "${c.productName}"`
+        ).join('\n');
+
+        alert(`Conflits détectés :\n\n${conflictDetails}\n\nVeuillez supprimer ces commissions existantes avant d'en créer de nouvelles.`);
+        return;
+      }
+
       // Créer les commissions pour tous les conseillers sélectionnés
       const commissionPromises = commissionForm.user_ids.map(userId => {
         const payload = {
           user_id: userId,
-          product_id: commissionForm.product_id === 'all' || !commissionForm.product_id ? null : commissionForm.product_id,
+          product_id: productId,
           commission_rate: parseFloat(commissionForm.commission_rate),
           is_default: commissionForm.is_default
         };
@@ -207,6 +238,27 @@ export function ProductsManager({ organizationId }: ProductsManagerProps) {
       fixed_value: '',
       commission_rate: ''
     });
+  };
+
+  const handleDeleteCommission = async (commission: AdvisorCommission) => {
+    if (!confirm(`Supprimer la commission de ${commission.user?.full_name} (${commission.commission_rate}%) ?`)) return;
+
+    try {
+      const response = await fetch(`/api/advisor-commissions/${commission.id}`, {
+        method: 'DELETE'
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error);
+      }
+
+      const result = await response.json();
+      toast.success(result.message);
+      fetchData();
+    } catch (error: any) {
+      toast.error(error.message || 'Erreur lors de la suppression');
+    }
   };
 
   const resetCommissionForm = () => {
@@ -570,13 +622,23 @@ export function ProductsManager({ organizationId }: ProductsManagerProps) {
                         {commission.user?.email}
                       </p>
                     </div>
-                    <div className="text-right">
-                      <div className="text-lg font-bold">
-                        {commission.commission_rate}%
+                    <div className="flex items-center gap-3">
+                      <div className="text-right">
+                        <div className="text-lg font-bold">
+                          {commission.commission_rate}%
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          du CA généré
+                        </div>
                       </div>
-                      <div className="text-xs text-muted-foreground">
-                        du CA généré
-                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleDeleteCommission(commission)}
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     </div>
                   </div>
                 ))
