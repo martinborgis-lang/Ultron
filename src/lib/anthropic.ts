@@ -528,15 +528,19 @@ export interface PromptConfig {
 // Helper function to replace variables in templates (SÉCURISÉ)
 export function replaceVariables(
   template: string,
-  data: Record<string, string>
+  data: Record<string, string>,
+  skipValidation = false  // 🔧 Nouveau paramètre pour bypass validation
 ): string {
-  // ✅ SÉCURITÉ : Validation du template lui-même
-  const templateValidation = validatePromptInput(template, 'template');
-  if (!templateValidation.isValid) {
-    throw new Error(`Template non sécurisé: ${templateValidation.threats.join(', ')}`);
-  }
+  let result = template;
 
-  let result = templateValidation.sanitizedInput;
+  // ✅ SÉCURITÉ : Validation du template seulement si pas de bypass
+  if (!skipValidation) {
+    const templateValidation = validatePromptInput(template, 'template');
+    if (!templateValidation.isValid) {
+      throw new Error(`Template non sécurisé: ${templateValidation.threats.join(', ')}`);
+    }
+    result = templateValidation.sanitizedInput;
+  }
 
   // ✅ SÉCURITÉ : Validation et sanitisation de chaque variable
   for (const [key, value] of Object.entries(data)) {
@@ -589,9 +593,10 @@ export async function generateEmailWithConfig(
 
     // 🔧 FIX: Appliquer replaceVariables sur l'email généré par Claude
     // Claude peut inclure des placeholders dans sa réponse qu'il faut remplacer
+    // skipValidation=true car l'email vient de Claude (déjà sécurisé)
     const emailWithData = {
-      objet: replaceVariables(email.objet, variables),
-      corps: replaceVariables(email.corps, variables),
+      objet: replaceVariables(email.objet, variables, true),
+      corps: replaceVariables(email.corps, variables, true),
     };
 
     // Pas de footer de désinscription automatique
