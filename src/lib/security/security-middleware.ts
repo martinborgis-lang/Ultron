@@ -190,18 +190,36 @@ export class SecurityMiddleware {
    * Obtient l'IP réelle du client
    */
   private getClientIP(request: NextRequest): string {
-    // Headers courants pour l'IP réelle
-    const forwarded = request.headers.get('x-forwarded-for');
-    if (forwarded) {
-      return forwarded.split(',')[0].trim();
+    // Essayer les headers de proxy en premier
+    const forwardedFor = request.headers.get('x-forwarded-for');
+    if (forwardedFor) {
+      // Prendre la première IP (client original)
+      const ips = forwardedFor.split(',').map(ip => ip.trim());
+      if (ips[0]) return ips[0];
     }
 
+    // Header Cloudflare
+    const cfIP = request.headers.get('cf-connecting-ip');
+    if (cfIP) return cfIP;
+
+    // Header réel IP (certains proxies)
     const realIP = request.headers.get('x-real-ip');
-    if (realIP) {
-      return realIP;
+    if (realIP) return realIP;
+
+    // Vercel spécifique
+    const vercelIP = request.headers.get('x-vercel-forwarded-for');
+    if (vercelIP) {
+      const ips = vercelIP.split(',').map(ip => ip.trim());
+      if (ips[0]) return ips[0];
     }
 
-    // Fallback (pas très fiable) - NextRequest n'a pas de propriété .ip
+    // Fallback - utiliser un hash du user-agent comme identifiant de secours
+    const userAgent = request.headers.get('user-agent') || '';
+    if (userAgent) {
+      // Créer un identifiant basé sur le user-agent (pas parfait mais mieux que 'unknown')
+      return 'ua-' + Buffer.from(userAgent).toString('base64').substring(0, 16);
+    }
+
     return 'unknown';
   }
 
