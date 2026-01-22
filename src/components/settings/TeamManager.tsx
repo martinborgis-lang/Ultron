@@ -56,6 +56,7 @@ interface TeamManagerProps {
 export function TeamManager({ currentUserId: initialUserId }: TeamManagerProps) {
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [currentUserId, setCurrentUserId] = useState<string | undefined>(initialUserId);
+  const [currentUserRole, setCurrentUserRole] = useState<'admin' | 'conseiller' | undefined>();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [email, setEmail] = useState('');
@@ -72,15 +73,16 @@ export function TeamManager({ currentUserId: initialUserId }: TeamManagerProps) 
     status: string;
   } | null>(null);
 
-  // Fetch current user ID if not provided
+  // Fetch current user ID and role if not provided
   useEffect(() => {
     if (!currentUserId) {
       fetch('/api/user/me')
         .then(res => res.json())
         .then(data => {
-          if (data.id) {
-            logger.debug('[TeamManager] Fetched currentUserId:', data.id);
-            setCurrentUserId(data.id);
+          if (data.user?.id) {
+            logger.debug('[TeamManager] Fetched currentUser:', data.user);
+            setCurrentUserId(data.user.id);
+            setCurrentUserRole(data.user.role);
           }
         })
         .catch(err => console.error('[TeamManager] Failed to fetch current user:', err));
@@ -447,21 +449,23 @@ export function TeamManager({ currentUserId: initialUserId }: TeamManagerProps) 
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    {/* Gmail Connect/Disconnect - only current user can manage their own */}
-                    {isCurrentUser ? (
-                      member.gmail_connected ? (
-                        <div className="flex items-center gap-2">
-                          <Badge className="bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300">
-                            <CheckCircle className="mr-1 h-3 w-3" />
-                            Gmail connecte
-                          </Badge>
+                    {/* Gmail status and actions */}
+                    {member.gmail_connected ? (
+                      <div className="flex items-center gap-2">
+                        <Badge className="bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300">
+                          <CheckCircle className="mr-1 h-3 w-3" />
+                          Gmail connecte
+                        </Badge>
+
+                        {/* Test button: visible for current user OR admin */}
+                        {(isCurrentUser || currentUserRole === 'admin') && (
                           <Button
                             variant="outline"
                             size="sm"
                             className="h-7 px-2 text-blue-600 hover:text-blue-700 border-blue-200 hover:bg-blue-50 dark:hover:bg-blue-950"
                             onClick={() => handleTestGmail(member.id)}
                             disabled={testingGmail === member.id}
-                            title="Tester la connexion Gmail"
+                            title={isCurrentUser ? "Tester votre connexion Gmail" : "Tester la connexion Gmail de ce conseiller"}
                           >
                             {testingGmail === member.id ? (
                               <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -470,6 +474,10 @@ export function TeamManager({ currentUserId: initialUserId }: TeamManagerProps) 
                             )}
                             <span className="ml-1 text-xs">Test</span>
                           </Button>
+                        )}
+
+                        {/* Disconnect button: only for current user */}
+                        {isCurrentUser && (
                           <AlertDialog>
                             <AlertDialogTrigger asChild>
                               <Button variant="ghost" size="sm" className="h-7 px-2 text-muted-foreground hover:text-red-600">
@@ -495,34 +503,31 @@ export function TeamManager({ currentUserId: initialUserId }: TeamManagerProps) 
                               </AlertDialogFooter>
                             </AlertDialogContent>
                           </AlertDialog>
-                        </div>
-                      ) : (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="h-7 text-xs"
-                          onClick={handleConnectGmail}
-                        >
-                          <Mail className="mr-1.5 h-3.5 w-3.5" />
-                          Connecter Gmail
-                        </Button>
-                      )
-                    ) : (
-                      <Badge
-                        variant="secondary"
-                        className={
-                          member.gmail_connected
-                            ? 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300'
-                            : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400'
-                        }
-                      >
-                        {member.gmail_connected ? (
-                          <CheckCircle className="mr-1 h-3 w-3" />
-                        ) : (
-                          <XCircle className="mr-1 h-3 w-3" />
                         )}
-                        Gmail
-                      </Badge>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <Badge
+                          variant="secondary"
+                          className="bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400"
+                        >
+                          <XCircle className="mr-1 h-3 w-3" />
+                          Gmail
+                        </Badge>
+
+                        {/* Connect button: only for current user */}
+                        {isCurrentUser && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-7 text-xs"
+                            onClick={handleConnectGmail}
+                          >
+                            <Mail className="mr-1.5 h-3.5 w-3.5" />
+                            Connecter Gmail
+                          </Button>
+                        )}
+                      </div>
                     )}
 
                     {/* Role Badge */}
