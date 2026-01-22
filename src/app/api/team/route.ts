@@ -10,24 +10,42 @@ export async function GET() {
   try {
     const supabase = await createClient();
 
-    const { data: { user: authUser } } = await supabase.auth.getUser();
+    const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
+
+    if (authError) {
+      console.error('Auth error in /api/team:', authError);
+      return NextResponse.json({ error: 'Erreur d\'authentification: ' + authError.message }, { status: 401 });
+    }
 
     if (!authUser) {
       return NextResponse.json({ error: 'Non authentifie' }, { status: 401 });
     }
 
-    const { data: currentUser } = await supabase
+    // Utiliser adminClient pour contourner les problèmes de session après OAuth
+    const adminClient = createAdminClient();
+    const { data: currentUser, error: userError } = await adminClient
       .from('users')
       .select('organization_id, role')
       .eq('auth_id', authUser.id)
       .single();
 
-    if (!currentUser?.organization_id) {
-      return NextResponse.json({ error: 'Organisation non trouvee' }, { status: 404 });
+    if (userError) {
+      console.error('User lookup error in /api/team:', userError);
+      return NextResponse.json({
+        error: 'Utilisateur non trouvé dans la base de données',
+        details: userError.message
+      }, { status: 404 });
     }
 
-    // Get all users in the organization
-    const { data: teamMembers, error } = await supabase
+    if (!currentUser?.organization_id) {
+      return NextResponse.json({
+        error: 'Organisation non trouvée pour cet utilisateur',
+        user_id: authUser.id
+      }, { status: 404 });
+    }
+
+    // Get all users in the organization - utiliser adminClient aussi
+    const { data: teamMembers, error } = await adminClient
       .from('users')
       .select('id, email, full_name, role, gmail_credentials, avatar_url, is_active, created_at')
       .eq('organization_id', currentUser.organization_id)

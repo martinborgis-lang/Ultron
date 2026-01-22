@@ -36,6 +36,8 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { Users, Plus, Mail, Shield, UserCog, Trash2, CheckCircle, XCircle, Loader2, Unlink, Zap } from 'lucide-react';
+import { useGmailAlerts } from '@/hooks/useGmailMonitor';
+import { GmailAlerts } from '@/components/ui/gmail-alerts';
 
 interface TeamMember {
   id: string;
@@ -227,6 +229,9 @@ export function TeamManager({ currentUserId: initialUserId }: TeamManagerProps) 
   const currentMember = members.find(m => m.id === currentUserId);
   const showGmailBanner = currentMember && !currentMember.gmail_connected;
 
+  // Gmail monitoring pour l'utilisateur actuel
+  const { status: gmailStatus, alerts, dismissAlert, forceCheck } = useGmailAlerts(currentUserId || '');
+
   if (loading) {
     return (
       <Card className="shadow-sm">
@@ -242,6 +247,13 @@ export function TeamManager({ currentUserId: initialUserId }: TeamManagerProps) 
 
   return (
     <div className="space-y-4">
+      {/* Gmail Alerts */}
+      <GmailAlerts
+        alerts={alerts}
+        onDismiss={dismissAlert}
+        onReconnect={handleConnectGmail}
+      />
+
       {/* Success Message */}
       {successMessage && (
         <Card className="border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950">
@@ -444,17 +456,19 @@ export function TeamManager({ currentUserId: initialUserId }: TeamManagerProps) 
                             Gmail connecte
                           </Badge>
                           <Button
-                            variant="ghost"
+                            variant="outline"
                             size="sm"
-                            className="h-7 px-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-950"
+                            className="h-7 px-2 text-blue-600 hover:text-blue-700 border-blue-200 hover:bg-blue-50 dark:hover:bg-blue-950"
                             onClick={() => handleTestGmail(member.id)}
                             disabled={testingGmail === member.id}
+                            title="Tester la connexion Gmail"
                           >
                             {testingGmail === member.id ? (
                               <Loader2 className="h-3.5 w-3.5 animate-spin" />
                             ) : (
                               <Zap className="h-3.5 w-3.5" />
                             )}
+                            <span className="ml-1 text-xs">Test</span>
                           </Button>
                           <AlertDialog>
                             <AlertDialogTrigger asChild>
