@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUserAndOrganization } from '@/lib/services/get-organization';
 import { createAdminClient } from '@/lib/supabase-admin';
+import { logger } from '@/lib/logger';
 
 export const dynamic = 'force-dynamic';
 
@@ -27,22 +28,21 @@ export async function GET(request: NextRequest) {
     const days = daysMap[period as keyof typeof daysMap] || 30;
     const startDate = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
 
-    // Récupérer les deals fermés avec produits et commissions
+    // Récupérer les deals fermés avec produits
     const { data: deals, error } = await adminClient
       .from('deal_products')
       .select(`
         *,
         product:products(id, name, type),
         prospect:crm_prospects(id, first_name, last_name, email, stage_slug),
-        advisor:users(id, full_name, email),
-        advisor_commission:advisor_commissions!inner(commission_rate)
+        advisor:users(id, full_name, email)
       `)
       .eq('organization_id', context.organization.id)
       .gte('closed_at', startDate.toISOString())
       .order('closed_at', { ascending: false });
 
     if (error) {
-      console.error('Erreur récupération deals:', error);
+      logger.error('Erreur récupération deals:', error);
       return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 });
     }
 
@@ -74,7 +74,7 @@ export async function GET(request: NextRequest) {
       if (!deal.product) return;
 
       const enterpriseRevenue = deal.company_revenue || 0;
-      const advisorCommission = deal.advisor_commission_amount || 0;
+      const advisorCommission = deal.advisor_commission || 0;
 
       metrics.totalEnterpriseCA += enterpriseRevenue;
       metrics.totalAdvisorCommissions += advisorCommission;
@@ -131,7 +131,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(response);
 
   } catch (error) {
-    console.error('Erreur API revenue-breakdown:', error);
+    logger.error('Erreur API revenue-breakdown:', error);
     return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 });
   }
 }
