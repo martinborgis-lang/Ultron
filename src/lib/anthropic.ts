@@ -587,11 +587,18 @@ export async function generateEmailWithConfig(
 
     const email = await generateEmail(systemPrompt, userPrompt);
 
+    // 🔧 FIX: Appliquer replaceVariables sur l'email généré par Claude
+    // Claude peut inclure des placeholders dans sa réponse qu'il faut remplacer
+    const emailWithData = {
+      objet: replaceVariables(email.objet, variables),
+      corps: replaceVariables(email.corps, variables),
+    };
+
     // Pas de footer de désinscription automatique
     // Les emails Ultron sont des échanges relationnels, pas du mass mailing
     // Le conseiller ajoute sa propre signature professionnelle
 
-    return email;
+    return emailWithData;
   }
 
   // Fixed email mode - just replace variables
