@@ -5,15 +5,14 @@ import { logger } from '@/lib/logger';
 
 export const dynamic = 'force-dynamic';
 
-// Stages par défaut identiques à ceux dans le schéma database/
+// Stages par défaut - 6 stages comme voulu par l'utilisateur
 const DEFAULT_STAGES = [
   { name: 'Nouveau', slug: 'nouveau', color: '#6366f1', position: 0, is_won: false, is_lost: false },
   { name: 'En attente', slug: 'en_attente', color: '#f59e0b', position: 1, is_won: false, is_lost: false },
   { name: 'RDV Pris', slug: 'rdv_pris', color: '#10b981', position: 2, is_won: false, is_lost: false },
-  { name: 'RDV Effectué', slug: 'rdv_effectue', color: '#3b82f6', position: 3, is_won: false, is_lost: false },
-  { name: 'Négociation', slug: 'negociation', color: '#8b5cf6', position: 4, is_won: false, is_lost: false },
-  { name: 'Gagné', slug: 'gagne', color: '#22c55e', position: 5, is_won: true, is_lost: false },
-  { name: 'Perdu', slug: 'perdu', color: '#ef4444', position: 6, is_won: false, is_lost: true },
+  { name: 'Négociation', slug: 'negociation', color: '#8b5cf6', position: 3, is_won: false, is_lost: false },
+  { name: 'Gagné', slug: 'gagne', color: '#22c55e', position: 4, is_won: true, is_lost: false },
+  { name: 'Perdu', slug: 'perdu', color: '#ef4444', position: 5, is_won: false, is_lost: true },
 ];
 
 export async function POST(request: NextRequest) {
