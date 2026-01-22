@@ -1,3 +1,5 @@
+import { logger } from '@/lib/logger';
+
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUserAndOrganization } from '@/lib/services/get-organization';
 import { createAdminClient } from '@/lib/supabase-admin';
@@ -82,7 +84,7 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (error) {
-      console.error('Erreur création deal:', error);
+      logger.error('Erreur création deal:', error);
       return NextResponse.json({ error: 'Erreur lors de la création du deal' }, { status: 500 });
     }
 
@@ -92,7 +94,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Erreur API deal-products:', error);
+    logger.error('Erreur API deal-products:', error);
     return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 });
   }
 }
@@ -146,14 +148,14 @@ export async function GET(request: NextRequest) {
     const { data: deals, error } = await query;
 
     if (error) {
-      console.error('Erreur récupération deals:', error);
+      logger.error('Erreur récupération deals:', error);
       return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 });
     }
 
     return NextResponse.json({ deals: deals || [] });
 
   } catch (error) {
-    console.error('Erreur API get deals:', error);
+    logger.error('Erreur API get deals:', error);
     return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 });
   }
 }

@@ -34,6 +34,13 @@ interface MeetingData {
   type: string;
 }
 
+interface DealData {
+  id: string;
+  client_amount: number;
+  created_at: string;
+  closed_at: string | null;
+}
+
 interface UserData {
   id: string;
   full_name: string | null;
@@ -119,13 +126,14 @@ export class AdminStatsService {
     period: PeriodDates,
     previousPeriod?: PeriodDates
   ): Promise<AdvisorStats> {
-    const [prospects, activities, meetings] = await Promise.all([
+    const [prospects, activities, meetings, deals] = await Promise.all([
       this.getAdvisorProspects(advisor.id, period),
       this.getAdvisorActivities(advisor.id, period),
-      this.getAdvisorMeetings(advisor.id, period)
+      this.getAdvisorMeetings(advisor.id, period),
+      this.getAdvisorDeals(advisor.id, period) // ✅ Ajouter récupération deals
     ]);
 
-    const metrics = this.calculateMetrics(prospects, activities, meetings);
+    const metrics = this.calculateMetrics(prospects, activities, meetings, deals);
 
     let growthMetrics = { rdv_growth: 0, conversion_growth: 0, revenue_growth: 0 };
     if (previousPeriod) {
@@ -209,10 +217,24 @@ export class AdminStatsService {
     return data || [];
   }
 
+  private async getAdvisorDeals(advisorId: string, period: PeriodDates): Promise<DealData[]> {
+    const { data, error } = await this.adminClient
+      .from('deal_products')
+      .select('id, client_amount, created_at, closed_at')
+      .eq('organization_id', this.organizationId)
+      .eq('advisor_id', advisorId)
+      .gte('created_at', period.start.toISOString())
+      .lte('created_at', period.end.toISOString());
+
+    if (error) throw new Error(`Failed to fetch advisor deals: ${error.message}`);
+    return data || [];
+  }
+
   private calculateMetrics(
     prospects: ProspectData[],
     activities: ActivityData[],
-    meetings: MeetingData[]
+    meetings: MeetingData[],
+    deals: DealData[]
   ): Omit<AdvisorStats, 'id' | 'full_name' | 'email' | 'avatar_url' | 'rdv_growth' | 'conversion_growth' | 'revenue_growth'> {
     const totalProspects = prospects.length;
     const prospectsInNegotiation = prospects.filter(p =>
@@ -223,7 +245,8 @@ export class AdminStatsService {
     const lostDeals = prospects.filter(p => p.stage?.is_lost).length;
 
     const wonProspects = prospects.filter(p => p.stage?.is_won);
-    const totalDealValue = wonProspects.reduce((sum, p) => sum + (p.deal_value || 0), 0);
+    // ✅ CORRECTION : Prendre les revenus depuis les deals réels plutôt que crm_prospects.deal_value
+    const totalDealValue = deals.reduce((sum, deal) => sum + (deal.client_amount || 0), 0);
 
     const activeProspects = prospects.filter(p => !p.stage?.is_won && !p.stage?.is_lost);
     const weightedForecast = activeProspects.reduce((sum, p) =>
@@ -285,15 +308,13 @@ export class AdminStatsService {
     previousPeriod: PeriodDates
   ): Promise<{ rdv_growth: number; conversion_growth: number; revenue_growth: number }> {
     // Calculs simplifiés pour les métriques de croissance
-    const [prevMeetings, prevProspects] = await Promise.all([
+    const [prevMeetings, prevDeals] = await Promise.all([
       this.getAdvisorMeetings(advisorId, previousPeriod),
-      this.getAdvisorProspects(advisorId, previousPeriod)
+      this.getAdvisorDeals(advisorId, previousPeriod) // ✅ Utiliser les deals réels
     ]);
 
     const prevRdvCount = prevMeetings.length;
-    const prevRevenue = prevProspects
-      .filter(p => p.stage?.is_won)
-      .reduce((sum, p) => sum + (p.deal_value || 0), 0);
+    const prevRevenue = prevDeals.reduce((sum, deal) => sum + (deal.client_amount || 0), 0);
 
     const rdvGrowth = prevRdvCount > 0
       ? ((currentMetrics.rdv_scheduled_count - prevRdvCount) / prevRdvCount) * 100
