@@ -337,7 +337,22 @@ export function DashboardContent() {
       });
 
       // Convertir les prospects unifies au format Google pour les helpers existants
-      const unifiedProspects = prospectsData as UnifiedProspect[];
+      // ✅ SÉCURITÉ : Vérifier que prospectsData est bien un array ou un objet paginé
+      let unifiedProspects: UnifiedProspect[] = [];
+
+      if (Array.isArray(prospectsData)) {
+        unifiedProspects = prospectsData;
+      } else if (prospectsData && Array.isArray(prospectsData.data)) {
+        // Format paginé: { data: [...], total, offset, limit }
+        unifiedProspects = prospectsData.data;
+      } else if (prospectsData && typeof prospectsData === 'object' && !prospectsData.error) {
+        // Fallback: essayer d'extraire un array de l'objet
+        const possibleArrays = Object.values(prospectsData).filter(Array.isArray);
+        if (possibleArrays.length > 0) {
+          unifiedProspects = possibleArrays[0] as UnifiedProspect[];
+        }
+      }
+
       const googleProspects = unifiedToGoogleFormat(unifiedProspects);
       setProspects(transformProspects(googleProspects));
       setActivities(generateRealActivities(googleProspects));

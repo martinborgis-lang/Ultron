@@ -154,7 +154,7 @@ export class SheetProspectService implements IProspectService {
       logger.debug('📊 SheetProspectService.getAll - sheetId:', this.googleSheetId);
 
       if (!this.googleSheetId) {
-        console.error('📊 SheetProspectService.getAll - No sheet ID configured');
+        logger.error('📊 SheetProspectService.getAll - No sheet ID configured');
         return [];
       }
 
@@ -189,7 +189,7 @@ export class SheetProspectService implements IProspectService {
 
       return prospects;
     } catch (error) {
-      console.error('📊 SheetProspectService.getAll - ERROR:', error);
+      logger.error('📊 SheetProspectService.getAll - ERROR:', error);
       return [];
     }
   }
@@ -204,7 +204,7 @@ export class SheetProspectService implements IProspectService {
     logger.debug('🔧 SheetProspectService.create - SheetId:', this.googleSheetId);
 
     if (!this.googleSheetId) {
-      console.error('🔧 SheetProspectService.create - No sheet ID configured');
+      logger.error('🔧 SheetProspectService.create - No sheet ID configured');
       throw new Error('Aucun ID de Google Sheet configuré');
     }
 

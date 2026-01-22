@@ -1,3 +1,5 @@
+import { logger } from '@/lib/logger';
+
 import { createAdminClient } from '@/lib/supabase-admin';
 import { IProspectService, ProspectData, ProspectFilters } from '../interfaces';
 import { validateStage, validateQualification, createSafeSearchPattern, validateUUID } from '@/lib/validation/sql-injection-protection';
@@ -70,7 +72,7 @@ export class CrmProspectService implements IProspectService {
     const { data, error } = await query;
 
     if (error) {
-      console.error('CrmProspectService.getAll error:', error);
+      logger.error('CrmProspectService.getAll error:', error);
       throw error;
     }
 
@@ -127,7 +129,7 @@ export class CrmProspectService implements IProspectService {
       .single();
 
     if (error) {
-      console.error('CrmProspectService.create error:', error);
+      logger.error('CrmProspectService.create error:', error);
       throw error;
     }
 
@@ -245,7 +247,7 @@ export class CrmProspectService implements IProspectService {
       .eq('organization_id', this.organizationId);
 
     if (error) {
-      console.error('CrmProspectService.getStats error:', error);
+      logger.error('CrmProspectService.getStats error:', error);
       throw error;
     }
 

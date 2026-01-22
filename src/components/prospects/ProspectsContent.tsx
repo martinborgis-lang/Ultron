@@ -236,8 +236,23 @@ export function ProspectsContent() {
         throw new Error(data.error || 'Erreur');
       }
 
-      // Unified API returns an array directly
-      setProspects(transformProspects(data as UnifiedProspect[]));
+      // ✅ SÉCURITÉ : Vérifier que data est bien un array ou un objet paginé
+      let unifiedProspects: UnifiedProspect[] = [];
+
+      if (Array.isArray(data)) {
+        unifiedProspects = data;
+      } else if (data && Array.isArray(data.data)) {
+        // Format paginé: { data: [...], total, offset, limit }
+        unifiedProspects = data.data;
+      } else if (data && typeof data === 'object' && !data.error) {
+        // Fallback: essayer d'extraire un array de l'objet
+        const possibleArrays = Object.values(data).filter(Array.isArray);
+        if (possibleArrays.length > 0) {
+          unifiedProspects = possibleArrays[0] as UnifiedProspect[];
+        }
+      }
+
+      setProspects(transformProspects(unifiedProspects));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur lors du chargement');
     } finally {

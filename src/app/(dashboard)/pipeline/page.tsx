@@ -143,11 +143,25 @@ export default function PipelinePage() {
       }
 
       if (prospectsRes.ok) {
-        const prospectsData: ProspectData[] = await prospectsRes.json();
-        setProspects(prospectsData.map(prospectDataToCrmProspect));
+        const prospectsData = await prospectsRes.json();
+        // ✅ SÉCURITÉ : Vérifier que prospectsData est bien un array
+        let validProspects: ProspectData[] = [];
+
+        if (Array.isArray(prospectsData)) {
+          validProspects = prospectsData;
+        } else if (prospectsData && Array.isArray(prospectsData.data)) {
+          validProspects = prospectsData.data;
+        } else if (prospectsData && typeof prospectsData === 'object' && !prospectsData.error) {
+          const possibleArrays = Object.values(prospectsData).filter(Array.isArray);
+          if (possibleArrays.length > 0) {
+            validProspects = possibleArrays[0] as ProspectData[];
+          }
+        }
+
+        setProspects(validProspects.map(prospectDataToCrmProspect));
       }
     } catch (error) {
-      console.error('Error fetching data:', error);
+      logger.error('Error fetching data:', error);
     } finally {
       setLoading(false);
     }
@@ -176,8 +190,22 @@ export default function PipelinePage() {
 
         // Handle prospects
         if (prospectsRes.ok) {
-          const prospectsData: ProspectData[] = await prospectsRes.json();
-          setProspects(prospectsData.map(prospectDataToCrmProspect));
+          const prospectsData = await prospectsRes.json();
+          // ✅ SÉCURITÉ : Vérifier que prospectsData est bien un array
+          let validProspects: ProspectData[] = [];
+
+          if (Array.isArray(prospectsData)) {
+            validProspects = prospectsData;
+          } else if (prospectsData && Array.isArray(prospectsData.data)) {
+            validProspects = prospectsData.data;
+          } else if (prospectsData && typeof prospectsData === 'object' && !prospectsData.error) {
+            const possibleArrays = Object.values(prospectsData).filter(Array.isArray);
+            if (possibleArrays.length > 0) {
+              validProspects = possibleArrays[0] as ProspectData[];
+            }
+          }
+
+          setProspects(validProspects.map(prospectDataToCrmProspect));
         }
 
         // Handle team members
@@ -196,7 +224,7 @@ export default function PipelinePage() {
           }
         }
       } catch (error) {
-        console.error('Error fetching initial data:', error);
+        logger.error('Error fetching initial data:', error);
       } finally {
         setLoading(false);
       }
@@ -316,7 +344,7 @@ export default function PipelinePage() {
               }),
             });
           } catch (calErr) {
-            console.error('Error creating Google Calendar event:', calErr);
+            logger.error('Error creating Google Calendar event:', calErr);
           }
         }
       }
@@ -406,7 +434,7 @@ export default function PipelinePage() {
 
       await fetchData(search);
     } catch (error) {
-      console.error('Error creating deal:', error);
+      logger.error('Error creating deal:', error);
       toast({
         title: 'Erreur',
         description: 'Impossible de configurer le deal',

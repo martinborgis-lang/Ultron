@@ -78,7 +78,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(prospects);
 
   } catch (error) {
-    console.error('GET /api/prospects/unified error:', error);
+    logger.error('GET /api/prospects/unified error:', error);
     return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 });
   }
 }
@@ -111,7 +111,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(prospect, { status: 201 });
   } catch (error: any) {
-    console.error('🔧 API unified POST - Error:', error);
+    logger.error('🔧 API unified POST - Error:', error);
     return NextResponse.json({ error: error.message || 'Erreur serveur' }, { status: 500 });
   }
 }
