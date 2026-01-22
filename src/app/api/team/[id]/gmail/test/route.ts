@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic';
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const context = await getCurrentUserAndOrganization();
@@ -17,7 +17,7 @@ export async function POST(
       return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
     }
 
-    const memberId = params.id;
+    const { id: memberId } = await params;
     const adminClient = createAdminClient();
 
     // Vérifier que l'utilisateur peut tester cette connexion
