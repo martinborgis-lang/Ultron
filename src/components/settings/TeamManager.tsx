@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { logger } from '@/lib/logger';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -69,7 +70,7 @@ export function TeamManager({ currentUserId: initialUserId }: TeamManagerProps) 
         .then(res => res.json())
         .then(data => {
           if (data.id) {
-            console.log('[TeamManager] Fetched currentUserId:', data.id);
+            logger.debug('[TeamManager] Fetched currentUserId:', data.id);
             setCurrentUserId(data.id);
           }
         })
@@ -79,11 +80,11 @@ export function TeamManager({ currentUserId: initialUserId }: TeamManagerProps) 
 
   const fetchTeam = useCallback(async () => {
     try {
-      console.log('[TeamManager] currentUserId:', currentUserId);
+      logger.debug('[TeamManager] currentUserId:', currentUserId);
       const response = await fetch('/api/team');
       if (!response.ok) throw new Error('Erreur lors du chargement');
       const data = await response.json();
-      console.log('[TeamManager] members:', data.members?.map((m: TeamMember) => ({ id: m.id, email: m.email, gmail_connected: m.gmail_connected })));
+      logger.debug('[TeamManager] members:', data.members?.map((m: TeamMember) => ({ id: m.id, email: m.email, gmail_connected: m.gmail_connected })));
       setMembers(data.members || []);
     } catch (err) {
       console.error('Failed to fetch team:', err);
@@ -335,7 +336,7 @@ export function TeamManager({ currentUserId: initialUserId }: TeamManagerProps) 
             ) : (
               members.map((member) => {
                 const isCurrentUser = member.id === currentUserId;
-                console.log('[TeamManager] Comparing:', { memberId: member.id, currentUserId, isCurrentUser, gmail_connected: member.gmail_connected });
+                logger.debug('[TeamManager] Comparing:', { memberId: member.id, currentUserId, isCurrentUser, gmail_connected: member.gmail_connected });
                 return (
                 <div
                   key={member.id}

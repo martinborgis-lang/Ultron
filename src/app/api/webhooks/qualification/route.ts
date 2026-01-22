@@ -1,4 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/admin';
+import { logger } from '@/lib/logger';
 import { generateEmail, buildUserPrompt, DEFAULT_PROMPTS } from '@/lib/anthropic';
 import { sendEmail, getEmailCredentials } from '@/lib/gmail';
 import { NextRequest, NextResponse } from 'next/server';
@@ -101,7 +102,7 @@ export async function POST(request: NextRequest) {
     // Handle invalid_grant - fallback to org credentials
     let emailCredentialsResult = credentialsResponse.result;
     if (credentialsResponse.error?.error === 'invalid_grant') {
-      console.log('⚠️ Token invalide, fallback sur organisation:', credentialsResponse.error.message);
+      logger.debug('⚠️ Token invalide, fallback sur organisation:', credentialsResponse.error.message);
       const orgCredentials = await getEmailCredentials(org.id);
       emailCredentialsResult = orgCredentials.result;
     }
@@ -111,7 +112,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: errorMsg }, { status: 400 });
     }
     const emailCredentials = emailCredentialsResult.credentials;
-    console.log('Using email credentials from:', emailCredentialsResult.source, emailCredentialsResult.userId || 'org');
+    logger.debug('Using email credentials from:', emailCredentialsResult.source, emailCredentialsResult.userId || 'org');
 
     // Get prompt (custom or default)
     const systemPrompt = org.prompt_qualification || DEFAULT_PROMPTS.qualification;

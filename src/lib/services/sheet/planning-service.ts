@@ -1,11 +1,13 @@
+import { logger } from '@/lib/logger';
+
 import { IPlanningService, PlanningEvent, PlanningFilters } from '../interfaces';
 
 /**
  * Service Planning pour le mode Google Sheet
- * Lit les evenements depuis Google Calendar de l'utilisateur
  *
- * TODO: Implementer avec Google Calendar API
- * Pour l'instant, retourne des donnees vides
+ * ⚠️  FONCTIONNALITÉ NON DISPONIBLE EN MODE SHEET
+ * Les événements sont gérés directement via Google Calendar.
+ * Pour utiliser la gestion de planning complète, activez le mode CRM.
  */
 export class SheetPlanningService implements IPlanningService {
   constructor(
@@ -15,41 +17,54 @@ export class SheetPlanningService implements IPlanningService {
   ) {}
 
   async getAll(filters?: PlanningFilters): Promise<PlanningEvent[]> {
-    // TODO: Implementer avec Google Calendar API
-    // Pour l'instant, on retourne un tableau vide
-    console.log('SheetPlanningService.getAll - Mode Sheet non encore implemente');
+    logger.debug('SheetPlanningService.getAll - Retour tableau vide (mode Sheet)');
+    // En mode Sheet, les événements sont gérés directement dans Google Calendar
     return [];
   }
 
   async getById(id: string): Promise<PlanningEvent | null> {
-    console.log('SheetPlanningService.getById - Mode Sheet non encore implemente');
+    logger.debug('SheetPlanningService.getById - Mode Sheet non encore implemente');
     return null;
   }
 
   async create(event: Partial<PlanningEvent>): Promise<PlanningEvent> {
-    // TODO: Creer un evenement dans Google Calendar
-    console.log('SheetPlanningService.create - Mode Sheet non encore implemente');
-    throw new Error("Mode Sheet non encore implemente pour la creation d'evenements");
+    logger.debug('SheetPlanningService.create - Création bloquée en mode Sheet');
+    throw new Error(
+      'La gestion du planning n\'est pas disponible en mode Google Sheet. ' +
+      'Pour utiliser cette fonctionnalité, activez le mode CRM dans les paramètres.'
+    );
   }
 
   async update(id: string, data: Partial<PlanningEvent>): Promise<PlanningEvent> {
-    console.log('SheetPlanningService.update - Mode Sheet non encore implemente');
-    throw new Error('Mode Sheet non encore implemente');
+    logger.debug('SheetPlanningService.update - Opération bloquée en mode Sheet');
+    throw new Error(
+      'La modification d\'événements n\'est pas disponible en mode Google Sheet. ' +
+      'Activez le mode CRM pour utiliser cette fonctionnalité.'
+    );
   }
 
   async delete(id: string): Promise<void> {
-    console.log('SheetPlanningService.delete - Mode Sheet non encore implemente');
-    throw new Error('Mode Sheet non encore implemente');
+    logger.debug('SheetPlanningService.delete - Opération bloquée en mode Sheet');
+    throw new Error(
+      'La suppression d\'événements n\'est pas disponible en mode Google Sheet. ' +
+      'Activez le mode CRM pour utiliser cette fonctionnalité.'
+    );
   }
 
   async markComplete(id: string): Promise<PlanningEvent> {
-    console.log('SheetPlanningService.markComplete - Mode Sheet non encore implemente');
-    throw new Error('Mode Sheet non encore implemente');
+    logger.debug('SheetPlanningService.markComplete - Opération bloquée en mode Sheet');
+    throw new Error(
+      'La gestion de statut des tâches n\'est pas disponible en mode Google Sheet. ' +
+      'Activez le mode CRM pour utiliser cette fonctionnalité.'
+    );
   }
 
   async markIncomplete(id: string): Promise<PlanningEvent> {
-    console.log('SheetPlanningService.markIncomplete - Mode Sheet non encore implemente');
-    throw new Error('Mode Sheet non encore implemente');
+    logger.debug('SheetPlanningService.markIncomplete - Opération bloquée en mode Sheet');
+    throw new Error(
+      'La gestion de statut des tâches n\'est pas disponible en mode Google Sheet. ' +
+      'Activez le mode CRM pour utiliser cette fonctionnalité.'
+    );
   }
 
   async getByProspect(prospectId: string): Promise<PlanningEvent[]> {

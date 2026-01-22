@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { logger } from '@/lib/logger';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent } from '@/components/ui/card';
@@ -26,7 +27,7 @@ export default function AuthCallbackPage() {
       const tokenHash = queryParams.get('token_hash');
       const code = queryParams.get('code');
 
-      console.log('[Auth Callback] Params:', {
+      logger.debug('[Auth Callback] Params:', {
         hasAccessToken: !!accessToken,
         hasRefreshToken: !!refreshToken,
         type,
@@ -50,13 +51,13 @@ export default function AuthCallbackPage() {
 
           // Check if this is an invite - redirect to set password
           if (type === 'invite' || type === 'signup' || type === 'recovery') {
-            console.log('[Auth Callback] Invite flow, redirecting to set-password');
+            logger.debug('[Auth Callback] Invite flow, redirecting to set-password');
             router.push('/auth/set-password');
             return;
           }
 
           // Otherwise go to dashboard
-          console.log('[Auth Callback] Normal auth, redirecting to dashboard');
+          logger.debug('[Auth Callback] Normal auth, redirecting to dashboard');
           router.push('/dashboard');
           return;
         }
@@ -98,7 +99,7 @@ export default function AuthCallbackPage() {
         }
 
         // No valid params found
-        console.log('[Auth Callback] No valid params found');
+        logger.debug('[Auth Callback] No valid params found');
         setError('Lien invalide ou expire');
 
       } catch (err) {

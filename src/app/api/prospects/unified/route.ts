@@ -1,3 +1,5 @@
+import { logger } from '@/lib/logger';
+
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUserAndOrganization } from '@/lib/services/get-organization';
 import { getProspectService } from '@/lib/services/factories/prospect-factory';
@@ -86,14 +88,14 @@ export async function POST(request: NextRequest) {
     const context = await getCurrentUserAndOrganization();
 
     if (!context) {
-      console.log('🔧 API unified POST - No auth context');
+      logger.debug('🔧 API unified POST - No auth context');
       return NextResponse.json({ error: 'Non authentifie' }, { status: 401 });
     }
 
     const { organization, user } = context;
     const body = await request.json();
 
-    console.log('🔧 API unified POST - Request received:', {
+    logger.debug('🔧 API unified POST - Request received:', {
       organizationId: organization.id,
       organizationName: organization.name,
       dataMode: organization.data_mode,
@@ -102,10 +104,10 @@ export async function POST(request: NextRequest) {
     });
 
     const service = getProspectService(organization);
-    console.log('🔧 API unified POST - Service type:', organization.data_mode === 'sheet' ? 'SheetProspectService' : 'CrmProspectService');
+    logger.debug('🔧 API unified POST - Service type:', organization.data_mode === 'sheet' ? 'SheetProspectService' : 'CrmProspectService');
 
     const prospect = await service.create(body);
-    console.log('🔧 API unified POST - Prospect created:', prospect);
+    logger.debug('🔧 API unified POST - Prospect created:', prospect);
 
     return NextResponse.json(prospect, { status: 201 });
   } catch (error: any) {

@@ -1,3 +1,5 @@
+import { logger } from '@/lib/logger';
+
 import { google } from 'googleapis';
 import { OAuth2Client } from 'google-auth-library';
 
@@ -199,7 +201,7 @@ export async function appendGoogleSheetRow(
   const match = updatedRange.match(/:?[A-Z]+(\d+)/);
   const rowNumber = match ? parseInt(match[1]) : 0;
 
-  console.log('✅ Row appended to Sheet:', { updatedRange, rowNumber });
+  logger.debug('✅ Row appended to Sheet:', { updatedRange, rowNumber });
 
   return { updatedRange, rowNumber };
 }

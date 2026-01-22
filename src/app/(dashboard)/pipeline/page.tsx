@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { logger } from '@/lib/logger';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { PipelineKanban } from '@/components/crm/PipelineKanban';
@@ -302,7 +303,7 @@ export default function PipelinePage() {
           });
         } catch (err) {
           // If planning fails (sheet mode), create Google Calendar event directly
-          console.log('Planning event not created, trying direct calendar:', err);
+          logger.debug('Planning event not created, trying direct calendar:', err);
           try {
             await fetch('/api/calendar/events', {
               method: 'POST',
@@ -455,12 +456,12 @@ export default function PipelinePage() {
           const planningData = await planningRes.json();
           meetLink = planningData.meetLink;
           if (meetLink) {
-            console.log('Google Meet link created:', meetLink);
+            logger.debug('Google Meet link created:', meetLink);
           }
         }
       } catch (err) {
         // Silently fail for sheet mode (planning managed via Google Calendar)
-        console.log('Planning event not created (probably sheet mode):', err);
+        logger.debug('Planning event not created (probably sheet mode):', err);
       }
 
       // 2. Update prospect with notes, RDV date, Meet link and assigned advisor

@@ -1,3 +1,5 @@
+import { logger } from '@/lib/logger';
+
 import { IProspectService, ProspectData, ProspectFilters, Organization } from '../interfaces';
 import {
   getValidCredentials,
@@ -104,7 +106,7 @@ export class SheetProspectService implements IProspectService {
     if (s === 'nouveau') return 'nouveau';
 
     // Default
-    console.log('📊 Unknown sheet status, defaulting to nouveau:', statut);
+    logger.debug('📊 Unknown sheet status, defaulting to nouveau:', statut);
     return 'nouveau';
   }
 
@@ -125,13 +127,13 @@ export class SheetProspectService implements IProspectService {
       throw new Error('Google non connecté');
     }
 
-    console.log('📊 SheetProspectService - Getting valid credentials...');
+    logger.debug('📊 SheetProspectService - Getting valid credentials...');
     const credentials = await getValidCredentials(this.googleCredentials as unknown as GoogleCredentials);
 
     // Compare access_token to detect if credentials were refreshed
     const originalCredentials = this.googleCredentials as unknown as GoogleCredentials;
     if (credentials.access_token !== originalCredentials.access_token) {
-      console.log('🔄 SheetProspectService - Credentials refreshed, saving...');
+      logger.debug('🔄 SheetProspectService - Credentials refreshed, saving...');
       const adminClient = createAdminClient();
       await adminClient
         .from('organizations')
@@ -146,10 +148,10 @@ export class SheetProspectService implements IProspectService {
 
   async getAll(filters?: ProspectFilters): Promise<ProspectData[]> {
     try {
-      console.log('📊 SheetProspectService.getAll - Starting...');
-      console.log('📊 SheetProspectService.getAll - org:', this.organizationId);
-      console.log('📊 SheetProspectService.getAll - has credentials:', !!this.googleCredentials);
-      console.log('📊 SheetProspectService.getAll - sheetId:', this.googleSheetId);
+      logger.debug('📊 SheetProspectService.getAll - Starting...');
+      logger.debug('📊 SheetProspectService.getAll - org:', this.organizationId);
+      logger.debug('📊 SheetProspectService.getAll - has credentials:', !!this.googleCredentials);
+      logger.debug('📊 SheetProspectService.getAll - sheetId:', this.googleSheetId);
 
       if (!this.googleSheetId) {
         console.error('📊 SheetProspectService.getAll - No sheet ID configured');
@@ -157,13 +159,13 @@ export class SheetProspectService implements IProspectService {
       }
 
       const credentials = await this.getCredentials();
-      console.log('📊 SheetProspectService.getAll - Got credentials, reading sheet...');
+      logger.debug('📊 SheetProspectService.getAll - Got credentials, reading sheet...');
 
       const rows = await readGoogleSheet(credentials, this.googleSheetId);
-      console.log('📊 SheetProspectService.getAll - Got rows:', rows.length);
+      logger.debug('📊 SheetProspectService.getAll - Got rows:', rows.length);
 
       const rawProspects = parseProspectsFromSheet(rows);
-      console.log('📊 SheetProspectService.getAll - Parsed prospects:', rawProspects.length);
+      logger.debug('📊 SheetProspectService.getAll - Parsed prospects:', rawProspects.length);
 
       // Mapper vers le format unifie
       let prospects = rawProspects.map((row) => this.mapSheetToProspect(row));
@@ -198,17 +200,17 @@ export class SheetProspectService implements IProspectService {
   }
 
   async create(data: Partial<ProspectData>): Promise<ProspectData> {
-    console.log('🔧 SheetProspectService.create - Starting with data:', data);
-    console.log('🔧 SheetProspectService.create - SheetId:', this.googleSheetId);
+    logger.debug('🔧 SheetProspectService.create - Starting with data:', data);
+    logger.debug('🔧 SheetProspectService.create - SheetId:', this.googleSheetId);
 
     if (!this.googleSheetId) {
       console.error('🔧 SheetProspectService.create - No sheet ID configured');
       throw new Error('Aucun ID de Google Sheet configuré');
     }
 
-    console.log('🔧 SheetProspectService.create - Getting credentials...');
+    logger.debug('🔧 SheetProspectService.create - Getting credentials...');
     const credentials = await this.getCredentials();
-    console.log('🔧 SheetProspectService.create - Got credentials');
+    logger.debug('🔧 SheetProspectService.create - Got credentials');
 
     // Get existing rows to determine the next ID
     const existingRows = await readGoogleSheet(credentials, this.googleSheetId);
@@ -262,7 +264,7 @@ export class SheetProspectService implements IProspectService {
       `${SHEET_TAB_NAME}!A:Z`
     );
 
-    console.log('✅ Prospect créé dans la Sheet:', { id: nextId, rowNumber });
+    logger.debug('✅ Prospect créé dans la Sheet:', { id: nextId, rowNumber });
 
     // Retourner le prospect créé
     return {

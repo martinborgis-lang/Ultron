@@ -1,3 +1,5 @@
+import { logger } from '@/lib/logger';
+
 import { google } from 'googleapis';
 import type { GoogleCredentials, GoogleCalendarEvent, CreateCalendarEventParams } from '@/types/database';
 
@@ -115,7 +117,7 @@ export async function createCalendarEvent(
     };
   }
 
-  console.log('Creating event with requestBody:', JSON.stringify(requestBody, null, 2));
+  logger.debug('Creating event with requestBody:', JSON.stringify(requestBody, null, 2));
 
   const response = await calendar.events.insert({
     calendarId: 'primary',
@@ -124,8 +126,8 @@ export async function createCalendarEvent(
     sendUpdates: event.attendees && event.attendees.length > 0 ? 'all' : 'none',
   });
 
-  console.log('Event created:', response.data.id);
-  console.log('Hangout link:', response.data.hangoutLink);
+  logger.debug('Event created:', response.data.id);
+  logger.debug('Hangout link:', response.data.hangoutLink);
 
   return response.data;
 }

@@ -1,3 +1,5 @@
+import { logger } from '@/lib/logger';
+
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getValidCredentials, GoogleCredentials, updateGoogleSheetCells } from '@/lib/google';
 import { generateEmailWithConfig, DEFAULT_PROMPTS, PromptConfig } from '@/lib/anthropic';
@@ -12,11 +14,11 @@ async function handleRappel(request: NextRequest) {
     const payload: RappelPayload = await request.json();
     const { organizationId, conseillerId, conseillerEmail, prospectData, rowNumber } = payload;
 
-    console.log('=== ENVOI RAPPEL 24H via QStash ===');
-    console.log('Prospect:', prospectData.email);
-    console.log('Organization:', organizationId);
-    console.log('Conseiller ID:', conseillerId || 'non specifie');
-    console.log('Conseiller Email:', conseillerEmail || 'non specifie');
+    logger.debug('=== ENVOI RAPPEL 24H via QStash ===');
+    logger.debug('Prospect:', prospectData.email);
+    logger.debug('Organization:', organizationId);
+    logger.debug('Conseiller ID:', conseillerId || 'non specifie');
+    logger.debug('Conseiller Email:', conseillerEmail || 'non specifie');
 
     const supabase = createAdminClient();
 
@@ -54,7 +56,7 @@ async function handleRappel(request: NextRequest) {
     // Handle invalid_grant - fallback to org credentials
     let emailCredentialsResult = credentialsResponse.result;
     if (credentialsResponse.error?.error === 'invalid_grant') {
-      console.log('⚠️ Token invalide, fallback sur organisation:', credentialsResponse.error.message);
+      logger.debug('⚠️ Token invalide, fallback sur organisation:', credentialsResponse.error.message);
       const orgCredentials = await getEmailCredentialsByEmail(organizationId);
       emailCredentialsResult = orgCredentials.result;
     }
@@ -65,7 +67,7 @@ async function handleRappel(request: NextRequest) {
       return NextResponse.json({ error: errorMsg }, { status: 400 });
     }
     const emailCredentials = emailCredentialsResult.credentials;
-    console.log('Using email credentials from:', emailCredentialsResult.source, emailCredentialsResult.userId || 'org');
+    logger.debug('Using email credentials from:', emailCredentialsResult.source, emailCredentialsResult.userId || 'org');
 
     // Generate email with Claude using organization prompt config
     const promptConfig = org.prompt_rappel as PromptConfig | null;
@@ -80,7 +82,7 @@ async function handleRappel(request: NextRequest) {
         date_rdv: prospectData.dateRdvFormatted || prospectData.date_rdv,
       }
     );
-    console.log('Email generated:', email.objet);
+    logger.debug('Email generated:', email.objet);
 
     // Send email via Gmail (using advisor's Gmail or org fallback)
     const result = await sendEmail(emailCredentials, {
@@ -89,14 +91,14 @@ async function handleRappel(request: NextRequest) {
       body: email.corps,
     });
 
-    console.log('Email sent, messageId:', result.messageId);
+    logger.debug('Email sent, messageId:', result.messageId);
 
     // Update column Y (Mail Rappel = Oui) if row_number is available
     if (rowNumber && org.google_sheet_id) {
       await updateGoogleSheetCells(sheetCredentials, org.google_sheet_id, [
         { range: `Y${rowNumber}`, value: 'Oui' },
       ]);
-      console.log(`Updated Sheet row ${rowNumber} column Y = Oui`);
+      logger.debug(`Updated Sheet row ${rowNumber} column Y = Oui`);
     }
 
     // Log email sent
@@ -111,7 +113,7 @@ async function handleRappel(request: NextRequest) {
       sent_at: new Date().toISOString(),
     });
 
-    console.log('Rappel envoye a', prospectData.email);
+    logger.debug('Rappel envoye a', prospectData.email);
 
     return NextResponse.json({
       success: true,

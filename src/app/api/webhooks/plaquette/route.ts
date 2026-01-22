@@ -1,3 +1,5 @@
+import { logger } from '@/lib/logger';
+
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getValidCredentials, GoogleCredentials, downloadFileFromDrive, updateGoogleSheetCells } from '@/lib/google';
 import { generateEmailWithConfig, DEFAULT_PROMPTS, PromptConfig } from '@/lib/anthropic';
@@ -125,7 +127,7 @@ export async function POST(request: NextRequest) {
     // Handle invalid_grant - fallback to org credentials
     let emailCredentialsResult = credentialsResponse.result;
     if (credentialsResponse.error?.error === 'invalid_grant') {
-      console.log('⚠️ Token invalide, fallback sur organisation:', credentialsResponse.error.message);
+      logger.debug('⚠️ Token invalide, fallback sur organisation:', credentialsResponse.error.message);
       const orgCredentials = await getEmailCredentialsByEmail(org.id);
       emailCredentialsResult = orgCredentials.result;
     }
@@ -135,12 +137,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: errorMsg }, { status: 400 });
     }
     const emailCredentials = emailCredentialsResult.credentials;
-    console.log('Using email credentials from:', emailCredentialsResult.source, emailCredentialsResult.userId || 'org');
+    logger.debug('Using email credentials from:', emailCredentialsResult.source, emailCredentialsResult.userId || 'org');
 
     // Download plaquette from Google Drive (using org credentials)
-    console.log('Downloading plaquette from Drive, fileId:', plaquetteId);
+    logger.debug('Downloading plaquette from Drive, fileId:', plaquetteId);
     const plaquetteFile = await downloadFileFromDrive(sheetCredentials, plaquetteId);
-    console.log('Plaquette downloaded:', plaquetteFile.fileName, plaquetteFile.mimeType);
+    logger.debug('Plaquette downloaded:', plaquetteFile.fileName, plaquetteFile.mimeType);
 
     // Generate email with Claude using organization prompt config
     const promptConfig = org.prompt_plaquette as PromptConfig | null;

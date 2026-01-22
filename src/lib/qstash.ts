@@ -1,4 +1,5 @@
 import { Client } from '@upstash/qstash';
+import { logger } from '@/lib/logger';
 
 function getQStashClient() {
   if (!process.env.QSTASH_TOKEN) {
@@ -32,7 +33,7 @@ export async function scheduleRappelEmail(
   const qstashClient = getQStashClient();
   const delaySeconds = Math.max(0, Math.floor((scheduledFor.getTime() - Date.now()) / 1000));
 
-  console.log(`Scheduling rappel for ${scheduledFor.toISOString()}, delay: ${delaySeconds}s`);
+  logger.debug(`Scheduling rappel for ${scheduledFor.toISOString()}, delay: ${delaySeconds}s`);
 
   const result = await qstashClient.publishJSON({
     url: `${process.env.NEXT_PUBLIC_APP_URL}/api/webhooks/send-rappel`,
@@ -40,6 +41,6 @@ export async function scheduleRappelEmail(
     delay: delaySeconds,
   });
 
-  console.log('QStash scheduled:', result.messageId);
+  logger.debug('QStash scheduled:', result.messageId);
   return result;
 }

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { logger } from '@/lib/logger';
 import { getCurrentUserAndOrganization } from '@/lib/services/get-organization';
 import { getProspectService } from '@/lib/services/factories/prospect-factory';
 import { mapStageToSheetStatus, WaitingSubtype } from '@/types/pipeline';
@@ -68,12 +69,12 @@ async function triggerSheetWorkflow(
   }
 
   if (!webhookEndpoint) {
-    console.log('📧 No workflow to trigger for status:', sheetStatus);
+    logger.debug('📧 No workflow to trigger for status:', sheetStatus);
     return null;
   }
 
-  console.log('📧 Triggering Sheet workflow:', webhookEndpoint, 'for status:', sheetStatus);
-  console.log('📧 Using advisor email:', advisorEmail);
+  logger.debug('📧 Triggering Sheet workflow:', webhookEndpoint, 'for status:', sheetStatus);
+  logger.debug('📧 Using advisor email:', advisorEmail);
 
   // Build payload matching Apps Script format
   const payload = {
@@ -115,7 +116,7 @@ async function triggerSheetWorkflow(
     });
 
     const result = await response.json();
-    console.log('📧 Workflow response:', response.status, result);
+    logger.debug('📧 Workflow response:', response.status, result);
 
     return { endpoint: webhookEndpoint, status: response.status, result };
   } catch (error) {
@@ -156,41 +157,41 @@ export async function PATCH(
     let advisorEmail = user.email;
     let advisorId = user.id;
 
-    console.log('📧 Stage route - body.assignedTo:', body.assignedTo);
-    console.log('📧 Stage route - prospect.assignedTo:', prospect.assignedTo);
-    console.log('📧 Stage route - prospect.emailConseiller:', prospect.emailConseiller);
-    console.log('📧 Stage route - current user:', user.id, user.email);
+    logger.debug('📧 Stage route - body.assignedTo:', body.assignedTo);
+    logger.debug('📧 Stage route - prospect.assignedTo:', prospect.assignedTo);
+    logger.debug('📧 Stage route - prospect.emailConseiller:', prospect.emailConseiller);
+    logger.debug('📧 Stage route - current user:', user.id, user.email);
 
     // If assignedTo is provided in request body, use that advisor
     if (body.assignedTo) {
       const assignedAdvisorEmail = await getAdvisorEmail(body.assignedTo, organization.id);
-      console.log('📧 Stage route - Looked up advisor email for', body.assignedTo, ':', assignedAdvisorEmail);
+      logger.debug('📧 Stage route - Looked up advisor email for', body.assignedTo, ':', assignedAdvisorEmail);
       if (assignedAdvisorEmail) {
         advisorEmail = assignedAdvisorEmail;
         advisorId = body.assignedTo;
-        console.log('📧 Using assigned advisor from request:', advisorId, advisorEmail);
+        logger.debug('📧 Using assigned advisor from request:', advisorId, advisorEmail);
       }
     }
     // If prospect has an assigned advisor, use their email
     else if (prospect.assignedTo) {
       const prospectAdvisorEmail = await getAdvisorEmail(prospect.assignedTo, organization.id);
-      console.log('📧 Stage route - Looked up prospect advisor email:', prospectAdvisorEmail);
+      logger.debug('📧 Stage route - Looked up prospect advisor email:', prospectAdvisorEmail);
       if (prospectAdvisorEmail) {
         advisorEmail = prospectAdvisorEmail;
         advisorId = prospect.assignedTo;
-        console.log('📧 Using prospect assigned advisor:', advisorId, advisorEmail);
+        logger.debug('📧 Using prospect assigned advisor:', advisorId, advisorEmail);
       }
     }
     // Fallback to emailConseiller field (from Sheet column Z)
     else if (prospect.emailConseiller) {
       advisorEmail = prospect.emailConseiller;
-      console.log('📧 Using prospect emailConseiller:', advisorEmail);
+      logger.debug('📧 Using prospect emailConseiller:', advisorEmail);
     }
     else {
-      console.log('📧 Using current user as fallback:', advisorId, advisorEmail);
+      logger.debug('📧 Using current user as fallback:', advisorId, advisorEmail);
     }
 
-    console.log('📧 Stage route - FINAL advisor to use:', advisorId, advisorEmail);
+    logger.debug('📧 Stage route - FINAL advisor to use:', advisorId, advisorEmail);
 
     // 3. Trigger workflows based on mode
     let workflowResult: WorkflowResult | null = null;

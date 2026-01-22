@@ -1,4 +1,5 @@
 import { createAdminClient } from '@/lib/supabase-admin';
+import { logger } from '@/lib/logger';
 import { qualifyProspect, generateEmailWithConfig, DEFAULT_PROMPTS, PromptConfig, ScoringConfig } from '@/lib/anthropic';
 import { sendEmail, sendEmailWithBufferAttachment, getEmailCredentials, EmailCredentialsResult } from '@/lib/gmail';
 import { scheduleRappelEmail } from '@/lib/qstash';
@@ -136,21 +137,21 @@ async function workflowPlaquette(
   user: WorkflowUser
 ): Promise<WorkflowResult> {
   const actions: string[] = [];
-  console.log('📧 Workflow Plaquette - Starting for prospect:', prospectId);
+  logger.debug('📧 Workflow Plaquette - Starting for prospect:', prospectId);
 
   try {
     const prospect = await getCrmProspect(prospectId);
-    console.log('📧 Workflow Plaquette - Prospect loaded:', prospect?.email, prospect?.first_name, prospect?.last_name);
+    logger.debug('📧 Workflow Plaquette - Prospect loaded:', prospect?.email, prospect?.first_name, prospect?.last_name);
 
     if (!prospect.email) {
-      console.log('📧 Workflow Plaquette - ERROR: No email');
+      logger.debug('📧 Workflow Plaquette - ERROR: No email');
       return { workflow: 'plaquette', success: false, actions, error: 'Email prospect manquant' };
     }
 
     // Check if already sent using metadata field or a new column
     // For now, we'll track this in metadata
     if (prospect.metadata?.mail_plaquette_sent) {
-      console.log('📧 Workflow Plaquette - Already sent, skipping');
+      logger.debug('📧 Workflow Plaquette - Already sent, skipping');
       return { workflow: 'plaquette', success: true, actions: ['Déjà envoyé'] };
     }
 
@@ -166,9 +167,9 @@ async function workflowPlaquette(
     // Priority: user parameter (assigned advisor from route) > prospect.assigned_to
     const advisorUserId = user.id || prospect.assigned_to;
     const advisorEmail = user.email || prospect.assigned_user?.email;
-    console.log('📧 Workflow Plaquette - Advisor from params:', user.id, user.email);
-    console.log('📧 Workflow Plaquette - Prospect assigned_to:', prospect.assigned_to);
-    console.log('📧 Workflow Plaquette - Final advisor:', advisorUserId, advisorEmail);
+    logger.debug('📧 Workflow Plaquette - Advisor from params:', user.id, user.email);
+    logger.debug('📧 Workflow Plaquette - Prospect assigned_to:', prospect.assigned_to);
+    logger.debug('📧 Workflow Plaquette - Final advisor:', advisorUserId, advisorEmail);
     actions.push(`Conseiller: ${advisorEmail}`);
 
     // Get email credentials - try assigned advisor first
@@ -176,11 +177,11 @@ async function workflowPlaquette(
     let emailCredentialsResult: EmailCredentialsResult | null = credentialsResponse.result;
     let warning: string | undefined;
 
-    console.log('📧 Workflow Plaquette - Credentials result:', emailCredentialsResult?.source, emailCredentialsResult?.userId);
+    logger.debug('📧 Workflow Plaquette - Credentials result:', emailCredentialsResult?.source, emailCredentialsResult?.userId);
 
     // Handle invalid_grant error - fallback to organization
     if (credentialsResponse.error?.error === 'invalid_grant') {
-      console.log('⚠️ Workflow Plaquette - Token invalide, fallback sur organisation');
+      logger.debug('⚠️ Workflow Plaquette - Token invalide, fallback sur organisation');
       warning = credentialsResponse.error.message;
       actions.push(`⚠️ Token expiré: ${credentialsResponse.error.userEmail}`);
 
@@ -189,13 +190,13 @@ async function workflowPlaquette(
       emailCredentialsResult = orgCredentials.result;
 
       if (emailCredentialsResult) {
-        console.log('📧 Workflow Plaquette - Using org credentials as fallback');
+        logger.debug('📧 Workflow Plaquette - Using org credentials as fallback');
         actions.push('Fallback: credentials organisation');
       }
     }
 
     if (!emailCredentialsResult) {
-      console.log('📧 Workflow Plaquette - No credentials found, cannot send email');
+      logger.debug('📧 Workflow Plaquette - No credentials found, cannot send email');
       const errorMsg = credentialsResponse.error?.message || `Pas de credentials email pour ${advisorEmail}`;
       return { workflow: 'plaquette', success: false, actions, error: errorMsg };
     }
@@ -302,20 +303,20 @@ async function workflowRdvValide(
   user: WorkflowUser
 ): Promise<WorkflowResult> {
   const actions: string[] = [];
-  console.log('📧 Workflow RDV Validé - Starting for prospect:', prospectId);
+  logger.debug('📧 Workflow RDV Validé - Starting for prospect:', prospectId);
 
   try {
     const prospect = await getCrmProspect(prospectId);
-    console.log('📧 Workflow RDV Validé - Prospect loaded:', prospect?.email, prospect?.first_name, prospect?.last_name);
+    logger.debug('📧 Workflow RDV Validé - Prospect loaded:', prospect?.email, prospect?.first_name, prospect?.last_name);
 
     if (!prospect.email) {
-      console.log('📧 Workflow RDV Validé - ERROR: No email');
+      logger.debug('📧 Workflow RDV Validé - ERROR: No email');
       return { workflow: 'rdv_valide', success: false, actions, error: 'Email prospect manquant' };
     }
 
     // Check if already sent
     if (prospect.metadata?.mail_synthese_sent) {
-      console.log('📧 Workflow RDV Validé - Already sent, skipping');
+      logger.debug('📧 Workflow RDV Validé - Already sent, skipping');
       return { workflow: 'rdv_valide', success: true, actions: ['Déjà envoyé'] };
     }
 
@@ -327,9 +328,9 @@ async function workflowRdvValide(
     // Priority: user parameter (assigned advisor from route) > prospect.assigned_to
     const advisorUserId = user.id || prospect.assigned_to;
     const advisorEmail = user.email || prospect.assigned_user?.email;
-    console.log('📧 Workflow RDV Validé - Advisor from params:', user.id, user.email);
-    console.log('📧 Workflow RDV Validé - Prospect assigned_to:', prospect.assigned_to);
-    console.log('📧 Workflow RDV Validé - Final advisor:', advisorUserId, advisorEmail);
+    logger.debug('📧 Workflow RDV Validé - Advisor from params:', user.id, user.email);
+    logger.debug('📧 Workflow RDV Validé - Prospect assigned_to:', prospect.assigned_to);
+    logger.debug('📧 Workflow RDV Validé - Final advisor:', advisorUserId, advisorEmail);
     actions.push(`Conseiller: ${advisorEmail}`);
 
     // 1. Qualify prospect if not already done
@@ -371,11 +372,11 @@ async function workflowRdvValide(
     let emailCredentialsResult: EmailCredentialsResult | null = credentialsResponse.result;
     let warning: string | undefined;
 
-    console.log('📧 Workflow RDV Validé - Credentials result:', emailCredentialsResult?.source, emailCredentialsResult?.userId);
+    logger.debug('📧 Workflow RDV Validé - Credentials result:', emailCredentialsResult?.source, emailCredentialsResult?.userId);
 
     // Handle invalid_grant error - fallback to organization
     if (credentialsResponse.error?.error === 'invalid_grant') {
-      console.log('⚠️ Workflow RDV Validé - Token invalide, fallback sur organisation');
+      logger.debug('⚠️ Workflow RDV Validé - Token invalide, fallback sur organisation');
       warning = credentialsResponse.error.message;
       actions.push(`⚠️ Token expiré: ${credentialsResponse.error.userEmail}`);
 
@@ -384,13 +385,13 @@ async function workflowRdvValide(
       emailCredentialsResult = orgCredentials.result;
 
       if (emailCredentialsResult) {
-        console.log('📧 Workflow RDV Validé - Using org credentials as fallback');
+        logger.debug('📧 Workflow RDV Validé - Using org credentials as fallback');
         actions.push('Fallback: credentials organisation');
       }
     }
 
     if (!emailCredentialsResult) {
-      console.log('📧 Workflow RDV Validé - No credentials found, cannot send email');
+      logger.debug('📧 Workflow RDV Validé - No credentials found, cannot send email');
       const errorMsg = credentialsResponse.error?.message || `Pas de credentials email pour ${advisorEmail}`;
       return { workflow: 'rdv_valide', success: false, actions, error: errorMsg };
     }
@@ -405,13 +406,13 @@ async function workflowRdvValide(
     const rdvDateSource = prospect.metadata?.rdv_datetime || prospect.expected_close_date;
 
     if (rdvDateSource) {
-      console.log('📧 Workflow RDV - Raw date source:', rdvDateSource);
-      console.log('📧 Workflow RDV - Source type:', prospect.metadata?.rdv_datetime ? 'metadata.rdv_datetime' : 'expected_close_date');
+      logger.debug('📧 Workflow RDV - Raw date source:', rdvDateSource);
+      logger.debug('📧 Workflow RDV - Source type:', prospect.metadata?.rdv_datetime ? 'metadata.rdv_datetime' : 'expected_close_date');
 
       const rdvDate = new Date(rdvDateSource as string);
-      console.log('📧 Workflow RDV - Parsed as Date:', rdvDate.toString());
-      console.log('📧 Workflow RDV - ISO:', rdvDate.toISOString());
-      console.log('📧 Workflow RDV - UTC hours:', rdvDate.getUTCHours());
+      logger.debug('📧 Workflow RDV - Parsed as Date:', rdvDate.toString());
+      logger.debug('📧 Workflow RDV - ISO:', rdvDate.toISOString());
+      logger.debug('📧 Workflow RDV - UTC hours:', rdvDate.getUTCHours());
 
       dateRdvFormatted = rdvDate.toLocaleString('fr-FR', {
         weekday: 'long',
@@ -422,7 +423,7 @@ async function workflowRdvValide(
         minute: '2-digit',
         timeZone: 'Europe/Paris', // Force Paris timezone
       });
-      console.log('📧 Workflow RDV - Formatted for Paris:', dateRdvFormatted);
+      logger.debug('📧 Workflow RDV - Formatted for Paris:', dateRdvFormatted);
     }
 
     // Get the Meet link from prospect metadata (set by pipeline when creating planning event)
@@ -548,13 +549,13 @@ export async function triggerCrmWorkflow(
   organization: WorkflowOrganization,
   user: WorkflowUser
 ): Promise<WorkflowResult | null> {
-  console.log('🔄 CRM Workflow - Stage:', stageSlug, 'Subtype:', subtype, 'ProspectId:', prospectId);
-  console.log('🔄 CRM Workflow - Organization:', organization.id, 'Mode:', organization.data_mode);
-  console.log('🔄 CRM Workflow - User:', user.id, user.email);
+  logger.debug('🔄 CRM Workflow - Stage:', stageSlug, 'Subtype:', subtype, 'ProspectId:', prospectId);
+  logger.debug('🔄 CRM Workflow - Organization:', organization.id, 'Mode:', organization.data_mode);
+  logger.debug('🔄 CRM Workflow - User:', user.id, user.email);
 
   // Only trigger for CRM mode
   if (organization.data_mode !== 'crm') {
-    console.log('🔄 CRM Workflow - Skipping: not CRM mode');
+    logger.debug('🔄 CRM Workflow - Skipping: not CRM mode');
     return null;
   }
 
@@ -563,18 +564,18 @@ export async function triggerCrmWorkflow(
   // Plaquette workflow: en_attente (or similar) + plaquette subtype
   // Sends email with PDF plaquette attachment
   if (WAITING_STAGE_SLUGS.includes(stageSlug) && subtype === 'plaquette') {
-    console.log('🔄 CRM Workflow - Triggering PLAQUETTE workflow');
+    logger.debug('🔄 CRM Workflow - Triggering PLAQUETTE workflow');
     return await workflowPlaquette(prospectId, organization, user);
   }
 
   // RDV workflow: rdv_pris OR rdv_valide
   // Does: Qualification IA + Email récap + Rappel 24h
   if (RDV_STAGE_SLUGS.includes(stageSlug)) {
-    console.log('🔄 CRM Workflow - Triggering RDV_VALIDE workflow');
+    logger.debug('🔄 CRM Workflow - Triggering RDV_VALIDE workflow');
     return await workflowRdvValide(prospectId, organization, user);
   }
 
   // No workflow for this stage change
-  console.log('🔄 CRM Workflow - No workflow for stage:', stageSlug);
+  logger.debug('🔄 CRM Workflow - No workflow for stage:', stageSlug);
   return null;
 }

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { logger } from '@/lib/logger';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 
@@ -18,11 +19,11 @@ export function AdminApiTest() {
     setUserApiResult(null);
 
     try {
-      console.log('🔄 Testing user API...');
+      logger.debug('🔄 Testing user API...');
       const response = await fetch('/api/user/me');
       const data = await response.json();
 
-      console.log('👤 User API Response:', response.status, data);
+      logger.debug('👤 User API Response:', response.status, data);
 
       if (!response.ok) {
         setUserApiError(`Error ${response.status}: ${data.error || 'Unknown error'}`);
@@ -43,11 +44,11 @@ export function AdminApiTest() {
     setResult(null);
 
     try {
-      console.log('🔄 Testing admin API...');
+      logger.debug('🔄 Testing admin API...');
       const response = await fetch('/api/admin/stats');
       const data = await response.json();
 
-      console.log('📊 Admin API Response:', response.status, data);
+      logger.debug('📊 Admin API Response:', response.status, data);
 
       if (!response.ok) {
         setError(`Error ${response.status}: ${data.error || 'Unknown error'}`);

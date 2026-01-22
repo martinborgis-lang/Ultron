@@ -1,3 +1,5 @@
+import { logger } from '@/lib/logger';
+
 import { createClient } from '@/lib/supabase/server';
 import {
   getValidCredentials,
@@ -55,7 +57,7 @@ export async function GET() {
     // Compare access_token to detect if credentials were refreshed
     const originalCredentials = org.google_credentials as GoogleCredentials;
     if (credentials.access_token !== originalCredentials.access_token) {
-      console.log('🔄 Google credentials refreshed, saving new tokens');
+      logger.debug('🔄 Google credentials refreshed, saving new tokens');
       await supabase
         .from('organizations')
         .update({ google_credentials: credentials })

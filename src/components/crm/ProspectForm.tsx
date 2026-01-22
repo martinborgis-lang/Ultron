@@ -1,3 +1,5 @@
+import { logger } from '@/lib/logger';
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -138,7 +140,7 @@ export function ProspectForm({ open, onOpenChange, onSuccess, stages }: Prospect
         assignedTo: formData.assigned_to || undefined,
       };
 
-      console.log('ProspectForm - Creating prospect:', unifiedData);
+      logger.debug('ProspectForm - Creating prospect:', unifiedData);
 
       // Use unified API which supports both CRM and Sheet modes
       const response = await fetch('/api/prospects/unified', {
@@ -148,7 +150,7 @@ export function ProspectForm({ open, onOpenChange, onSuccess, stages }: Prospect
       });
 
       const data = await response.json();
-      console.log('ProspectForm - API response:', { ok: response.ok, status: response.status, data });
+      logger.debug('ProspectForm - API response:', { ok: response.ok, status: response.status, data });
 
       if (!response.ok) {
         throw new Error(data.error || 'Erreur lors de la creation');

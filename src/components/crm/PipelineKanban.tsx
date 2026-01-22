@@ -1,3 +1,5 @@
+import { logger } from '@/lib/logger';
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -80,7 +82,7 @@ export function PipelineKanban({
 
     // If dropped outside any droppable area, cancel
     if (!over) {
-      console.log('Drop cancelled - no target');
+      logger.debug('Drop cancelled - no target');
       return;
     }
 
@@ -99,10 +101,10 @@ export function PipelineKanban({
       const targetProspect = localProspects.find(p => p.id === targetId);
       if (targetProspect) {
         newStageSlug = targetProspect.stage_slug;
-        console.log('Dropped on card, using card stage:', newStageSlug);
+        logger.debug('Dropped on card, using card stage:', newStageSlug);
       } else {
         // Unknown target, cancel
-        console.log('Drop cancelled - unknown target:', targetId);
+        logger.debug('Drop cancelled - unknown target:', targetId);
         return;
       }
     }
@@ -116,11 +118,11 @@ export function PipelineKanban({
 
     // Same stage - no change needed
     if (prospect.stage_slug === newStageSlug) {
-      console.log('Same stage, no change');
+      logger.debug('Same stage, no change');
       return;
     }
 
-    console.log('Moving prospect:', {
+    logger.debug('Moving prospect:', {
       from: prospect.stage_slug,
       to: newStageSlug,
       isWaitingStage: WAITING_STAGE_SLUGS.includes(newStageSlug),
@@ -133,7 +135,7 @@ export function PipelineKanban({
         .filter(Boolean)
         .join(' ') || 'Ce prospect';
 
-      console.log('Opening waiting modal for:', prospectName);
+      logger.debug('Opening waiting modal for:', prospectName);
       onWaitingDrop(prospectId, prospectName);
       return;
     }
@@ -144,7 +146,7 @@ export function PipelineKanban({
         .filter(Boolean)
         .join(' ') || 'Ce prospect';
 
-      console.log('Opening RDV notes modal for:', prospectName);
+      logger.debug('Opening RDV notes modal for:', prospectName);
       onRdvDrop(prospectId, prospectName, newStageSlug);
       return;
     }
@@ -155,7 +157,7 @@ export function PipelineKanban({
         .filter(Boolean)
         .join(' ') || 'Ce prospect';
 
-      console.log('Opening product selector for won deal:', prospectName);
+      logger.debug('Opening product selector for won deal:', prospectName);
       onWonDrop(prospectId, prospectName);
       return;
     }

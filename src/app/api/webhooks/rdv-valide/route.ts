@@ -1,3 +1,5 @@
+import { logger } from '@/lib/logger';
+
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getValidCredentials, GoogleCredentials, updateGoogleSheetCells } from '@/lib/google';
 import { generateEmailWithConfig, DEFAULT_PROMPTS, qualifyProspect, PromptConfig, ScoringConfig } from '@/lib/anthropic';
@@ -117,7 +119,7 @@ export async function POST(request: NextRequest) {
     // Handle invalid_grant - fallback to org credentials
     let emailCredentialsResult = credentialsResponse.result;
     if (credentialsResponse.error?.error === 'invalid_grant') {
-      console.log('⚠️ Token invalide, fallback sur organisation:', credentialsResponse.error.message);
+      logger.debug('⚠️ Token invalide, fallback sur organisation:', credentialsResponse.error.message);
       const orgCredentials = await getEmailCredentialsByEmail(org.id);
       emailCredentialsResult = orgCredentials.result;
     }
@@ -127,12 +129,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: errorMsg }, { status: 400 });
     }
     const emailCredentials = emailCredentialsResult.credentials;
-    console.log('Using email credentials from:', emailCredentialsResult.source, emailCredentialsResult.userId || 'org');
+    logger.debug('Using email credentials from:', emailCredentialsResult.source, emailCredentialsResult.userId || 'org');
 
     // Step 1: Qualify prospect if not already qualified
     let qualificationResult = null;
     if (!prospect.qualificationIA || prospect.qualificationIA.trim() === '') {
-      console.log('Qualifying prospect before sending email...');
+      logger.debug('Qualifying prospect before sending email...');
 
       qualificationResult = await qualifyProspect(
         {
@@ -167,7 +169,7 @@ export async function POST(request: NextRequest) {
           { range: `S${rowNum}`, value: qualificationResult.priorite },
           { range: `T${rowNum}`, value: qualificationResult.justification },
         ]);
-        console.log(`Updated Sheet row ${rowNum} with qualification: ${qualificationResult.qualification}`);
+        logger.debug(`Updated Sheet row ${rowNum} with qualification: ${qualificationResult.qualification}`);
       }
     }
 
@@ -186,7 +188,7 @@ export async function POST(request: NextRequest) {
         date_rdv: prospect.dateRdv,
       }
     );
-    console.log('Email generated:', JSON.stringify(email));
+    logger.debug('Email generated:', JSON.stringify(email));
 
     // Step 4: Send email via Gmail (using advisor's Gmail or org fallback)
     const result = await sendEmail(emailCredentials, {
@@ -215,10 +217,10 @@ export async function POST(request: NextRequest) {
     });
 
     // Step 7: Schedule 24h reminder email via QStash
-    console.log('=== PROGRAMMATION RAPPEL 24H via QStash ===');
+    logger.debug('=== PROGRAMMATION RAPPEL 24H via QStash ===');
     const dateRdvStr = prospect.dateRdv;
-    console.log('Date RDV brute:', dateRdvStr);
-    console.log('Organization ID:', org.id);
+    logger.debug('Date RDV brute:', dateRdvStr);
+    logger.debug('Organization ID:', org.id);
 
     const rappelResult: { scheduled: boolean; scheduledFor: string | null; error: string | null; messageId?: string } = {
       scheduled: false,
@@ -245,11 +247,11 @@ export async function POST(request: NextRequest) {
       }
 
       if (rdvDate && !isNaN(rdvDate.getTime())) {
-        console.log('Date RDV parsee:', rdvDate.toISOString());
+        logger.debug('Date RDV parsee:', rdvDate.toISOString());
 
         // Schedule reminder exactly 24h before RDV
         const scheduledFor = new Date(rdvDate.getTime() - 24 * 60 * 60 * 1000);
-        console.log('Rappel programme pour:', scheduledFor.toISOString());
+        logger.debug('Rappel programme pour:', scheduledFor.toISOString());
 
         // Only schedule if reminder is in the future
         if (scheduledFor > new Date()) {
@@ -279,7 +281,7 @@ export async function POST(request: NextRequest) {
               rowNumber: payload.row_number,
             });
 
-            console.log('Rappel programme via QStash, messageId:', qstashResult.messageId);
+            logger.debug('Rappel programme via QStash, messageId:', qstashResult.messageId);
             rappelResult.scheduled = true;
             rappelResult.scheduledFor = scheduledFor.toISOString();
             rappelResult.messageId = qstashResult.messageId;
@@ -288,15 +290,15 @@ export async function POST(request: NextRequest) {
             rappelResult.error = qstashError instanceof Error ? qstashError.message : 'QStash error';
           }
         } else {
-          console.log('Rappel non programme: date deja passee');
+          logger.debug('Rappel non programme: date deja passee');
           rappelResult.error = 'Date already passed';
         }
       } else {
-        console.log('Impossible de parser la date RDV:', dateRdvStr);
+        logger.debug('Impossible de parser la date RDV:', dateRdvStr);
         rappelResult.error = 'Cannot parse date';
       }
     } else {
-      console.log('Pas de date RDV, rappel non programme');
+      logger.debug('Pas de date RDV, rappel non programme');
       rappelResult.error = 'No date_rdv provided';
     }
 

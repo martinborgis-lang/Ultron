@@ -24,7 +24,9 @@
       "Bash(curl:*)",
       "Bash(npm run dev:*)",
       "Bash(find:*)",
-      "Bash(npx eslint:*)"
+      "Bash(npx eslint:*)",
+      "Bash(tree:*)",
+      "Bash(node:*)"
     ]
   }
 }

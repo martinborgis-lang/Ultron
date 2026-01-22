@@ -1,4 +1,5 @@
 import { google } from 'googleapis';
+import { logger } from '@/lib/logger';
 import { GoogleCredentials, getValidCredentials } from './google';
 import { createAdminClient } from './supabase/admin';
 import EmailSecurityValidator from './validation/email-security';
@@ -62,7 +63,7 @@ export async function getEmailCredentials(
         // Check if it's an invalid_grant error (token expired/revoked)
         const errorMessage = error instanceof Error ? error.message : String(error);
         if (errorMessage.includes('invalid_grant')) {
-          console.log(`⚠️ Token invalide pour ${user.email} - le conseiller doit reconnecter son Gmail`);
+          logger.debug(`⚠️ Token invalide pour ${user.email} - le conseiller doit reconnecter son Gmail`);
 
           // Clear invalid credentials
           await supabase
@@ -139,9 +140,9 @@ export async function getEmailCredentialsByEmail(
 ): Promise<{ result: EmailCredentialsResult | null; error?: EmailCredentialsError }> {
   const supabase = createAdminClient();
 
-  console.log('=== RECHERCHE CONSEILLER PAR EMAIL ===');
-  console.log('Email recherche:', userEmail);
-  console.log('Organization ID:', organizationId);
+  logger.debug('=== RECHERCHE CONSEILLER PAR EMAIL ===');
+  logger.debug('Email recherche:', userEmail);
+  logger.debug('Organization ID:', organizationId);
 
   // If userEmail is provided, try to get user's Gmail credentials first
   if (userEmail && userEmail.trim() !== '') {
@@ -152,9 +153,9 @@ export async function getEmailCredentialsByEmail(
       .eq('organization_id', organizationId)
       .single();
 
-    console.log('Resultat recherche:', user ? `Trouve: ${user.email}` : 'Non trouve');
-    if (userError) console.log('Erreur recherche:', userError.message);
-    console.log('Gmail credentials presents:', !!user?.gmail_credentials);
+    logger.debug('Resultat recherche:', user ? `Trouve: ${user.email}` : 'Non trouve');
+    if (userError) logger.debug('Erreur recherche:', userError.message);
+    logger.debug('Gmail credentials presents:', !!user?.gmail_credentials);
 
     if (user?.gmail_credentials) {
       try {
@@ -168,7 +169,7 @@ export async function getEmailCredentialsByEmail(
             .eq('id', user.id);
         }
 
-        console.log('✅ Utilisation Gmail conseiller:', user.email);
+        logger.debug('✅ Utilisation Gmail conseiller:', user.email);
         return {
           result: {
             credentials: validCredentials,
@@ -180,7 +181,7 @@ export async function getEmailCredentialsByEmail(
       } catch (error: unknown) {
         const errorMessage = error instanceof Error ? error.message : String(error);
         if (errorMessage.includes('invalid_grant')) {
-          console.log(`⚠️ Token invalide pour ${user.email} - le conseiller doit reconnecter son Gmail`);
+          logger.debug(`⚠️ Token invalide pour ${user.email} - le conseiller doit reconnecter son Gmail`);
 
           // Clear invalid credentials
           await supabase
@@ -201,12 +202,12 @@ export async function getEmailCredentialsByEmail(
         throw error;
       }
     } else if (user) {
-      console.log('⚠️ Conseiller trouve mais sans Gmail connecte, fallback sur organisation');
+      logger.debug('⚠️ Conseiller trouve mais sans Gmail connecte, fallback sur organisation');
     } else {
-      console.log('⚠️ Conseiller non trouve dans la base, fallback sur organisation');
+      logger.debug('⚠️ Conseiller non trouve dans la base, fallback sur organisation');
     }
   } else {
-    console.log('⚠️ Pas d\'email conseiller fourni, fallback sur organisation');
+    logger.debug('⚠️ Pas d\'email conseiller fourni, fallback sur organisation');
   }
 
   // Fallback to organization credentials
@@ -228,7 +229,7 @@ export async function getEmailCredentialsByEmail(
           .eq('id', organizationId);
       }
 
-      console.log('📧 Utilisation Gmail organisation');
+      logger.debug('📧 Utilisation Gmail organisation');
       return {
         result: {
           credentials: validCredentials,

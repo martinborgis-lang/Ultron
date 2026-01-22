@@ -1,3 +1,5 @@
+import { logger } from '@/lib/logger';
+
 import { createAdminClient } from '@/lib/supabase-admin';
 import { IPlanningService, PlanningEvent, PlanningFilters } from '../interfaces';
 import type { PlanningEventDbRecord } from '@/types/database';
@@ -148,7 +150,7 @@ export class CrmPlanningService implements IPlanningService {
       endDate = endDateTime.toISOString();
     }
 
-    console.log('📅 Planning create - FULL EVENT DATA:', JSON.stringify({
+    logger.debug('📅 Planning create - FULL EVENT DATA:', JSON.stringify({
       startDate,
       endDate,
       dueDate: event.dueDate,
@@ -194,7 +196,7 @@ export class CrmPlanningService implements IPlanningService {
     }
 
     // Sync with Google Calendar (best effort - don't block if it fails)
-    console.log('📅 Calendar sync check:', {
+    logger.debug('📅 Calendar sync check:', {
       startDate: data.start_date,
       endDate: data.end_date,
     });
@@ -203,10 +205,10 @@ export class CrmPlanningService implements IPlanningService {
 
     try {
       const credentials = await getCalendarCredentials(this.userId, this.organizationId);
-      console.log('📅 Calendar credentials found:', !!credentials);
+      logger.debug('📅 Calendar credentials found:', !!credentials);
 
       if (credentials && data.start_date && data.end_date) {
-        console.log('📅 Creating SINGLE calendar event with Meet:', event.addGoogleMeet, '- NO OTHER EVENTS SHOULD BE CREATED');
+        logger.debug('📅 Creating SINGLE calendar event with Meet:', event.addGoogleMeet, '- NO OTHER EVENTS SHOULD BE CREATED');
         const calendarEvent = await createCalendarEvent(credentials, {
           summary: event.title || 'Événement Ultron',
           description: event.description || (prospectName ? `Prospect: ${prospectName}` : undefined),
@@ -239,7 +241,7 @@ export class CrmPlanningService implements IPlanningService {
           .update(updateFields)
           .eq('id', data.id);
 
-        console.log('✅ Event synced to Google Calendar:', calendarEvent.id, 'Meet link:', meetLink);
+        logger.debug('✅ Event synced to Google Calendar:', calendarEvent.id, 'Meet link:', meetLink);
       }
     } catch (calendarError) {
       console.error('⚠️ Failed to sync to Google Calendar (non-blocking):', calendarError);
@@ -316,7 +318,7 @@ export class CrmPlanningService implements IPlanningService {
             endDateTime: data.endDate,
             allDay: data.allDay,
           });
-          console.log('✅ Event updated in Google Calendar:', eventData.external_id);
+          logger.debug('✅ Event updated in Google Calendar:', eventData.external_id);
         }
       }
     } catch (calendarError) {
@@ -348,7 +350,7 @@ export class CrmPlanningService implements IPlanningService {
 
         if (credentials) {
           await deleteCalendarEvent(credentials, existing.external_id);
-          console.log('✅ Event deleted from Google Calendar:', existing.external_id);
+          logger.debug('✅ Event deleted from Google Calendar:', existing.external_id);
         }
       }
     } catch (calendarError) {

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { logger } from '@/lib/logger';
 import {
   Dialog,
   DialogContent,
@@ -85,9 +86,9 @@ export function RdvNotesModal({
     // Create date using local time constructor
     const localDate = new Date(year, month - 1, day, hours, minutes, 0, 0);
 
-    console.log('RDV Modal - Input:', rdvDate);
-    console.log('RDV Modal - Parsed as local:', localDate.toString());
-    console.log('RDV Modal - ISO (UTC):', localDate.toISOString());
+    logger.debug('RDV Modal - Input:', rdvDate);
+    logger.debug('RDV Modal - Parsed as local:', localDate.toString());
+    logger.debug('RDV Modal - ISO (UTC):', localDate.toISOString());
 
     onConfirm(notes, localDate, assignedTo || undefined);
     onOpenChange(false);

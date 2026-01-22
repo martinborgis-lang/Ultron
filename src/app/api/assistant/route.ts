@@ -1,3 +1,5 @@
+import { logger } from '@/lib/logger';
+
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUserAndOrganization } from '@/lib/services/get-organization';
 import { createAdminClient } from '@/lib/supabase/admin';
@@ -61,7 +63,7 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    console.log('Generated SQL:', sql);
+    logger.debug('Generated SQL:', sql);
 
     // 5. Ensure organization filter is present
     sql = ensureOrganizationFilter(sql);
@@ -93,7 +95,7 @@ export async function POST(request: NextRequest) {
 
       if (queryError) {
         // If RPC doesn't exist, fall back to direct query approach
-        console.log('RPC not available, using direct query approach');
+        logger.debug('RPC not available, using direct query approach');
 
         // Parse the SQL and manually replace $1 with the organization ID
         // This is safe because we've already validated the query
@@ -192,7 +194,7 @@ async function executeQueryDirectly(
     selectColumns = columns.join(',');
   }
 
-  console.log('Executing query on table:', tableName, 'with columns:', selectColumns);
+  logger.debug('Executing query on table:', tableName, 'with columns:', selectColumns);
 
   // Build a basic query
   let query = supabase.from(tableName).select(selectColumns).eq('organization_id', organizationId);
@@ -215,7 +217,7 @@ async function executeQueryDirectly(
   for (const match of notNullMatches) {
     const column = match[1];
     if (column !== 'organization_id') {
-      console.log('Adding NOT NULL filter for:', column);
+      logger.debug('Adding NOT NULL filter for:', column);
       query = query.not(column, 'is', null);
     }
   }
@@ -226,7 +228,7 @@ async function executeQueryDirectly(
     const column = match[1];
     // Skip if this was part of "IS NOT NULL"
     if (!lowerSQL.includes(`${column} is not null`)) {
-      console.log('Adding IS NULL filter for:', column);
+      logger.debug('Adding IS NULL filter for:', column);
       query = query.is(column, null);
     }
   }
@@ -247,7 +249,7 @@ async function executeQueryDirectly(
   for (const match of gtMatches) {
     const column = match[1];
     const value = parseInt(match[2], 10);
-    console.log('Adding > filter:', column, '>', value);
+    logger.debug('Adding > filter:', column, '>', value);
     query = query.gt(column, value);
   }
 
@@ -258,6 +260,6 @@ async function executeQueryDirectly(
     throw error;
   }
 
-  console.log('Query returned', data?.length || 0, 'results');
+  logger.debug('Query returned', data?.length || 0, 'results');
   return (data as unknown as Record<string, unknown>[]) || [];
 }
