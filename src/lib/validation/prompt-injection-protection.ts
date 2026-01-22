@@ -43,8 +43,8 @@ const PROMPT_INJECTION_PATTERNS = [
   /just\s+kidding[,.]?\s*(?:ignore|disregard|forget)/gi,
   /actually[,.]?\s*(?:ignore|disregard|forget)/gi,
 
-  // Injection de templates
-  /\{\{.*\}\}/g,
+  // Injection de templates (exclusion des placeholders email légitimes)
+  /\{\{(?!(?:prenom|nom|email|besoins|qualification|notes_appel|date_rdv)\}\}).*\}\}/g,
   /\$\{.*\}/g,
   /%\{.*\}/g,
 
@@ -57,13 +57,19 @@ const PROMPT_INJECTION_PATTERNS = [
   /\\[rntbfav]/g,
 ];
 
-// Mots-clés sensibles à surveiller
+// Mots-clés sensibles à surveiller (contexte d'injection)
 const SENSITIVE_KEYWORDS = [
   'system', 'prompt', 'instruction', 'ignore', 'forget', 'disregard',
   'override', 'bypass', 'jailbreak', 'hack', 'exploit', 'vulnerability',
   'admin', 'administrator', 'root', 'sudo', 'password', 'token', 'secret',
-  'api_key', 'anthropic', 'claude', 'openai', 'chatgpt', 'llm', 'ai',
+  'api_key', 'anthropic', 'claude', 'openai', 'chatgpt', 'llm',
   'model', 'training', 'dataset', 'eval', 'exec', 'shell', 'command'
+];
+
+// Mots-clés sensibles uniquement en contexte d'injection IA (pas dans texte normal)
+const AI_INJECTION_KEYWORDS = [
+  'ai model', 'ai system', 'large language model', 'you are ai',
+  'act as ai', 'pretend to be ai', 'override ai', 'ai instructions'
 ];
 
 export class PromptInjectionProtection {
@@ -101,6 +107,14 @@ export class PromptInjectionProtection {
       if (lowerInput.includes(keyword.toLowerCase())) {
         threats.push(`Mot-clé sensible détecté: "${keyword}"`);
         riskLevel = this.escalateRiskLevel(riskLevel, 'MEDIUM');
+      }
+    }
+
+    // 2b. Détecter les injections IA spécifiques (contexte plus strict)
+    for (const keyword of AI_INJECTION_KEYWORDS) {
+      if (lowerInput.includes(keyword.toLowerCase())) {
+        threats.push(`Pattern d'injection IA détecté: "${keyword}"`);
+        riskLevel = this.escalateRiskLevel(riskLevel, 'HIGH');
       }
     }
 
