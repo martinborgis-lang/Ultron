@@ -35,7 +35,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { Users, Plus, Mail, Shield, UserCog, Trash2, CheckCircle, XCircle, Loader2, Unlink } from 'lucide-react';
+import { Users, Plus, Mail, Shield, UserCog, Trash2, CheckCircle, XCircle, Loader2, Unlink, Zap } from 'lucide-react';
 
 interface TeamMember {
   id: string;
@@ -62,6 +62,13 @@ export function TeamManager({ currentUserId: initialUserId }: TeamManagerProps) 
   const [sheetOpen, setSheetOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [testingGmail, setTestingGmail] = useState<string | null>(null);
+  const [testResult, setTestResult] = useState<{
+    memberId: string;
+    success: boolean;
+    message: string;
+    status: string;
+  } | null>(null);
 
   // Fetch current user ID if not provided
   useEffect(() => {
@@ -172,8 +179,47 @@ export function TeamManager({ currentUserId: initialUserId }: TeamManagerProps) 
       setMembers(members.map(m =>
         m.id === memberId ? { ...m, gmail_connected: false } : m
       ));
+
+      setSuccessMessage('Gmail déconnecté avec succès');
+      setTimeout(() => setSuccessMessage(null), 5000);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur inconnue');
+    }
+  };
+
+  const handleTestGmail = async (memberId: string) => {
+    setTestingGmail(memberId);
+    setTestResult(null);
+    setError(null);
+
+    try {
+      const response = await fetch(`/api/team/${memberId}/gmail/test`, {
+        method: 'POST',
+      });
+
+      const data = await response.json();
+
+      setTestResult({
+        memberId,
+        success: data.success,
+        message: data.success ?
+          `✅ ${data.message}${data.details?.email ? ` (${data.details.email})` : ''}` :
+          `❌ ${data.error}: ${data.details}`,
+        status: data.status
+      });
+
+      // Clear test result after 10 seconds
+      setTimeout(() => setTestResult(null), 10000);
+
+    } catch (err) {
+      setTestResult({
+        memberId,
+        success: false,
+        message: `❌ Erreur de test: ${err instanceof Error ? err.message : 'Erreur inconnue'}`,
+        status: 'error'
+      });
+    } finally {
+      setTestingGmail(null);
     }
   };
 
@@ -203,6 +249,41 @@ export function TeamManager({ currentUserId: initialUserId }: TeamManagerProps) 
             <div className="flex items-center gap-3">
               <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
               <p className="text-green-800 dark:text-green-200">{successMessage}</p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Test Result Message */}
+      {testResult && (
+        <Card className={`${
+          testResult.success
+            ? 'border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950'
+            : 'border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-950'
+        }`}>
+          <CardContent className="py-4">
+            <div className="flex items-center gap-3">
+              {testResult.success ? (
+                <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
+              ) : (
+                <XCircle className="h-5 w-5 text-red-600 dark:text-red-400" />
+              )}
+              <div>
+                <p className={`font-medium ${
+                  testResult.success
+                    ? 'text-green-800 dark:text-green-200'
+                    : 'text-red-800 dark:text-red-200'
+                }`}>
+                  Test Gmail
+                </p>
+                <p className={`text-sm ${
+                  testResult.success
+                    ? 'text-green-700 dark:text-green-300'
+                    : 'text-red-700 dark:text-red-300'
+                }`}>
+                  {testResult.message}
+                </p>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -362,6 +443,19 @@ export function TeamManager({ currentUserId: initialUserId }: TeamManagerProps) 
                             <CheckCircle className="mr-1 h-3 w-3" />
                             Gmail connecte
                           </Badge>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 px-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-950"
+                            onClick={() => handleTestGmail(member.id)}
+                            disabled={testingGmail === member.id}
+                          >
+                            {testingGmail === member.id ? (
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            ) : (
+                              <Zap className="h-3.5 w-3.5" />
+                            )}
+                          </Button>
                           <AlertDialog>
                             <AlertDialogTrigger asChild>
                               <Button variant="ghost" size="sm" className="h-7 px-2 text-muted-foreground hover:text-red-600">
