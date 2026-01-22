@@ -62,6 +62,10 @@ export async function POST(request: NextRequest) {
       .delete()
       .eq('prospect_id', prospect_id);
 
+    // Calculer le CA de l'entreprise (commission)
+    const commissionRate = product.commission_rate || 0;
+    const company_revenue = (client_amount * commissionRate) / 100;
+
     // Créer le nouveau deal
     const dealData = {
       organization_id: context.organization.id,
@@ -69,6 +73,8 @@ export async function POST(request: NextRequest) {
       product_id,
       advisor_id: context.user.id,
       client_amount,
+      company_revenue,
+      commission_rate_used: commissionRate,
       notes
     };
 

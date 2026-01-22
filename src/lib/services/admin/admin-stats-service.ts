@@ -37,6 +37,7 @@ interface MeetingData {
 interface DealData {
   id: string;
   client_amount: number;
+  company_revenue: number;
   created_at: string;
   closed_at: string | null;
 }
@@ -220,7 +221,7 @@ export class AdminStatsService {
   private async getAdvisorDeals(advisorId: string, period: PeriodDates): Promise<DealData[]> {
     const { data, error } = await this.adminClient
       .from('deal_products')
-      .select('id, client_amount, created_at, closed_at')
+      .select('id, client_amount, company_revenue, created_at, closed_at')
       .eq('organization_id', this.organizationId)
       .eq('advisor_id', advisorId)
       .gte('created_at', period.start.toISOString())
@@ -241,12 +242,13 @@ export class AdminStatsService {
       ['negociation', 'proposition'].includes(p.stage_slug)
     ).length;
 
-    const wonDeals = prospects.filter(p => p.stage?.is_won).length;
+    // ✅ CORRECTION : Compter les deals réels plutôt que les prospects avec stage is_won
+    const wonDeals = deals.length;
     const lostDeals = prospects.filter(p => p.stage?.is_lost).length;
 
     const wonProspects = prospects.filter(p => p.stage?.is_won);
-    // ✅ CORRECTION : Prendre les revenus depuis les deals réels plutôt que crm_prospects.deal_value
-    const totalDealValue = deals.reduce((sum, deal) => sum + (deal.client_amount || 0), 0);
+    // ✅ CORRECTION : Utiliser company_revenue (CA entreprise) plutôt que client_amount (montant client)
+    const totalDealValue = deals.reduce((sum, deal) => sum + (deal.company_revenue || 0), 0);
 
     const activeProspects = prospects.filter(p => !p.stage?.is_won && !p.stage?.is_lost);
     const weightedForecast = activeProspects.reduce((sum, p) =>
@@ -314,7 +316,7 @@ export class AdminStatsService {
     ]);
 
     const prevRdvCount = prevMeetings.length;
-    const prevRevenue = prevDeals.reduce((sum, deal) => sum + (deal.client_amount || 0), 0);
+    const prevRevenue = prevDeals.reduce((sum, deal) => sum + (deal.company_revenue || 0), 0);
 
     const rdvGrowth = prevRdvCount > 0
       ? ((currentMetrics.rdv_scheduled_count - prevRdvCount) / prevRdvCount) * 100
