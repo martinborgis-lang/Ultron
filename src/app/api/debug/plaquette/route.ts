@@ -5,6 +5,23 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 
+interface TestEmailResult {
+  success: boolean;
+  subject?: string;
+  body_preview?: string;
+  error?: string;
+}
+
+interface OrganizationDebugInfo {
+  id: string;
+  name: string;
+  google_sheet_id: string | null;
+  has_plaquette_url: boolean;
+  has_prompt_plaquette: boolean;
+  prompt_config: PromptConfig | null;
+  test_email: TestEmailResult;
+}
+
 export async function GET() {
   try {
     const supabase = createAdminClient();
@@ -19,10 +36,10 @@ export async function GET() {
     }
 
     // Debug info for each organization
-    const debugInfo: any[] = [];
+    const debugInfo: OrganizationDebugInfo[] = [];
 
     for (const org of organizations || []) {
-      const orgInfo: any = {
+      const orgInfo: Partial<OrganizationDebugInfo> = {
         id: org.id,
         name: org.name,
         google_sheet_id: org.google_sheet_id,
@@ -60,7 +77,7 @@ export async function GET() {
         };
       }
 
-      debugInfo.push(orgInfo);
+      debugInfo.push(orgInfo as OrganizationDebugInfo);
     }
 
     return NextResponse.json({
