@@ -13,8 +13,12 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
     }
 
-    // TODO: Vérifier si l'utilisateur est admin
-    // Pour l'instant, tous les utilisateurs connectés peuvent voir les stats
+    // ✅ SÉCURITÉ : Vérifier que l'utilisateur est admin
+    if (context.user.role !== 'admin') {
+      return NextResponse.json({
+        error: 'Accès refusé - Réservé aux administrateurs'
+      }, { status: 403 });
+    }
 
     const stats = securityMiddleware.getSecurityStats();
     const now = new Date();
@@ -85,7 +89,12 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
     }
 
-    // TODO: Vérifier admin
+    // ✅ SÉCURITÉ : Vérifier que l'utilisateur est admin pour la réinitialisation
+    if (context.user.role !== 'admin') {
+      return NextResponse.json({
+        error: 'Accès refusé - Réservé aux administrateurs'
+      }, { status: 403 });
+    }
 
     // Note: Pour une vraie réinitialisation, il faudrait exposer des méthodes dans SecurityMiddleware
     // Pour l'instant, on renvoie juste un message
