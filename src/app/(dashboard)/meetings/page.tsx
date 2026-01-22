@@ -48,21 +48,21 @@ export default function MeetingsPage() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
 
-  const fetchTranscripts = async () => {
-    setLoading(true);
-    try {
-      const res = await fetch('/api/meeting/transcripts');
-      if (res.ok) {
-        const data = await res.json();
-        setTranscripts(data.transcripts || []);
-      }
-    } catch (error) {
-      console.error('Error fetching transcripts:', error);
-    }
-    setLoading(false);
-  };
-
   useEffect(() => {
+    const fetchTranscripts = async () => {
+      setLoading(true);
+      try {
+        const res = await fetch('/api/meeting/transcripts');
+        if (res.ok) {
+          const data = await res.json();
+          setTranscripts(data.transcripts || []);
+        }
+      } catch (error) {
+        console.error('Error fetching transcripts:', error);
+      }
+      setLoading(false);
+    };
+
     fetchTranscripts();
   }, []);
 

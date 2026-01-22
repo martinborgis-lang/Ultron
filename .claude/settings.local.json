@@ -23,7 +23,8 @@
       "Bash(git restore:*)",
       "Bash(curl:*)",
       "Bash(npm run dev:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(npx eslint:*)"
     ]
   }
 }

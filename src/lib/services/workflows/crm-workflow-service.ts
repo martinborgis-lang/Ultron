@@ -172,7 +172,7 @@ async function workflowPlaquette(
     actions.push(`Conseiller: ${advisorEmail}`);
 
     // Get email credentials - try assigned advisor first
-    let credentialsResponse = await getEmailCredentials(organization.id, advisorUserId);
+    const credentialsResponse = await getEmailCredentials(organization.id, advisorUserId);
     let emailCredentialsResult: EmailCredentialsResult | null = credentialsResponse.result;
     let warning: string | undefined;
 
@@ -367,7 +367,7 @@ async function workflowRdvValide(
     }
 
     // 2. Get email credentials - try assigned advisor first
-    let credentialsResponse = await getEmailCredentials(organization.id, advisorUserId);
+    const credentialsResponse = await getEmailCredentials(organization.id, advisorUserId);
     let emailCredentialsResult: EmailCredentialsResult | null = credentialsResponse.result;
     let warning: string | undefined;
 

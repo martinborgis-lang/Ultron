@@ -13,22 +13,22 @@ export default function DataSourceSettings() {
   const [originalMode, setOriginalMode] = useState<'sheet' | 'crm'>('crm');
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
-  const fetchCurrentSettings = async () => {
-    try {
-      const res = await fetch('/api/settings/data-source');
-      if (res.ok) {
-        const data = await res.json();
-        setMode(data.data_mode || 'crm');
-        setOriginalMode(data.data_mode || 'crm');
-        setSheetId(data.google_sheet_id || '');
-      }
-    } catch (error) {
-      console.error('Error fetching settings:', error);
-    }
-    setLoading(false);
-  };
-
   useEffect(() => {
+    const fetchCurrentSettings = async () => {
+      try {
+        const res = await fetch('/api/settings/data-source');
+        if (res.ok) {
+          const data = await res.json();
+          setMode(data.data_mode || 'crm');
+          setOriginalMode(data.data_mode || 'crm');
+          setSheetId(data.google_sheet_id || '');
+        }
+      } catch (error) {
+        console.error('Error fetching settings:', error);
+      }
+      setLoading(false);
+    };
+
     fetchCurrentSettings();
   }, []);
 
@@ -185,7 +185,7 @@ export default function DataSourceSettings() {
                 className="w-full px-3 py-2 border rounded-lg bg-background"
               />
               <p className="text-xs text-muted-foreground mt-1.5">
-                L'ID se trouve dans l'URL de votre Sheet : docs.google.com/spreadsheets/d/
+                L&apos;ID se trouve dans l&apos;URL de votre Sheet : docs.google.com/spreadsheets/d/
                 <strong>[ID]</strong>/edit
               </p>
             </div>

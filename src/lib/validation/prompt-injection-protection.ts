@@ -221,7 +221,7 @@ export class PromptInjectionProtection {
   /**
    * Valide et sécurise un objet entier de données prospect
    */
-  static validateProspectData(prospect: Record<string, any>): {
+  static validateProspectData(prospect: Record<string, unknown>): {
     isValid: boolean;
     sanitizedData: Record<string, string>;
     threats: string[];
@@ -269,7 +269,7 @@ export function wrapUserDataForPrompt(data: string, label?: string): string {
   return PromptInjectionProtection.wrapUserData(data, label);
 }
 
-export function validateProspectForPrompt(prospect: Record<string, any>): Record<string, string> {
+export function validateProspectForPrompt(prospect: Record<string, unknown>): Record<string, string> {
   const result = PromptInjectionProtection.validateProspectData(prospect);
   if (!result.isValid) {
     throw new Error(`Données prospect non sécurisées: ${result.threats.join(', ')}`);

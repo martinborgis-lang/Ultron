@@ -201,8 +201,8 @@ export class SecurityMiddleware {
       return realIP;
     }
 
-    // Fallback (pas très fiable)
-    return request.ip || 'unknown';
+    // Fallback (pas très fiable) - NextRequest n'a pas de propriété .ip
+    return 'unknown';
   }
 
   /**

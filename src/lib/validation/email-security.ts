@@ -58,15 +58,15 @@ const PHISHING_PATTERNS = [
 
 // Patterns XSS et injection HTML/JavaScript
 const XSS_PATTERNS = [
-  /<script[^>]*>.*?<\/script>/gis,
-  /<iframe[^>]*>.*?<\/iframe>/gis,
-  /<object[^>]*>.*?<\/object>/gis,
+  /<script[^>]*>.*?<\/script>/gi,
+  /<iframe[^>]*>.*?<\/iframe>/gi,
+  /<object[^>]*>.*?<\/object>/gi,
   /<embed[^>]*>/gi,
-  /<form[^>]*>.*?<\/form>/gis,
+  /<form[^>]*>.*?<\/form>/gi,
   /<input[^>]*>/gi,
-  /<textarea[^>]*>.*?<\/textarea>/gis,
-  /<select[^>]*>.*?<\/select>/gis,
-  /<button[^>]*>.*?<\/button>/gis,
+  /<textarea[^>]*>.*?<\/textarea>/gi,
+  /<select[^>]*>.*?<\/select>/gi,
+  /<button[^>]*>.*?<\/button>/gi,
   /on\w+\s*=/gi,              // Event handlers (onclick, onload, etc.)
   /javascript:/gi,
   /vbscript:/gi,

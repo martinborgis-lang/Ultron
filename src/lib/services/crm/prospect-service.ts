@@ -100,7 +100,7 @@ export class CrmProspectService implements IProspectService {
   }
 
   async create(data: Partial<ProspectData>): Promise<ProspectData> {
-    const dbData: Record<string, any> = {
+    const dbData: Record<string, unknown> = {
       organization_id: this.organizationId,
       first_name: data.firstName,
       last_name: data.lastName,
@@ -135,7 +135,7 @@ export class CrmProspectService implements IProspectService {
   }
 
   async update(id: string, data: Partial<ProspectData>): Promise<ProspectData> {
-    const dbData: Record<string, any> = { updated_at: new Date().toISOString() };
+    const dbData: Record<string, unknown> = { updated_at: new Date().toISOString() };
 
     if (data.firstName !== undefined) dbData.first_name = data.firstName;
     if (data.lastName !== undefined) dbData.last_name = data.lastName;
@@ -157,7 +157,7 @@ export class CrmProspectService implements IProspectService {
 
     // Handle meetLink and dateRdv - store in metadata
     // dateRdv is also stored in metadata as rdv_datetime to preserve the full datetime (since expected_close_date might be DATE type)
-    if ((data as any).meetLink !== undefined || data.dateRdv !== undefined) {
+    if ('meetLink' in data || data.dateRdv !== undefined) {
       // We need to merge with existing metadata
       const { data: existingProspect } = await this.supabase
         .from('crm_prospects')
@@ -165,18 +165,20 @@ export class CrmProspectService implements IProspectService {
         .eq('id', id)
         .single();
 
-      dbData.metadata = {
+      const metadata = {
         ...(existingProspect?.metadata || {}),
       };
 
-      if ((data as any).meetLink !== undefined) {
-        dbData.metadata.meet_link = (data as any).meetLink;
+      if ('meetLink' in data) {
+        metadata.meet_link = (data as Record<string, unknown>).meetLink;
       }
 
       if (data.dateRdv !== undefined) {
         // Store full ISO datetime in metadata for accurate time retrieval
-        dbData.metadata.rdv_datetime = data.dateRdv;
+        metadata.rdv_datetime = data.dateRdv;
       }
+
+      dbData.metadata = metadata;
     }
 
     const { data: result, error } = await this.supabase

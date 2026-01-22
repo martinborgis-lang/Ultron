@@ -1,3 +1,5 @@
+import Link from 'next/link';
+
 export default function LegalLayout({
   children,
 }: {
@@ -8,9 +10,9 @@ export default function LegalLayout({
       {/* Header simple */}
       <header className="bg-white border-b">
         <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
-          <a href="/" className="text-xl font-bold text-indigo-600">
+          <Link href="/" className="text-xl font-bold text-indigo-600">
             Ultron
-          </a>
+          </Link>
           <nav className="flex gap-4 text-sm">
             <a href="/login" className="text-gray-600 hover:text-indigo-600">
               Connexion

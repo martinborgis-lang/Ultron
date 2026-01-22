@@ -117,3 +117,47 @@ export interface DatabaseResponse<T = unknown> {
 export type DatabaseRow = Record<string, unknown>;
 export type DatabaseUpdate = Record<string, unknown>;
 export type DatabaseInsert = Record<string, unknown>;
+
+// Types pour les credentials Google
+export interface GoogleCredentials {
+  access_token: string;
+  refresh_token?: string;
+  scope?: string;
+  token_type?: string;
+  expiry_date?: number;
+}
+
+// Types pour les événements Google Calendar
+export interface GoogleCalendarEvent {
+  id: string;
+  summary: string;
+  description?: string;
+  start: {
+    dateTime?: string;
+    date?: string;
+    timeZone?: string;
+  };
+  end: {
+    dateTime?: string;
+    date?: string;
+    timeZone?: string;
+  };
+  attendees?: Array<{
+    email: string;
+    displayName?: string;
+    responseStatus?: 'needsAction' | 'declined' | 'tentative' | 'accepted';
+  }>;
+  hangoutLink?: string;
+  htmlLink?: string;
+}
+
+// Type pour les paramètres de création d'événement
+export interface CreateCalendarEventParams {
+  summary: string;
+  description?: string;
+  startDateTime: string;
+  endDateTime: string;
+  allDay?: boolean;
+  addGoogleMeet?: boolean;
+  attendees?: string[];
+}

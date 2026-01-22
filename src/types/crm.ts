@@ -101,7 +101,7 @@ export interface CrmActivity {
   duration_minutes: number | null;
   outcome: 'positive' | 'neutral' | 'negative' | 'no_answer' | 'voicemail' | null;
 
-  metadata: Record<string, any>;
+  metadata: Record<string, unknown>;
   created_at: string;
 
   // Relations

@@ -91,7 +91,7 @@ export default function ImportPage() {
   const [columns, setColumns] = useState<string[]>([]);
   const [rows, setRows] = useState<Record<string, string>[]>([]);
   const [mapping, setMapping] = useState<Record<string, string>>({});
-  const [importing, setImporting] = useState(false);
+  const [_importing, setImporting] = useState(false);
   const [result, setResult] = useState<{
     imported: number;
     skipped: number;

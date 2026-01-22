@@ -105,12 +105,12 @@ export class PaginationHelper {
   /**
    * Génère les métadonnées pour cursor-based pagination
    */
-  static generateCursorMeta(
-    data: any[],
+  static generateCursorMeta<T>(
+    data: T[],
     limit: number,
     hasNext: boolean,
     hasPrev: boolean,
-    getCursor: (item: any) => string,
+    getCursor: (item: T) => string,
     total?: number
   ): CursorPaginationMeta {
     const nextCursor = hasNext && data.length > 0
@@ -133,11 +133,15 @@ export class PaginationHelper {
   /**
    * Applique la pagination à une query Supabase
    */
-  static applyToSupabaseQuery(
-    query: any,
+  static applyToSupabaseQuery<T extends {
+    order: (column: string, options?: { ascending: boolean }) => T;
+    range: (from: number, to: number) => T;
+    select: (columns: string, options?: any) => T;
+  }>(
+    query: T,
     params: PaginationParams,
-    countQuery?: any
-  ) {
+    countQuery?: T
+  ): T {
     // Appliquer tri
     if (params.sort) {
       query = query.order(params.sort, { ascending: params.order === 'asc' });
@@ -223,7 +227,7 @@ export class PaginationHelper {
       return `${baseUrl}?${params.toString()}`;
     };
 
-    const links: any = {};
+    const links: Record<string, string> = {};
 
     if (meta.page > 1) {
       links.first = createUrl(1);

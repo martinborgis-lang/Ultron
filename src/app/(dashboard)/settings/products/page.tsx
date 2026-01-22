@@ -72,8 +72,8 @@ export default async function ProductsPage() {
               Configuration des Produits et Commissions
             </p>
             <div className="text-blue-700 dark:text-blue-400 mt-1 space-y-1">
-              <p><strong>Produits à Bénéfice Fixe :</strong> L'entreprise gagne un montant fixe par vente</p>
-              <p><strong>Produits à Commission :</strong> L'entreprise gagne un % du montant investi par le client</p>
+              <p><strong>Produits à Bénéfice Fixe :</strong> L&apos;entreprise gagne un montant fixe par vente</p>
+              <p><strong>Produits à Commission :</strong> L&apos;entreprise gagne un % du montant investi par le client</p>
               <p><strong>Commissions Conseillers :</strong> % sur le CA généré, configurable par produit/conseiller</p>
             </div>
           </div>

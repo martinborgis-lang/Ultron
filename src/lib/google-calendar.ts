@@ -1,6 +1,29 @@
 import { google } from 'googleapis';
+import type { GoogleCredentials, GoogleCalendarEvent, CreateCalendarEventParams } from '@/types/database';
 
-function getCalendarClient(credentials: any) {
+interface CalendarEventRequest {
+  summary: string;
+  description?: string;
+  location?: string;
+  start: { dateTime: string; timeZone: string };
+  end: { dateTime: string; timeZone: string };
+  reminders: {
+    useDefault: boolean;
+    overrides: Array<{ method: string; minutes: number }>;
+  };
+  attendees?: Array<{ email: string; responseStatus?: string }>;
+  guestsCanModify?: boolean;
+  guestsCanInviteOthers?: boolean;
+  guestsCanSeeOtherGuests?: boolean;
+  conferenceData?: {
+    createRequest: {
+      requestId: string;
+      conferenceSolutionKey: { type: string };
+    };
+  };
+}
+
+function getCalendarClient(credentials: GoogleCredentials) {
   const oauth2Client = new google.auth.OAuth2(
     process.env.GOOGLE_CLIENT_ID,
     process.env.GOOGLE_CLIENT_SECRET
@@ -10,7 +33,7 @@ function getCalendarClient(credentials: any) {
 }
 
 export async function getCalendarEvents(
-  credentials: any,
+  credentials: GoogleCredentials,
   timeMin: Date,
   timeMax: Date
 ) {
@@ -29,16 +52,8 @@ export async function getCalendarEvents(
 }
 
 export async function createCalendarEvent(
-  credentials: any,
-  event: {
-    summary: string;
-    description?: string;
-    startDateTime: string;
-    endDateTime: string;
-    attendees?: string[];
-    location?: string;
-    addGoogleMeet?: boolean;
-  }
+  credentials: GoogleCredentials,
+  event: CreateCalendarEventParams & { location?: string }
 ) {
   const oauth2Client = new google.auth.OAuth2(
     process.env.GOOGLE_CLIENT_ID,
@@ -54,7 +69,9 @@ export async function createCalendarEvent(
 
   const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
 
-  const requestBody: any = {
+  // Interface CalendarEventRequest moved to module level
+
+  const requestBody: CalendarEventRequest = {
     summary: event.summary,
     description: event.description,
     location: event.location,
@@ -113,7 +130,7 @@ export async function createCalendarEvent(
   return response.data;
 }
 
-export async function getCalendarEvent(credentials: any, eventId: string) {
+export async function getCalendarEvent(credentials: GoogleCredentials, eventId: string) {
   const calendar = getCalendarClient(credentials);
 
   const response = await calendar.events.get({
@@ -125,7 +142,7 @@ export async function getCalendarEvent(credentials: any, eventId: string) {
 }
 
 export async function updateCalendarEvent(
-  credentials: any,
+  credentials: GoogleCredentials,
   eventId: string,
   event: {
     summary?: string;
@@ -137,7 +154,7 @@ export async function updateCalendarEvent(
 ) {
   const calendar = getCalendarClient(credentials);
 
-  const updateData: any = {};
+  const updateData: Partial<CalendarEventRequest> = {};
   if (event.summary) updateData.summary = event.summary;
   if (event.description) updateData.description = event.description;
   if (event.location) updateData.location = event.location;
@@ -157,7 +174,7 @@ export async function updateCalendarEvent(
   return response.data;
 }
 
-export async function deleteCalendarEvent(credentials: any, eventId: string) {
+export async function deleteCalendarEvent(credentials: GoogleCredentials, eventId: string) {
   const calendar = getCalendarClient(credentials);
 
   await calendar.events.delete({

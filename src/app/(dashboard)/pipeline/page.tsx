@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { PipelineKanban } from '@/components/crm/PipelineKanban';
@@ -127,8 +127,8 @@ export default function PipelinePage() {
   // Ref to prevent double fetch on mount
   const hasFetched = useRef(false);
 
-  // Fetch function (not in useCallback to avoid dependency issues)
-  const fetchData = async (searchQuery?: string) => {
+  // Fetch function wrapped in useCallback
+  const fetchData = useCallback(async (searchQuery?: string) => {
     setLoading(true);
     try {
       const [stagesRes, prospectsRes] = await Promise.all([
@@ -150,7 +150,7 @@ export default function PipelinePage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   // ✅ OPTIMISATION N+1: Initial fetch - regrouper TOUTES les requêtes en parallèle
   useEffect(() => {
