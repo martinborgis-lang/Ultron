@@ -19,10 +19,10 @@ export async function GET() {
     }
 
     // Debug info for each organization
-    const debugInfo = [];
+    const debugInfo: any[] = [];
 
     for (const org of organizations || []) {
-      const orgInfo = {
+      const orgInfo: any = {
         id: org.id,
         name: org.name,
         google_sheet_id: org.google_sheet_id,
