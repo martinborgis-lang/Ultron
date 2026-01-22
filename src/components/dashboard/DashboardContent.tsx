@@ -6,9 +6,6 @@ import { StatsCards } from './StatsCards';
 import { ProspectsChart } from './ProspectsChart';
 import { RecentProspects } from './RecentProspects';
 import { ActivityFeed } from './ActivityFeed';
-import { UserDebug } from '../debug/UserDebug';
-import { AdminApiTest } from '../debug/AdminApiTest';
-import { AdminNavTest } from '../debug/AdminNavTest';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -405,10 +402,6 @@ export function DashboardContent() {
 
   return (
     <div className="space-y-6">
-      <UserDebug />
-      <AdminApiTest />
-      <AdminNavTest />
-
       <div className="flex justify-end">
         <Button onClick={fetchData} variant="outline" size="sm">
           <RefreshCw className="mr-2 h-4 w-4" />
