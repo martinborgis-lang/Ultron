@@ -46,12 +46,24 @@ export function RegisterForm() {
       return;
     }
 
-    // 2. Create organization
+    // 2. Create organization with default scoring config
     const { data: orgData, error: orgError } = await supabase
       .from('organizations')
       .insert({
         name: companyName,
         slug: generateSlug(companyName),
+        data_mode: 'crm',
+        scoring_config: {
+          seuil_chaud: 70,
+          seuil_tiede: 40,
+          poids_revenus: 25,
+          poids_analyse_ia: 50,
+          poids_patrimoine: 25,
+          seuil_revenus_max: 10000,
+          seuil_revenus_min: 2500,
+          seuil_patrimoine_max: 300000,
+          seuil_patrimoine_min: 30000
+        }
       })
       .select()
       .single();
@@ -79,17 +91,146 @@ export function RegisterForm() {
       return;
     }
 
-    // 4. Create default prompts
-    const defaultPrompts = [
-      { type: 'qualification', name: 'Qualification de prospect', system_prompt: 'Tu es un assistant specialise dans la qualification de prospects pour un cabinet de gestion de patrimoine.', user_prompt: 'Analyse ce prospect et determine son niveau de qualification (CHAUD, TIEDE, FROID).' },
-      { type: 'synthese', name: 'Synthese de conversation', system_prompt: 'Tu es un assistant qui synthetise les conversations avec les prospects.', user_prompt: 'Cree une synthese de cette conversation.' },
-      { type: 'rappel', name: 'Email de rappel', system_prompt: 'Tu es un assistant qui redige des emails de rappel professionnels et personnalises.', user_prompt: 'Redige un email de rappel pour ce prospect.' },
-      { type: 'plaquette', name: 'Envoi de plaquette', system_prompt: 'Tu es un assistant qui redige des emails d\'accompagnement pour l\'envoi de plaquettes commerciales.', user_prompt: 'Redige un email pour accompagner l\'envoi de la plaquette.' },
+    // 4. Add default prompts to organization
+    const defaultPromptConfigs = {
+      prompt_qualification: {
+        useAI: true,
+        systemPrompt: `Tu es un expert en qualification de prospects pour conseillers en gestion de patrimoine.
+Analyse le profil du prospect et détermine sa qualification.
+
+Critères de qualification:
+- CHAUD: Patrimoine > 100k€, revenus stables, besoin identifié, disponible rapidement
+- TIEDE: Potentiel intéressant mais hésitant ou timing pas optimal
+- FROID: Faible potentiel, peu de moyens, ou pas de besoin identifié
+
+Score: 0-100 basé sur le potentiel commercial
+Priorité: HAUTE (à contacter en priorité), MOYENNE, BASSE
+
+Retourne UNIQUEMENT un JSON avec le format:
+{"qualification": "CHAUD|TIEDE|FROID", "score": 75, "priorite": "HAUTE|MOYENNE|BASSE", "justification": "Explication courte"}`,
+        userPromptTemplate: `Informations du prospect à qualifier:
+
+Prénom: {{prenom}}
+Nom: {{nom}}
+Email: {{email}}
+Téléphone: {{telephone}}
+Âge: {{age}}
+Situation professionnelle: {{situation_pro}}
+Revenus: {{revenus}}
+Patrimoine: {{patrimoine}}
+Besoins exprimés: {{besoins}}
+Notes de l'appel: {{notes_appel}}`,
+        fixedEmailSubject: '',
+        fixedEmailBody: ''
+      },
+      prompt_synthese: {
+        useAI: true,
+        systemPrompt: `Tu es l'assistant d'un cabinet de gestion de patrimoine.
+
+Ta mission : rédiger un email de RÉCAPITULATIF suite à un APPEL DE PROSPECTION téléphonique.
+
+CONTEXTE IMPORTANT :
+- Un conseiller vient de faire un APPEL TÉLÉPHONIQUE avec un prospect (c'est l'appel de prospection)
+- Pendant cet appel, ils ont convenu d'un RENDEZ-VOUS à une date future
+- Cet email récapitule l'appel ET confirme le RDV à venir
+
+⚠️ RÈGLE ABSOLUE - SIGNATURE :
+- JAMAIS de signature à la fin (pas de nom, prénom, fonction, téléphone, etc.)
+- JAMAIS de placeholder comme [Nom], [Prénom], [Signature], [Conseiller]
+- Terminer UNIQUEMENT par "Cordialement," ou "À très bientôt," - RIEN D'AUTRE APRÈS
+
+FORMAT DE SORTIE : {"objet": "...", "corps": "HTML avec <br>"}`,
+        userPromptTemplate: `Rédige un email de synthèse pour :
+- Prénom : {{prenom}}
+- Nom : {{nom}}
+- Qualification : {{qualification}}
+- Besoins : {{besoins}}
+- Notes de l'appel : {{notes_appel}}
+- Date du RDV : {{date_rdv}}
+
+L'appel de prospection vient d'avoir lieu. Le RDV est à la date mentionnée (futur).`,
+        fixedEmailSubject: '',
+        fixedEmailBody: ''
+      },
+      prompt_rappel: {
+        useAI: true,
+        systemPrompt: `Tu es un assistant pour conseillers en gestion de patrimoine.
+
+Ta mission : rédiger un email de RAPPEL pour un rendez-vous prévu demain (24h avant).
+
+L'email doit :
+- Rappeler la date et l'heure exactes du rendez-vous
+- Être bref et professionnel (max 5-6 lignes)
+- Mentionner brièvement l'objet du RDV (analyse patrimoniale)
+- Exprimer l'enthousiasme de rencontrer le prospect
+
+⚠️ RÈGLE ABSOLUE - SIGNATURE :
+- JAMAIS de signature à la fin (pas de nom, prénom, fonction, téléphone, etc.)
+- JAMAIS de placeholder comme [Nom], [Prénom], [Signature], [Conseiller]
+- Terminer UNIQUEMENT par "Cordialement," ou "À demain," - RIEN D'AUTRE APRÈS
+
+FORMAT DE SORTIE : {"objet": "...", "corps": "HTML avec <br>"}`,
+        userPromptTemplate: `Rédige un email de rappel pour le RDV demain :
+- Prénom : {{prenom}}
+- Nom : {{nom}}
+- Date du RDV : {{date_rdv}}
+- Besoins : {{besoins}}`,
+        fixedEmailSubject: '',
+        fixedEmailBody: ''
+      },
+      prompt_plaquette: {
+        useAI: true,
+        systemPrompt: `Tu es un assistant pour conseillers en gestion de patrimoine.
+
+Ta mission : rédiger un email sobre pour accompagner l'envoi d'une plaquette commerciale en pièce jointe.
+
+CONTEXTE :
+- Le prospect a demandé à recevoir la plaquette (statut "À rappeler - Plaquette")
+- L'email doit être court et sobre, car la plaquette parle d'elle-même
+- Ne pas surcharger d'informations, juste présenter la PJ
+
+L'email doit :
+- Être court (4-5 lignes max)
+- Mentionner la plaquette en pièce jointe
+- Inviter à la consulter et à revenir vers nous pour toute question
+- Rester sobre et professionnel
+
+⚠️ RÈGLE ABSOLUE - SIGNATURE :
+- JAMAIS de signature à la fin (pas de nom, prénom, fonction, téléphone, etc.)
+- JAMAIS de placeholder comme [Nom], [Prénom], [Signature], [Conseiller]
+- Terminer UNIQUEMENT par "Cordialement," ou "Belle lecture," - RIEN D'AUTRE APRÈS
+
+FORMAT DE SORTIE : {"objet": "...", "corps": "HTML avec <br>"}`,
+        userPromptTemplate: `Rédige un email sobre pour accompagner la plaquette :
+- Prénom : {{prenom}}
+- Nom : {{nom}}
+- Besoins : {{besoins}}
+
+Email court et professionnel pour présenter la plaquette en pièce jointe.`,
+        fixedEmailSubject: '',
+        fixedEmailBody: ''
+      }
+    };
+
+    // Update organization with default prompts
+    await supabase
+      .from('organizations')
+      .update(defaultPromptConfigs)
+      .eq('id', orgData.id);
+
+    // 5. Create default pipeline stages
+    const defaultStages = [
+      { name: 'Nouveau', slug: 'nouveau', color: '#6366f1', position: 0, is_won: false, is_lost: false },
+      { name: 'En attente', slug: 'en_attente', color: '#f59e0b', position: 1, is_won: false, is_lost: false },
+      { name: 'RDV Pris', slug: 'rdv_pris', color: '#10b981', position: 2, is_won: false, is_lost: false },
+      { name: 'Négociation', slug: 'negociation', color: '#8b5cf6', position: 3, is_won: false, is_lost: false },
+      { name: 'Gagné', slug: 'gagne', color: '#22c55e', position: 4, is_won: true, is_lost: false },
+      { name: 'Perdu', slug: 'perdu', color: '#ef4444', position: 5, is_won: false, is_lost: true },
     ];
 
-    await supabase.from('prompts').insert(
-      defaultPrompts.map((p) => ({
-        ...p,
+    await supabase.from('pipeline_stages').insert(
+      defaultStages.map((stage) => ({
+        ...stage,
         organization_id: orgData.id,
       }))
     );
