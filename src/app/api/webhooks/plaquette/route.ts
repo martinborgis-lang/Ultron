@@ -146,6 +146,18 @@ export async function POST(request: NextRequest) {
 
     // Generate email with Claude using organization prompt config
     const promptConfig = org.prompt_plaquette as PromptConfig | null;
+
+    // DEBUG: Log important information
+    logger.debug('[PLAQUETTE DEBUG] Organization:', org.id);
+    logger.debug('[PLAQUETTE DEBUG] Has prompt_plaquette:', !!org.prompt_plaquette);
+    logger.debug('[PLAQUETTE DEBUG] PromptConfig:', promptConfig);
+    logger.debug('[PLAQUETTE DEBUG] Prospect data:', {
+      prenom: prospect.prenom,
+      nom: prospect.nom,
+      email: prospect.email,
+      besoins: prospect.besoins?.substring(0, 100) || 'none'
+    });
+
     const email = await generateEmailWithConfig(
       promptConfig,
       DEFAULT_PROMPTS.plaquette,
@@ -157,7 +169,23 @@ export async function POST(request: NextRequest) {
       }
     );
 
+    // DEBUG: Log generated email
+    logger.debug('[PLAQUETTE DEBUG] Generated email:', {
+      subject: email.objet,
+      body_length: email.corps?.length || 0,
+      body_preview: email.corps?.substring(0, 200) || 'no body'
+    });
+
     // Send email with attachment via Gmail (using advisor's Gmail or org fallback)
+    logger.debug('[PLAQUETTE DEBUG] Sending email with:', {
+      to: prospect.email,
+      subject: email.objet,
+      from: emailCredentialsResult.userEmail || conseillerEmail,
+      attachmentName: plaquetteFile.fileName,
+      has_body: !!email.corps,
+      body_length: email.corps?.length || 0
+    });
+
     const result = await sendEmailWithBufferAttachment(emailCredentials, {
       to: prospect.email,
       subject: email.objet,
@@ -167,6 +195,11 @@ export async function POST(request: NextRequest) {
       attachmentName: plaquetteFile.fileName,
       attachmentMimeType: plaquetteFile.mimeType,
     }, org.id, emailCredentialsResult.userId);
+
+    logger.debug('[PLAQUETTE DEBUG] Email sent result:', {
+      messageId: result.messageId,
+      success: !!result.messageId
+    });
 
     // Update column W (Mail Plaquette Envoyé = Oui)
     if (payload.row_number) {
