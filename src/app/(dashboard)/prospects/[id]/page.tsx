@@ -153,7 +153,8 @@ export default function ProspectDetailPage() {
 
       setProspect(crmProspect);
       setFormData(crmProspect);
-      setStages(stagesData);
+      // ✅ SÉCURITÉ : Vérifier que stagesData est un array
+      setStages(Array.isArray(stagesData) ? stagesData : []);
 
       // ✅ OPTIMISATION : Regrouper les requêtes secondaires en parallèle selon le mode
       const prospectEmail = sheetMode ? prospectData.email : crmProspect.email;
@@ -185,9 +186,10 @@ export default function ProspectDetailPage() {
           );
 
           const [activitiesData, tasksData, emailsData] = results;
-          setActivities(activitiesData || []);
-          setTasks(tasksData || []);
-          setEmails(emailsData || []);
+          // ✅ SÉCURITÉ : Vérifier que les données sont des arrays
+          setActivities(Array.isArray(activitiesData) ? activitiesData : []);
+          setTasks(Array.isArray(tasksData) ? tasksData : []);
+          setEmails(Array.isArray(emailsData) ? emailsData : []);
         } catch (err) {
           console.error('Error fetching secondary CRM data:', err);
           setActivities([]);
@@ -204,7 +206,8 @@ export default function ProspectDetailPage() {
             const emailsRes = await fetch(`/api/crm/emails?prospect_email=${encodeURIComponent(prospectEmail)}`);
             if (emailsRes.ok) {
               const emailsData = await emailsRes.json();
-              setEmails(emailsData);
+              // ✅ SÉCURITÉ : Vérifier que emailsData est un array
+              setEmails(Array.isArray(emailsData) ? emailsData : []);
             } else {
               setEmails([]);
             }
@@ -626,7 +629,8 @@ export default function ProspectDetailPage() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {stages.map((stage) => (
+                    {/* ✅ SÉCURITÉ : Vérifier que stages est un array avant .map() */}
+                    {Array.isArray(stages) && stages.map((stage) => (
                       <SelectItem key={stage.slug} value={stage.slug}>
                         <div className="flex items-center gap-2">
                           <div
@@ -730,7 +734,7 @@ export default function ProspectDetailPage() {
           </Card>
 
           {/* Email History */}
-          {emails.length > 0 && (
+          {Array.isArray(emails) && emails.length > 0 && (
             <Card>
               <CardHeader>
                 <CardTitle className="text-base flex items-center gap-2">
@@ -739,7 +743,8 @@ export default function ProspectDetailPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                {emails.map((email) => {
+                {/* ✅ SÉCURITÉ : Vérifier que emails est un array avant .map() */}
+                {Array.isArray(emails) && emails.map((email) => {
                   const isExpanded = expandedEmails.has(email.id);
                   const emailTypeLabels: Record<string, string> = {
                     plaquette: 'Plaquette',

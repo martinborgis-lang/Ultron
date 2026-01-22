@@ -90,6 +90,10 @@ const qualificationLabels: Record<string, string> = {
 };
 
 function transformProspects(unifiedProspects: UnifiedProspect[]): ProspectDisplay[] {
+  // ✅ SÉCURITÉ : Vérifier que unifiedProspects est un array avant .map()
+  if (!Array.isArray(unifiedProspects)) {
+    return [];
+  }
   return unifiedProspects.map((p) => ({
     id: p.id,
     nom: p.lastName,

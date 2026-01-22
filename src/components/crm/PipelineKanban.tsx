@@ -55,7 +55,8 @@ export function PipelineKanban({
   const { toast } = useToast();
 
   // Create a Set of valid stage slugs for quick lookup
-  const validStageSlugs = new Set(stages.map(s => s.slug));
+  // ✅ SÉCURITÉ : Vérifier que stages est un array avant .map()
+  const validStageSlugs = new Set(Array.isArray(stages) ? stages.map(s => s.slug) : []);
 
   useEffect(() => {
     setLocalProspects(prospects);
@@ -213,7 +214,8 @@ export function PipelineKanban({
       onDragEnd={handleDragEnd}
     >
       <div className="flex gap-4 overflow-x-auto pb-4 h-[calc(100vh-200px)]">
-        {stages.map((stage, index) => (
+        {/* ✅ SÉCURITÉ : Vérifier que stages est un array avant .map() */}
+        {Array.isArray(stages) && stages.map((stage, index) => (
           <PipelineColumn
             key={stage.id}
             stage={stage}
