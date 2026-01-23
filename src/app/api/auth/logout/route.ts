@@ -3,6 +3,13 @@ import { createClient } from '@/lib/supabase/server';
 
 export const dynamic = 'force-dynamic';
 
+// CORS headers
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+};
+
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient();
@@ -20,6 +27,11 @@ export async function POST(request: NextRequest) {
 
     // Create response with cleared cookies
     const response = NextResponse.json({ success: true });
+
+    // Add CORS headers to prevent CSRF issues
+    Object.entries(corsHeaders).forEach(([key, value]) => {
+      response.headers.set(key, value);
+    });
 
     // Clear all auth-related cookies
     const cookiesToClear = [
@@ -43,7 +55,12 @@ export async function POST(request: NextRequest) {
     console.error('Logout API error:', error);
     return NextResponse.json(
       { error: 'Server error during logout' },
-      { status: 500 }
+      { status: 500, headers: corsHeaders }
     );
   }
+}
+
+// Handle OPTIONS request for CORS
+export async function OPTIONS() {
+  return new NextResponse(null, { status: 200, headers: corsHeaders });
 }
