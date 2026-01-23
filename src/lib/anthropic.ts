@@ -677,7 +677,31 @@ export async function generateEmailWithConfig(
       console.warn('generateEmail failed, using fallback template:', error);
 
       const fallbackSubject = 'Confirmation de rendez-vous';
-      const fallbackBody = `Bonjour ${variables.prenom || 'Madame/Monsieur'},<br><br>Suite à notre conversation téléphonique, je vous remercie pour le temps que vous m'avez accordé.${variables.besoins ? '<br><br>Vous m'avez fait part de vos préoccupations concernant ' + variables.besoins + '.' : ''}${variables.notes_appel ? '<br>' + variables.notes_appel : ''}<br><br>Je vous confirme notre rendez-vous${variables.date_rdv ? ' le ' + variables.date_rdv : ''}.<br><br>Cet entretien d'environ 45 minutes nous permettra d'analyser votre situation patrimoniale actuelle, de préciser vos objectifs et de vous présenter les solutions personnalisées qui correspondent le mieux à votre profil.<br><br>N'hésitez pas à me contacter si vous avez des questions d'ici notre rendez-vous.<br><br>Cordialement,`;
+
+      // Construire l'email de fallback par étapes pour éviter les problèmes d'échappement
+      let fallbackBody = `Bonjour ${variables.prenom || 'Madame/Monsieur'},<br><br>`;
+      fallbackBody += 'Suite à notre conversation téléphonique, je vous remercie pour le temps que vous avez accordé.<br><br>';
+
+      if (variables.besoins) {
+        fallbackBody += `Vous avez fait part de vos préoccupations concernant ${variables.besoins}.<br><br>`;
+      }
+
+      if (variables.notes_appel) {
+        fallbackBody += `${variables.notes_appel}<br><br>`;
+      }
+
+      fallbackBody += 'Je vous confirme notre rendez-vous';
+      if (variables.date_rdv) {
+        fallbackBody += ` le ${variables.date_rdv}`;
+      }
+      fallbackBody += '.<br><br>';
+
+      fallbackBody += 'Cet entretien d\'environ 45 minutes nous permettra d\'analyser votre situation patrimoniale actuelle, ';
+      fallbackBody += 'de préciser vos objectifs et de vous présenter les solutions personnalisées qui correspondent ';
+      fallbackBody += 'le mieux à votre profil.<br><br>';
+
+      fallbackBody += 'N\'hésitez pas à me contacter si vous avez des questions d\'ici notre rendez-vous.<br><br>';
+      fallbackBody += 'Cordialement,';
 
       return {
         objet: fallbackSubject,
