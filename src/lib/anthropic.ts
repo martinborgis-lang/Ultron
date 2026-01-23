@@ -627,7 +627,7 @@ export function replaceVariables(
 
 // Generate email using PromptConfig (supports both AI and fixed email modes)
 export async function generateEmailWithConfig(
-  promptConfig: PromptConfig | null,
+  promptConfig: PromptConfig | null | string | any,
   defaultSystemPrompt: string,
   prospectData: {
     prenom?: string;
@@ -653,13 +653,22 @@ export async function generateEmailWithConfig(
     date_rdv: prospectData.date_rdv || '',
   };
 
+  console.log('🔍 Email Generation Debug:');
+  console.log('- promptConfig type:', typeof promptConfig);
+  console.log('- promptConfig content:', JSON.stringify(promptConfig));
+
+  // 🚨 CRITICAL FIX: Detect if promptConfig is actually a template string instead of PromptConfig
+  if (typeof promptConfig === 'string') {
+    console.log('⚠️ promptConfig is a string template, using fallback to AI generation');
+    promptConfig = null; // Force fallback to AI generation
+  }
+
   // If no config or using AI mode
   if (!promptConfig || promptConfig.useAI) {
     const systemPrompt = promptConfig?.systemPrompt || defaultSystemPrompt;
     const userPromptTemplate = promptConfig?.userPromptTemplate || buildDefaultUserPromptTemplate();
 
     // Debug: Vérifier quel prompt est utilisé
-    console.log('🔍 Email Generation Debug:');
     console.log('- Has promptConfig:', !!promptConfig);
     console.log('- Using custom systemPrompt:', !!promptConfig?.systemPrompt);
     console.log('- Using custom userPromptTemplate:', !!promptConfig?.userPromptTemplate);
