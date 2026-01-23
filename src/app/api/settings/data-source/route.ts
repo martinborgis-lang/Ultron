@@ -4,6 +4,13 @@ import { createAdminClient } from '@/lib/supabase-admin';
 
 export const dynamic = 'force-dynamic';
 
+// CORS headers
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+};
+
 export async function GET(request: NextRequest) {
   try {
     const supabase = await createClient();
@@ -40,10 +47,10 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       data_mode: org?.data_mode || 'crm',
       google_sheet_id: org?.google_sheet_id || '',
-    });
+    }, { headers: corsHeaders });
   } catch (error) {
     console.error('GET /api/settings/data-source error:', error);
-    return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 });
+    return NextResponse.json({ error: 'Erreur serveur' }, { status: 500, headers: corsHeaders });
   }
 }
 
@@ -89,9 +96,14 @@ export async function POST(request: NextRequest) {
 
     if (error) throw error;
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true }, { headers: corsHeaders });
   } catch (error) {
     console.error('POST /api/settings/data-source error:', error);
-    return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 });
+    return NextResponse.json({ error: 'Erreur serveur' }, { status: 500, headers: corsHeaders });
   }
+}
+
+// Handle OPTIONS request for CORS
+export async function OPTIONS() {
+  return new NextResponse(null, { status: 200, headers: corsHeaders });
 }
