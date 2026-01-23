@@ -2,6 +2,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { logger } from '@/lib/logger';
 import { generateEmail, buildUserPrompt, DEFAULT_PROMPTS } from '@/lib/anthropic';
 import { sendEmail, getEmailCredentials } from '@/lib/gmail';
+import { replaceEmailPlaceholders } from '@/lib/utils/replace-placeholders';
 import { NextRequest, NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
@@ -121,11 +122,14 @@ export async function POST(request: NextRequest) {
     // Generate email with Claude
     const email = await generateEmail(systemPrompt, userPrompt);
 
+    // 🚨 CRITICAL FIX: Replace placeholders before sending
+    const emailWithData = replaceEmailPlaceholders(email, prospect);
+
     // Send email via Gmail (using advisor's Gmail or org fallback)
     const result = await sendEmail(emailCredentials, {
       to: prospect.email,
-      subject: email.objet,
-      body: email.corps,
+      subject: emailWithData.objet,
+      body: emailWithData.corps,
     });
 
     // Log email sent
@@ -134,8 +138,8 @@ export async function POST(request: NextRequest) {
       prospect_email: prospect.email,
       prospect_name: `${prospect.prenom} ${prospect.nom}`.trim(),
       email_type: 'qualification',
-      subject: email.objet,
-      body: email.corps,
+      subject: emailWithData.objet,
+      body: emailWithData.corps,
       gmail_message_id: result.messageId,
       sent_at: new Date().toISOString(),
     });
@@ -145,7 +149,7 @@ export async function POST(request: NextRequest) {
       messageId: result.messageId,
       email: {
         to: prospect.email,
-        subject: email.objet,
+        subject: emailWithData.objet,
       },
     });
   } catch (error) {

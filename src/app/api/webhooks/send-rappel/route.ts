@@ -4,6 +4,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { getValidCredentials, GoogleCredentials, updateGoogleSheetCells } from '@/lib/google';
 import { generateEmailWithConfig, DEFAULT_PROMPTS, PromptConfig } from '@/lib/anthropic';
 import { sendEmail, getEmailCredentialsByEmail } from '@/lib/gmail';
+import { replaceEmailPlaceholders } from '@/lib/utils/replace-placeholders';
 import { NextRequest, NextResponse } from 'next/server';
 import type { RappelPayload } from '@/lib/qstash';
 
@@ -84,11 +85,14 @@ async function handleRappel(request: NextRequest) {
     );
     logger.debug('Email generated:', email.objet);
 
+    // 🚨 CRITICAL FIX: Replace placeholders before sending
+    const emailWithData = replaceEmailPlaceholders(email, prospectData);
+
     // Send email via Gmail (using advisor's Gmail or org fallback)
     const result = await sendEmail(emailCredentials, {
       to: prospectData.email,
-      subject: email.objet,
-      body: email.corps,
+      subject: emailWithData.objet,
+      body: emailWithData.corps,
     });
 
     logger.debug('Email sent, messageId:', result.messageId);

@@ -5,6 +5,7 @@ import { getValidCredentials, GoogleCredentials, updateGoogleSheetCells } from '
 import { generateEmailWithConfig, DEFAULT_PROMPTS, qualifyProspect, PromptConfig, ScoringConfig } from '@/lib/anthropic';
 import { sendEmail, getEmailCredentialsByEmail } from '@/lib/gmail';
 import { scheduleRappelEmail } from '@/lib/qstash';
+import { replaceEmailPlaceholders } from '@/lib/utils/replace-placeholders';
 import { NextRequest, NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
@@ -201,11 +202,15 @@ export async function POST(request: NextRequest) {
     );
     logger.debug('Email generated:', JSON.stringify(email));
 
+    // 🚨 CRITICAL FIX: Replace placeholders before sending
+    const emailWithData = replaceEmailPlaceholders(email, prospect);
+    logger.debug('Email after placeholder replacement:', JSON.stringify(emailWithData));
+
     // Step 4: Send email via Gmail (using advisor's Gmail or org fallback)
     const result = await sendEmail(emailCredentials, {
       to: prospect.email,
-      subject: email.objet,
-      body: email.corps,
+      subject: emailWithData.objet,
+      body: emailWithData.corps,
     });
 
     // Step 5: Update column X (Mail Synthèse = Oui)
@@ -221,8 +226,8 @@ export async function POST(request: NextRequest) {
       prospect_email: prospect.email,
       prospect_name: `${prospect.prenom} ${prospect.nom}`.trim(),
       email_type: 'synthese',
-      subject: email.objet,
-      body: email.corps,
+      subject: emailWithData.objet,
+      body: emailWithData.corps,
       gmail_message_id: result.messageId,
       sent_at: new Date().toISOString(),
     });
@@ -320,7 +325,7 @@ export async function POST(request: NextRequest) {
       qualification: prospect.qualificationIA,
       email: {
         to: prospect.email,
-        subject: email.objet,
+        subject: emailWithData.objet,
       },
       emailSentFrom: emailCredentialsResult.source === 'user' ? conseillerEmail : 'organization',
       rappel: rappelResult,
