@@ -39,10 +39,32 @@ export function Header({ userName, userEmail, orgName }: HeaderProps) {
   const pageTitle = pageTitles[pathname] || 'Dashboard';
 
   const handleLogout = async () => {
-    const supabase = createClient();
-    await supabase.auth.signOut();
-    router.push('/login');
-    router.refresh();
+    try {
+      const supabase = createClient();
+
+      // Clear all local storage and session storage
+      if (typeof window !== 'undefined') {
+        localStorage.clear();
+        sessionStorage.clear();
+
+        // Clear all cookies
+        document.cookie.split(";").forEach((c) => {
+          const eqPos = c.indexOf("=");
+          const name = eqPos > -1 ? c.substr(0, eqPos) : c;
+          document.cookie = `${name.trim()}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`;
+        });
+      }
+
+      // Sign out from Supabase
+      await supabase.auth.signOut();
+
+      // Force full page reload to clear all state
+      window.location.href = '/login';
+    } catch (error) {
+      console.error('Logout error:', error);
+      // Force redirect even if logout fails
+      window.location.href = '/login';
+    }
   };
 
   const toggleTheme = () => {

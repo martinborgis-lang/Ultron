@@ -6,6 +6,13 @@ import { GoogleCredentials } from '@/lib/google';
 
 export const dynamic = 'force-dynamic';
 
+// Add CORS headers to prevent CSRF issues
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+};
+
 export async function GET() {
   try {
     const supabase = await createClient();
@@ -84,12 +91,17 @@ export async function GET() {
       }
     }
 
-    return NextResponse.json(result);
+    return NextResponse.json(result, { headers: corsHeaders });
   } catch (error: unknown) {
     console.error('Gmail test error:', error);
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Erreur serveur' },
-      { status: 500 }
+      { status: 500, headers: corsHeaders }
     );
   }
+}
+
+// Handle OPTIONS request for CORS
+export async function OPTIONS() {
+  return new NextResponse(null, { status: 200, headers: corsHeaders });
 }

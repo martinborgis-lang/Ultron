@@ -26,11 +26,32 @@ export function GmailTestButton() {
     setTesting(true);
     setResult(null);
     try {
-      const res = await fetch('/api/gmail/test');
+      const res = await fetch('/api/gmail/test', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        credentials: 'same-origin'
+      });
+
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+      }
+
+      const contentType = res.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        const text = await res.text();
+        throw new Error(`Expected JSON, got: ${text.substring(0, 100)}`);
+      }
+
       const data = await res.json();
       setResult(data);
-    } catch {
-      setResult({ error: 'Erreur de test' });
+    } catch (error) {
+      console.error('Gmail test error:', error);
+      setResult({
+        error: error instanceof Error ? error.message : 'Erreur de test'
+      });
     }
     setTesting(false);
   };
