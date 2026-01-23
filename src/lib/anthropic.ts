@@ -94,7 +94,11 @@ EXEMPLES MAUVAIS :
 ❌ "À bientôt, [Nom du conseiller]" (placeholder de signature)
 ❌ "Bien à vous, Pierre Martin - Conseiller en gestion de patrimoine" (signature complète)
 
-FORMAT DE SORTIE : {"objet": "...", "corps": "HTML avec <br>"}`,
+⚠️ FORMAT DE SORTIE OBLIGATOIRE :
+RETOURNE EXCLUSIVEMENT un JSON valide avec cette structure EXACTE :
+{"objet": "titre de l'email", "corps": "contenu HTML avec <br> pour les retours à la ligne"}
+
+RIEN D'AUTRE QUE CE JSON - PAS DE TEXTE AVANT OU APRÈS LE JSON.`,
 
   rappel: `Tu es un assistant pour conseillers en gestion de patrimoine.
 
@@ -125,7 +129,11 @@ EXEMPLE MAUVAIS :
 ❌ "À demain, Pierre Martin" (ajoute un nom)
 ❌ "Cordialement, [Conseiller]" (placeholder)
 
-FORMAT DE SORTIE : {"objet": "...", "corps": "HTML avec <br>"}`,
+⚠️ FORMAT DE SORTIE OBLIGATOIRE :
+RETOURNE EXCLUSIVEMENT un JSON valide avec cette structure EXACTE :
+{"objet": "titre de l'email", "corps": "contenu HTML avec <br> pour les retours à la ligne"}
+
+RIEN D'AUTRE QUE CE JSON - PAS DE TEXTE AVANT OU APRÈS LE JSON.`,
 
   plaquette: `Tu es un assistant pour conseillers en gestion de patrimoine.
 
@@ -217,16 +225,60 @@ export async function generateEmail(
 
   try {
     // Extract JSON from the response (handle potential markdown code blocks)
-    let jsonStr = content.text;
-    const jsonMatch = jsonStr.match(/\{[\s\S]*\}/);
-    if (jsonMatch) {
-      jsonStr = jsonMatch[0];
+    let jsonStr = content.text.trim();
+
+    // Try multiple extraction strategies
+    let parsed: any = null;
+
+    // Strategy 1: Direct JSON parse
+    try {
+      parsed = JSON.parse(jsonStr);
+    } catch {
+      // Strategy 2: Extract from markdown code blocks
+      const markdownMatch = jsonStr.match(/```(?:json)?\s*\{[\s\S]*?\}\s*```/);
+      if (markdownMatch) {
+        const cleanJson = markdownMatch[0].replace(/```(?:json)?\s*/g, '').replace(/\s*```/g, '');
+        parsed = JSON.parse(cleanJson);
+      } else {
+        // Strategy 3: Extract first JSON object found
+        const jsonMatch = jsonStr.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          parsed = JSON.parse(jsonMatch[0]);
+        } else {
+          // Strategy 4: Claude returned plain text - convert to JSON
+          console.warn('Claude returned plain text instead of JSON, converting...');
+          console.log('Raw Claude response:', jsonStr);
+
+          // Try to extract subject and body from plain text
+          const lines = jsonStr.split('\n').filter(line => line.trim());
+          let objet = '';
+          let corps = '';
+
+          // Look for subject patterns
+          const subjectLine = lines.find(line =>
+            line.includes('Objet:') || line.includes('Subject:') || line.includes('Sujet:')
+          );
+
+          if (subjectLine) {
+            objet = subjectLine.replace(/^.*?(?:Objet|Subject|Sujet):\s*/, '').trim();
+            // Remove the subject line from body
+            corps = jsonStr.replace(subjectLine, '').trim();
+          } else {
+            // If no subject pattern, use first line as subject
+            objet = lines[0] || 'Confirmation de rendez-vous';
+            corps = lines.slice(1).join('\n').trim();
+          }
+
+          // Remove any template variables that weren't replaced
+          corps = corps.replace(/\{\{[^}]+\}\}/g, '[Information non disponible]');
+
+          parsed = { objet, corps };
+        }
+      }
     }
 
-    const parsed = JSON.parse(jsonStr);
-
-    if (!parsed.objet || !parsed.corps) {
-      throw new Error('Invalid email format');
+    if (!parsed || !parsed.objet || !parsed.corps) {
+      throw new Error(`Invalid email format. Parsed: ${JSON.stringify(parsed)}`);
     }
 
     // ✅ SÉCURITÉ EMAIL: Validation de l'email généré par l'IA
@@ -259,8 +311,10 @@ export async function generateEmail(
       objet: parsed.objet,
       corps: parsed.corps,
     };
-  } catch {
-    throw new Error('Failed to parse email from Claude response: ' + content.text);
+  } catch (error) {
+    console.error('Failed to parse email from Claude response:', error);
+    console.error('Claude response:', content.text);
+    throw new Error(`Failed to parse email from Claude response: ${content.text.substring(0, 200)}...`);
   }
 }
 
