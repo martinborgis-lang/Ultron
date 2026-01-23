@@ -56,7 +56,18 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { name, description, type, fixed_value, commission_rate } = body;
+    const {
+      name,
+      description,
+      type,
+      category,
+      fixed_value,
+      commission_rate,
+      commission_conseiller_initial,
+      commission_conseiller_periodique,
+      commission_cabinet_initial,
+      commission_cabinet_periodique
+    } = body;
 
     // Validation
     if (!name || !type) {
@@ -98,6 +109,7 @@ export async function POST(request: NextRequest) {
       name,
       description,
       type,
+      category,
       created_by: context.user.id,
       is_active: true
     };
@@ -106,6 +118,10 @@ export async function POST(request: NextRequest) {
       productData.fixed_value = fixed_value;
     } else {
       productData.commission_rate = commission_rate;
+      productData.commission_conseiller_initial = commission_conseiller_initial || 0;
+      productData.commission_conseiller_periodique = commission_conseiller_periodique || 0;
+      productData.commission_cabinet_initial = commission_cabinet_initial || 0;
+      productData.commission_cabinet_periodique = commission_cabinet_periodique || 0;
     }
 
     const { data: product, error } = await adminClient

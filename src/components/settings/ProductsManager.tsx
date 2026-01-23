@@ -31,6 +31,10 @@ interface ProductForm {
   fixed_value: string;
   commission_rate: string;
   category: string;
+  commission_conseiller_initial: string;
+  commission_conseiller_periodique: string;
+  commission_cabinet_initial: string;
+  commission_cabinet_periodique: string;
 }
 
 export function ProductsManager({ organizationId }: ProductsManagerProps) {
@@ -46,7 +50,12 @@ export function ProductsManager({ organizationId }: ProductsManagerProps) {
     description: '',
     type: 'commission' as 'fixed' | 'commission',
     fixed_value: '',
-    commission_rate: ''
+    commission_rate: '',
+    category: '',
+    commission_conseiller_initial: '',
+    commission_conseiller_periodique: '',
+    commission_cabinet_initial: '',
+    commission_cabinet_periodique: ''
   });
 
   const [showCommissionDialog, setShowCommissionDialog] = useState(false);
@@ -105,10 +114,15 @@ export function ProductsManager({ organizationId }: ProductsManagerProps) {
         name: productForm.name,
         description: productForm.description,
         type: productForm.type,
+        category: productForm.category,
         ...(productForm.type === 'fixed' ? {
           fixed_value: parseFloat(productForm.fixed_value)
         } : {
-          commission_rate: parseFloat(productForm.commission_rate)
+          commission_rate: parseFloat(productForm.commission_rate),
+          commission_conseiller_initial: parseFloat(productForm.commission_conseiller_initial) || 0,
+          commission_conseiller_periodique: parseFloat(productForm.commission_conseiller_periodique) || 0,
+          commission_cabinet_initial: parseFloat(productForm.commission_cabinet_initial) || 0,
+          commission_cabinet_periodique: parseFloat(productForm.commission_cabinet_periodique) || 0
         })
       };
 
@@ -254,7 +268,12 @@ export function ProductsManager({ organizationId }: ProductsManagerProps) {
       description: '',
       type: 'commission',
       fixed_value: '',
-      commission_rate: ''
+      commission_rate: '',
+      category: '',
+      commission_conseiller_initial: '',
+      commission_conseiller_periodique: '',
+      commission_cabinet_initial: '',
+      commission_cabinet_periodique: ''
     });
   };
 
@@ -328,7 +347,12 @@ export function ProductsManager({ organizationId }: ProductsManagerProps) {
       description: product.description || '',
       type: product.type,
       fixed_value: product.fixed_value?.toString() || '',
-      commission_rate: product.commission_rate?.toString() || ''
+      commission_rate: product.commission_rate?.toString() || '',
+      category: product.category || '',
+      commission_conseiller_initial: product.commission_conseiller_initial?.toString() || '',
+      commission_conseiller_periodique: product.commission_conseiller_periodique?.toString() || '',
+      commission_cabinet_initial: product.commission_cabinet_initial?.toString() || '',
+      commission_cabinet_periodique: product.commission_cabinet_periodique?.toString() || ''
     });
     setShowProductDialog(true);
   };
@@ -371,7 +395,7 @@ export function ProductsManager({ organizationId }: ProductsManagerProps) {
                     Nouveau Produit
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="max-w-md">
+                <DialogContent className="max-w-2xl">
                   <DialogHeader>
                     <DialogTitle>
                       {editingProduct ? 'Modifier' : 'Créer'} un Produit
@@ -401,6 +425,14 @@ export function ProductsManager({ organizationId }: ProductsManagerProps) {
                       />
                     </div>
 
+                    <div>
+                      <Label>Catégorie</Label>
+                      <Input
+                        value={productForm.category}
+                        onChange={(e) => setProductForm({...productForm, category: e.target.value})}
+                        placeholder="ex: assurance_vie, pea, immobilier"
+                      />
+                    </div>
 
                     <div>
                       <Label>Type de rémunération</Label>
@@ -429,17 +461,71 @@ export function ProductsManager({ organizationId }: ProductsManagerProps) {
                         />
                       </div>
                     ) : (
-                      <div>
-                        <Label>Taux de commission (%)</Label>
-                        <Input
-                          type="number"
-                          step="0.1"
-                          min="0"
-                          max="100"
-                          value={productForm.commission_rate}
-                          onChange={(e) => setProductForm({...productForm, commission_rate: e.target.value})}
-                          placeholder="2.5"
-                        />
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <Label>Commission conseiller initial (%)</Label>
+                            <Input
+                              type="number"
+                              step="0.1"
+                              min="0"
+                              max="100"
+                              value={productForm.commission_conseiller_initial}
+                              onChange={(e) => setProductForm({...productForm, commission_conseiller_initial: e.target.value})}
+                              placeholder="2.5"
+                            />
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Sur versement initial
+                            </p>
+                          </div>
+                          <div>
+                            <Label>Commission conseiller périodique (%)</Label>
+                            <Input
+                              type="number"
+                              step="0.1"
+                              min="0"
+                              max="100"
+                              value={productForm.commission_conseiller_periodique}
+                              onChange={(e) => setProductForm({...productForm, commission_conseiller_periodique: e.target.value})}
+                              placeholder="1.5"
+                            />
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Sur versements mensuels année 1
+                            </p>
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <Label>Commission cabinet initial (%)</Label>
+                            <Input
+                              type="number"
+                              step="0.1"
+                              min="0"
+                              max="100"
+                              value={productForm.commission_cabinet_initial}
+                              onChange={(e) => setProductForm({...productForm, commission_cabinet_initial: e.target.value})}
+                              placeholder="3.0"
+                            />
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Sur versement initial
+                            </p>
+                          </div>
+                          <div>
+                            <Label>Commission cabinet périodique (%)</Label>
+                            <Input
+                              type="number"
+                              step="0.1"
+                              min="0"
+                              max="100"
+                              value={productForm.commission_cabinet_periodique}
+                              onChange={(e) => setProductForm({...productForm, commission_cabinet_periodique: e.target.value})}
+                              placeholder="2.0"
+                            />
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Sur versements mensuels
+                            </p>
+                          </div>
+                        </div>
                       </div>
                     )}
                   </div>
@@ -487,7 +573,14 @@ export function ProductsManager({ organizationId }: ProductsManagerProps) {
                           minimumFractionDigits: 0
                         }).format(product.fixed_value || 0)}`
                       ) : (
-                        `Commission: ${product.commission_rate}%`
+                        <div className="grid grid-cols-2 gap-4 text-xs">
+                          <div>
+                            <strong>Conseiller:</strong> {product.commission_conseiller_initial || 0}% initial, {product.commission_conseiller_periodique || 0}% périodique
+                          </div>
+                          <div>
+                            <strong>Cabinet:</strong> {product.commission_cabinet_initial || 0}% initial, {product.commission_cabinet_periodique || 0}% périodique
+                          </div>
+                        </div>
                       )}
                     </div>
                   </div>

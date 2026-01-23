@@ -28,6 +28,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { ActivityTimeline } from '@/components/crm/ActivityTimeline';
 import { ProspectTasks } from '@/components/crm/ProspectTasks';
+import { SaleClosureForm } from '@/components/crm/SaleClosureForm';
 import { CrmProspect, CrmActivity, CrmTask, PipelineStage } from '@/types/crm';
 import { EmailLog } from '@/types/email';
 import {
@@ -651,6 +652,20 @@ export default function ProspectDetailPage() {
                   <p className="text-sm mt-1">
                     {format(new Date(prospect.expected_close_date), 'EEEE dd MMMM yyyy HH:mm', { locale: fr })}
                   </p>
+                </div>
+              )}
+
+              {/* Sale Closure Form for won prospects */}
+              {!isSheetMode && currentStage?.is_won && (
+                <div className="pt-4 border-t">
+                  <Label className="text-xs text-muted-foreground">Finaliser la vente</Label>
+                  <div className="mt-2">
+                    <SaleClosureForm
+                      prospectId={prospect.id}
+                      prospectName={fullName}
+                      onSaleClosed={fetchData}
+                    />
+                  </div>
                 </div>
               )}
             </CardContent>

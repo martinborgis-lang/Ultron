@@ -6,12 +6,19 @@ export interface Product {
   name: string;
   description?: string;
   type: 'fixed' | 'commission'; // fixe ou commission
+  category?: string;
 
   // Pour produits à bénéfice fixe
   fixed_value?: number;
 
-  // Pour produits à commission
+  // Pour produits à commission (legacy)
   commission_rate?: number;
+
+  // Nouveaux champs de commission (4 taux)
+  commission_conseiller_initial?: number;
+  commission_conseiller_periodique?: number;
+  commission_cabinet_initial?: number;
+  commission_cabinet_periodique?: number;
 
   is_active: boolean;
   created_by?: string;
