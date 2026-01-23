@@ -72,12 +72,14 @@ RÈGLES STRICTES :
 - Les boîtes mail ont des signatures automatiques, donc NE RIEN AJOUTER
 
 STRUCTURE DU MAIL :
-1. "Bonjour [Prénom du prospect],"
+1. "Bonjour [utilise le vrai prénom fourni],"
 2. Accroche : "Lors de notre échange téléphonique..." (SANS date)
-3. Rappel des besoins/sujets abordés pendant l'appel
-4. Confirmation du RDV : "Je vous confirme notre rendez-vous le [DATE] à [HEURE]"
+3. Rappel des besoins/sujets abordés pendant l'appel (utilise les vraies données fournies)
+4. Confirmation du RDV avec la vraie date/heure fournie
 5. Explication du déroulé du RDV (45min, analyse patrimoine, objectifs, solutions)
 6. "Cordialement," ou "À très bientôt," - ET C'EST TOUT, RIEN APRÈS
+
+IMPORTANT : Tu as accès aux vraies informations du prospect (prénom, besoins, notes d'appel, date RDV). Utilise-les directement dans l'email. N'utilise JAMAIS de placeholders comme {{prenom}} ou {{date_rdv}}.
 
 EXEMPLE BON :
 "Bonjour Jean,
@@ -616,8 +618,11 @@ export function replaceVariables(
   for (const [key, value] of Object.entries(data)) {
     if (value) {
       const sanitizedValue = sanitizePromptInput(value);
+      // Replace both {key} and {{key}} patterns
+      result = result.replace(new RegExp(`\\{${key}\\}`, 'g'), sanitizedValue);
       result = result.replace(new RegExp(`\\{\\{${key}\\}\\}`, 'g'), sanitizedValue);
     } else {
+      result = result.replace(new RegExp(`\\{${key}\\}`, 'g'), '');
       result = result.replace(new RegExp(`\\{\\{${key}\\}\\}`, 'g'), '');
     }
   }
@@ -761,13 +766,15 @@ export async function generateEmailWithConfig(
 }
 
 function buildDefaultUserPromptTemplate(): string {
-  return `Rédige un email pour :
-- Prénom : {{prenom}}
-- Nom : {{nom}}
-- Qualification : {{qualification}}
-- Besoins : {{besoins}}
-- Notes de l'appel : {{notes_appel}}
-- Date du RDV : {{date_rdv}}
+  return `Rédige un email personnalisé avec ces informations :
+- Prénom du prospect : {prenom}
+- Nom du prospect : {nom}
+- Qualification : {qualification}
+- Besoins exprimés : {besoins}
+- Notes de l'appel : {notes_appel}
+- Date et heure du RDV : {date_rdv}
+
+IMPORTANT : Utilise ces informations pour rédiger un email naturel et personnalisé. N'utilise pas de placeholders dans le résultat final.
 
 Retourne uniquement le JSON.`;
 }
