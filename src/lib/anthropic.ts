@@ -285,9 +285,8 @@ export async function generateEmail(
           // Convert line breaks to HTML for email
           corps = corps.replace(/\n/g, '<br>');
 
-          // Remove any remaining template variables that couldn't be replaced
-          corps = corps.replace(/\{\{[^}]+\}\}/g, '[Information non disponible]');
-          objet = objet.replace(/\{\{[^}]+\}\}/g, '[Information non disponible]');
+          // Keep template variables for proper replacement in generateEmailWithConfig
+          // Just ensure they don't break email parsing
 
           parsed = { objet, corps };
         }
@@ -670,6 +669,12 @@ export async function generateEmailWithConfig(
         objet: replaceVariables(email.objet, variables, true),
         corps: replaceVariables(email.corps, variables, true),
       };
+
+      // Vérifier s'il reste des variables non remplacées (problème de parsing Claude)
+      if (emailWithData.corps.includes('{{') || emailWithData.objet.includes('{{')) {
+        console.warn('Email contains unreplaced variables after replaceVariables, using fallback');
+        throw new Error('Email still contains template variables - triggering fallback');
+      }
 
       return emailWithData;
     } catch (error) {
