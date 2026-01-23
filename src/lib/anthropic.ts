@@ -235,16 +235,24 @@ export async function generateEmail(
       parsed = JSON.parse(jsonStr);
     } catch {
       // Strategy 2: Extract from markdown code blocks
-      const markdownMatch = jsonStr.match(/```(?:json)?\s*\{[\s\S]*?\}\s*```/);
-      if (markdownMatch) {
-        const cleanJson = markdownMatch[0].replace(/```(?:json)?\s*/g, '').replace(/\s*```/g, '');
-        parsed = JSON.parse(cleanJson);
-      } else {
-        // Strategy 3: Extract first JSON object found
-        const jsonMatch = jsonStr.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-          parsed = JSON.parse(jsonMatch[0]);
+      try {
+        const markdownMatch = jsonStr.match(/```(?:json)?\s*\{[\s\S]*?\}\s*```/);
+        if (markdownMatch) {
+          const cleanJson = markdownMatch[0].replace(/```(?:json)?\s*/g, '').replace(/\s*```/g, '');
+          parsed = JSON.parse(cleanJson);
         } else {
+          throw new Error('No markdown JSON found');
+        }
+      } catch {
+        // Strategy 3: Extract first JSON object found
+        try {
+          const jsonMatch = jsonStr.match(/\{[\s\S]*\}/);
+          if (jsonMatch) {
+            parsed = JSON.parse(jsonMatch[0]);
+          } else {
+            throw new Error('No JSON object found');
+          }
+        } catch {
           // Strategy 4: Claude returned plain text - convert to JSON
           console.warn('Claude returned plain text instead of JSON, converting...');
           console.log('Raw Claude response:', jsonStr);
@@ -264,13 +272,22 @@ export async function generateEmail(
             // Remove the subject line from body
             corps = jsonStr.replace(subjectLine, '').trim();
           } else {
-            // If no subject pattern, use first line as subject
-            objet = lines[0] || 'Confirmation de rendez-vous';
-            corps = lines.slice(1).join('\n').trim();
+            // If no subject pattern, use first line as subject and rest as body
+            if (lines.length > 0) {
+              objet = 'Confirmation de rendez-vous';
+              corps = jsonStr.trim();
+            } else {
+              objet = 'Confirmation de rendez-vous';
+              corps = 'Bonjour,\n\nSuite à notre conversation, je vous confirme notre rendez-vous.\n\nCordialement,';
+            }
           }
 
-          // Remove any template variables that weren't replaced
+          // Convert line breaks to HTML for email
+          corps = corps.replace(/\n/g, '<br>');
+
+          // Remove any remaining template variables that couldn't be replaced
           corps = corps.replace(/\{\{[^}]+\}\}/g, '[Information non disponible]');
+          objet = objet.replace(/\{\{[^}]+\}\}/g, '[Information non disponible]');
 
           parsed = { objet, corps };
         }
@@ -643,21 +660,30 @@ export async function generateEmailWithConfig(
     const userPromptTemplate = promptConfig?.userPromptTemplate || buildDefaultUserPromptTemplate();
     const userPrompt = replaceVariables(userPromptTemplate, variables);
 
-    const email = await generateEmail(systemPrompt, userPrompt);
+    try {
+      const email = await generateEmail(systemPrompt, userPrompt);
 
-    // 🔧 FIX: Appliquer replaceVariables sur l'email généré par Claude
-    // Claude peut inclure des placeholders dans sa réponse qu'il faut remplacer
-    // skipValidation=true car l'email vient de Claude (déjà sécurisé)
-    const emailWithData = {
-      objet: replaceVariables(email.objet, variables, true),
-      corps: replaceVariables(email.corps, variables, true),
-    };
+      // 🔧 FIX: Appliquer replaceVariables sur l'email généré par Claude
+      // Claude peut inclure des placeholders dans sa réponse qu'il faut remplacer
+      // skipValidation=true car l'email vient de Claude (déjà sécurisé)
+      const emailWithData = {
+        objet: replaceVariables(email.objet, variables, true),
+        corps: replaceVariables(email.corps, variables, true),
+      };
 
-    // Pas de footer de désinscription automatique
-    // Les emails Ultron sont des échanges relationnels, pas du mass mailing
-    // Le conseiller ajoute sa propre signature professionnelle
+      return emailWithData;
+    } catch (error) {
+      // Fallback: Si Claude retourne du texte au lieu de JSON, créer un email générique
+      console.warn('generateEmail failed, using fallback template:', error);
 
-    return emailWithData;
+      const fallbackSubject = 'Confirmation de rendez-vous';
+      const fallbackBody = `Bonjour ${variables.prenom || 'Madame/Monsieur'},<br><br>Suite à notre conversation téléphonique, je vous remercie pour le temps que vous m'avez accordé.${variables.besoins ? '<br><br>Vous m'avez fait part de vos préoccupations concernant ' + variables.besoins + '.' : ''}${variables.notes_appel ? '<br>' + variables.notes_appel : ''}<br><br>Je vous confirme notre rendez-vous${variables.date_rdv ? ' le ' + variables.date_rdv : ''}.<br><br>Cet entretien d'environ 45 minutes nous permettra d'analyser votre situation patrimoniale actuelle, de préciser vos objectifs et de vous présenter les solutions personnalisées qui correspondent le mieux à votre profil.<br><br>N'hésitez pas à me contacter si vous avez des questions d'ici notre rendez-vous.<br><br>Cordialement,`;
+
+      return {
+        objet: fallbackSubject,
+        corps: fallbackBody,
+      };
+    }
   }
 
   // Fixed email mode - just replace variables
