@@ -175,6 +175,17 @@ export async function POST(request: NextRequest) {
 
     // Step 3: Generate synthesis email with Claude (using qualification for tone)
     const promptConfig = org.prompt_synthese as PromptConfig | null;
+
+    // Debug: Vérifier si prompts personnalisés sont présents
+    logger.debug('=== EMAIL GENERATION DEBUG ===');
+    logger.debug('promptConfig from DB:', JSON.stringify(promptConfig, null, 2));
+    logger.debug('prospect data:', {
+      prenom: prospect.prenom,
+      besoins: prospect.besoins,
+      notes_appel: prospect.notesAppel,
+      date_rdv: prospect.dateRdv
+    });
+
     const email = await generateEmailWithConfig(
       promptConfig,
       DEFAULT_PROMPTS.synthese,
