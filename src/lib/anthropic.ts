@@ -97,10 +97,19 @@ EXEMPLES MAUVAIS :
 ❌ "Bien à vous, Pierre Martin - Conseiller en gestion de patrimoine" (signature complète)
 
 ⚠️ FORMAT DE SORTIE OBLIGATOIRE :
-RETOURNE EXCLUSIVEMENT un JSON valide avec cette structure EXACTE :
+Tu dois IMMÉDIATEMENT retourner un JSON valide. PAS D'EXPLICATION, PAS DE TEXTE.
+Commence ta réponse directement par { et termine par }
+
+Structure EXACTE :
 {"objet": "titre de l'email", "corps": "contenu HTML avec <br> pour les retours à la ligne"}
 
-RIEN D'AUTRE QUE CE JSON - PAS DE TEXTE AVANT OU APRÈS LE JSON.`,
+INTERDIT :
+- "Je vais rédiger..."
+- "Voici le modèle..."
+- Tout texte explicatif
+- Notes ou commentaires
+
+COMMENCE TA RÉPONSE PAR { IMMÉDIATEMENT.`,
 
   rappel: `Tu es un assistant pour conseillers en gestion de patrimoine.
 
@@ -132,10 +141,19 @@ EXEMPLE MAUVAIS :
 ❌ "Cordialement, [Conseiller]" (placeholder)
 
 ⚠️ FORMAT DE SORTIE OBLIGATOIRE :
-RETOURNE EXCLUSIVEMENT un JSON valide avec cette structure EXACTE :
+Tu dois IMMÉDIATEMENT retourner un JSON valide. PAS D'EXPLICATION, PAS DE TEXTE.
+Commence ta réponse directement par { et termine par }
+
+Structure EXACTE :
 {"objet": "titre de l'email", "corps": "contenu HTML avec <br> pour les retours à la ligne"}
 
-RIEN D'AUTRE QUE CE JSON - PAS DE TEXTE AVANT OU APRÈS LE JSON.`,
+INTERDIT :
+- "Je vais rédiger..."
+- "Voici le modèle..."
+- Tout texte explicatif
+- Notes ou commentaires
+
+COMMENCE TA RÉPONSE PAR { IMMÉDIATEMENT.`,
 
   plaquette: `Tu es un assistant pour conseillers en gestion de patrimoine.
 
@@ -766,17 +784,16 @@ export async function generateEmailWithConfig(
 }
 
 function buildDefaultUserPromptTemplate(): string {
-  return `Rédige un email personnalisé avec ces informations :
-- Prénom du prospect : {prenom}
-- Nom du prospect : {nom}
+  return `DONNÉES DU PROSPECT :
+- Prénom : {prenom}
+- Nom : {nom}
 - Qualification : {qualification}
-- Besoins exprimés : {besoins}
-- Notes de l'appel : {notes_appel}
-- Date et heure du RDV : {date_rdv}
+- Besoins : {besoins}
+- Notes appel : {notes_appel}
+- Date RDV : {date_rdv}
 
-IMPORTANT : Utilise ces informations pour rédiger un email naturel et personnalisé. N'utilise pas de placeholders dans le résultat final.
-
-Retourne uniquement le JSON.`;
+GÉNÈRE L'EMAIL IMMÉDIATEMENT EN FORMAT JSON.
+N'explique pas, n'écris pas de texte, commence directement par {`;
 }
 
 /**
