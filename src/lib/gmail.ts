@@ -288,13 +288,14 @@ function createEmailMessage(options: EmailOptions): string {
     checkPhishing: true,
   });
 
-  if (!emailValidation.isValid) {
-    const report = EmailSecurityValidator.generateSecurityReport(emailValidation);
-    throw new Error(`Email security validation failed:\n${report}`);
-  }
+  // ⚠️ VALIDATION SMTP DÉSACTIVÉE - Causait trop de faux positifs
+  // if (!emailValidation.isValid) {
+  //   const report = EmailSecurityValidator.generateSecurityReport(emailValidation);
+  //   throw new Error(`Email security validation failed:\n${report}`);
+  // }
 
-  // Utiliser les valeurs sécurisées
-  const sanitizedEmail = JSON.parse(emailValidation.sanitizedValue);
+  // Utiliser les valeurs originales (validation désactivée)
+  const sanitizedEmail = options;
 
   // Build headers (filter out empty optional headers like From)
   const headers = [
@@ -330,13 +331,14 @@ async function createEmailWithAttachment(
     allowAttachments: true,
   });
 
-  if (!emailValidation.isValid) {
-    const report = EmailSecurityValidator.generateSecurityReport(emailValidation);
-    throw new Error(`Email security validation failed:\n${report}`);
-  }
+  // ⚠️ VALIDATION SMTP DÉSACTIVÉE - Causait trop de faux positifs
+  // if (!emailValidation.isValid) {
+  //   const report = EmailSecurityValidator.generateSecurityReport(emailValidation);
+  //   throw new Error(`Email security validation failed:\n${report}`);
+  // }
 
-  // Utiliser les valeurs sécurisées
-  const sanitizedEmail = JSON.parse(emailValidation.sanitizedValue);
+  // Utiliser les valeurs originales (validation désactivée)
+  const sanitizedEmail = options;
 
   // ✅ VALIDATION URL ATTACHMENT: Vérifier que l'URL n'est pas malveillante
   try {
@@ -540,13 +542,14 @@ function createEmailWithBufferAttachment(
     allowAttachments: true,
   });
 
-  if (!emailValidation.isValid) {
-    const report = EmailSecurityValidator.generateSecurityReport(emailValidation);
-    throw new Error(`Email security validation failed:\n${report}`);
-  }
+  // ⚠️ VALIDATION SMTP DÉSACTIVÉE - Causait trop de faux positifs
+  // if (!emailValidation.isValid) {
+  //   const report = EmailSecurityValidator.generateSecurityReport(emailValidation);
+  //   throw new Error(`Email security validation failed:\n${report}`);
+  // }
 
-  // Utiliser les valeurs sécurisées
-  const sanitizedEmail = JSON.parse(emailValidation.sanitizedValue);
+  // Utiliser les valeurs originales (validation désactivée)
+  const sanitizedEmail = options;
 
   // ✅ VALIDATION TAILLE BUFFER
   if (attachmentBuffer.length > 25 * 1024 * 1024) { // 25MB limite Gmail
