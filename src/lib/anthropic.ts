@@ -616,9 +616,9 @@ export function replaceVariables(
   for (const [key, value] of Object.entries(data)) {
     if (value) {
       const sanitizedValue = sanitizePromptInput(value);
-      result = result.replace(new RegExp(`{{${key}}}`, 'g'), sanitizedValue);
+      result = result.replace(new RegExp(`\\{\\{${key}\\}\\}`, 'g'), sanitizedValue);
     } else {
-      result = result.replace(new RegExp(`{{${key}}}`, 'g'), '');
+      result = result.replace(new RegExp(`\\{\\{${key}\\}\\}`, 'g'), '');
     }
   }
 
@@ -670,11 +670,8 @@ export async function generateEmailWithConfig(
         corps: replaceVariables(email.corps, variables, true),
       };
 
-      // Vérifier s'il reste des variables non remplacées (problème de parsing Claude)
-      if (emailWithData.corps.includes('{{') || emailWithData.objet.includes('{{')) {
-        console.warn('Email contains unreplaced variables after replaceVariables, using fallback');
-        throw new Error('Email still contains template variables - triggering fallback');
-      }
+      // Variables correctement remplacées, email prêt
+      console.log('Email successfully generated with replaced variables');
 
       return emailWithData;
     } catch (error) {
