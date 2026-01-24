@@ -27,6 +27,7 @@ import {
   FileText,
   Sparkles,
 } from 'lucide-react';
+import { AdvancedFiltersComponent, AdvancedFilters, DEFAULT_FILTERS } from './AdvancedFilters';
 
 // Helper to display readable stage names
 function getStageDisplayName(stageSlug: string): string {
@@ -59,6 +60,9 @@ interface UnifiedProspect {
   qualification: string | null;
   scoreIa?: number;
   dateRdv?: string;
+  patrimoineEstime?: number;
+  revenusAnnuels?: number;
+  age?: number;
   createdAt: string;
 }
 
@@ -73,6 +77,9 @@ interface ProspectDisplay {
   statut: string;
   dateRdv: string;
   dateLead: string;
+  patrimoineEstime?: number;
+  revenusAnnuels?: number;
+  age?: number;
 }
 
 const qualificationColors: Record<string, string> = {
@@ -105,6 +112,9 @@ function transformProspects(unifiedProspects: UnifiedProspect[]): ProspectDispla
     statut: p.stage || 'Nouveau',
     dateRdv: p.dateRdv || '',
     dateLead: p.createdAt,
+    patrimoineEstime: p.patrimoineEstime,
+    revenusAnnuels: p.revenusAnnuels,
+    age: p.age,
   }));
 }
 
@@ -155,6 +165,7 @@ export function ProspectsContent() {
   const [prospects, setProspects] = useState<ProspectDisplay[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [qualificationFilter, setQualificationFilter] = useState<QualificationFilter>('tous');
+  const [advancedFilters, setAdvancedFilters] = useState<AdvancedFilters>(DEFAULT_FILTERS);
 
   // Handler: Open default mail client with pre-filled email
   const handleSendEmail = (prospect: ProspectDisplay) => {
@@ -223,6 +234,11 @@ export function ProspectsContent() {
     window.open(calendarUrl, '_blank');
   };
 
+  // Handler: Reset advanced filters
+  const handleResetAdvancedFilters = () => {
+    setAdvancedFilters(DEFAULT_FILTERS);
+  };
+
   const fetchData = async () => {
     setLoading(true);
     setError(null);
@@ -268,6 +284,33 @@ export function ProspectsContent() {
     fetchData();
   }, []);
 
+  // Calcul des valeurs maximales pour les sliders
+  const maxValues = useMemo(() => {
+    if (prospects.length === 0) {
+      return {
+        maxPatrimoine: 1000000,
+        maxRevenus: 200000,
+        maxAge: 80,
+      };
+    }
+
+    const validPatrimoine = prospects.filter(p => p.patrimoineEstime && p.patrimoineEstime > 0);
+    const validRevenus = prospects.filter(p => p.revenusAnnuels && p.revenusAnnuels > 0);
+    const validAges = prospects.filter(p => p.age && p.age > 0);
+
+    return {
+      maxPatrimoine: validPatrimoine.length > 0
+        ? Math.max(...validPatrimoine.map(p => p.patrimoineEstime!))
+        : 1000000,
+      maxRevenus: validRevenus.length > 0
+        ? Math.max(...validRevenus.map(p => p.revenusAnnuels!))
+        : 200000,
+      maxAge: validAges.length > 0
+        ? Math.max(...validAges.map(p => p.age!))
+        : 80,
+    };
+  }, [prospects]);
+
   const filteredProspects = useMemo(() => {
     return prospects.filter((p) => {
       // Filtre par recherche
@@ -280,14 +323,53 @@ export function ProspectsContent() {
         if (!matchesSearch) return false;
       }
 
-      // Filtre par qualification
+      // Filtre par qualification (cumulable avec les filtres avancés)
       if (qualificationFilter !== 'tous') {
         if (p.qualification !== qualificationFilter) return false;
       }
 
+      // Filtres avancés (patrimoine)
+      if (p.patrimoineEstime !== undefined && p.patrimoineEstime !== null) {
+        if (p.patrimoineEstime < advancedFilters.patrimoineRange[0] ||
+            p.patrimoineEstime > advancedFilters.patrimoineRange[1]) {
+          return false;
+        }
+      } else {
+        // Si pas de patrimoine défini, on exclut si le filtre min est > 0
+        if (advancedFilters.patrimoineRange[0] > 0) {
+          return false;
+        }
+      }
+
+      // Filtres avancés (revenus annuels)
+      if (p.revenusAnnuels !== undefined && p.revenusAnnuels !== null) {
+        if (p.revenusAnnuels < advancedFilters.revenusRange[0] ||
+            p.revenusAnnuels > advancedFilters.revenusRange[1]) {
+          return false;
+        }
+      } else {
+        // Si pas de revenus définis, on exclut si le filtre min est > 0
+        if (advancedFilters.revenusRange[0] > 0) {
+          return false;
+        }
+      }
+
+      // Filtres avancés (âge)
+      if (p.age !== undefined && p.age !== null) {
+        if (p.age < advancedFilters.ageRange[0] ||
+            p.age > advancedFilters.ageRange[1]) {
+          return false;
+        }
+      } else {
+        // Si pas d'âge défini, on exclut si le filtre min est > 18
+        if (advancedFilters.ageRange[0] > 18) {
+          return false;
+        }
+      }
+
       return true;
     });
-  }, [prospects, searchQuery, qualificationFilter]);
+  }, [prospects, searchQuery, qualificationFilter, advancedFilters]);
 
   const stats = useMemo(() => {
     const chauds = prospects.filter((p) => p.qualification === 'CHAUD').length;
@@ -343,7 +425,7 @@ export function ProspectsContent() {
             </button>
           )}
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button
             variant={qualificationFilter === 'tous' ? 'default' : 'outline'}
             size="sm"
@@ -376,6 +458,13 @@ export function ProspectsContent() {
           >
             Froids
           </Button>
+          {/* Filtres avancés */}
+          <AdvancedFiltersComponent
+            filters={advancedFilters}
+            onFiltersChange={setAdvancedFilters}
+            onReset={handleResetAdvancedFilters}
+            maxValues={maxValues}
+          />
         </div>
         <Button onClick={fetchData} variant="outline" size="sm">
           <RefreshCw className="h-4 w-4" />
@@ -441,13 +530,28 @@ export function ProspectsContent() {
       </div>
 
       {/* Results count */}
-      {(searchQuery || qualificationFilter !== 'tous') && (
-        <p className="text-sm text-muted-foreground">
-          {filteredProspects.length} prospect{filteredProspects.length !== 1 ? 's' : ''} trouve{filteredProspects.length !== 1 ? 's' : ''}
-          {searchQuery && ` pour "${searchQuery}"`}
-          {qualificationFilter !== 'tous' && ` (${qualificationFilter})`}
-        </p>
-      )}
+      {(() => {
+        const hasAdvancedFilters =
+          advancedFilters.patrimoineRange[0] !== 0 ||
+          advancedFilters.patrimoineRange[1] !== maxValues.maxPatrimoine ||
+          advancedFilters.revenusRange[0] !== 0 ||
+          advancedFilters.revenusRange[1] !== maxValues.maxRevenus ||
+          advancedFilters.ageRange[0] !== 18 ||
+          advancedFilters.ageRange[1] !== maxValues.maxAge;
+
+        const hasFilters = searchQuery || qualificationFilter !== 'tous' || hasAdvancedFilters;
+
+        if (!hasFilters) return null;
+
+        return (
+          <p className="text-sm text-muted-foreground">
+            {filteredProspects.length} prospect{filteredProspects.length !== 1 ? 's' : ''} trouve{filteredProspects.length !== 1 ? 's' : ''}
+            {searchQuery && ` pour "${searchQuery}"`}
+            {qualificationFilter !== 'tous' && ` (${qualificationFilter})`}
+            {hasAdvancedFilters && ' avec filtres avancés'}
+          </p>
+        );
+      })()}
 
       {/* Prospects table */}
       <Card className="shadow-sm">
@@ -459,9 +563,21 @@ export function ProspectsContent() {
         <CardContent>
           {filteredProspects.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
-              {searchQuery || qualificationFilter !== 'tous'
-                ? 'Aucun prospect ne correspond aux filtres'
-                : 'Aucun prospect dans votre Google Sheet'}
+              {(() => {
+                const hasAdvancedFilters =
+                  advancedFilters.patrimoineRange[0] !== 0 ||
+                  advancedFilters.patrimoineRange[1] !== maxValues.maxPatrimoine ||
+                  advancedFilters.revenusRange[0] !== 0 ||
+                  advancedFilters.revenusRange[1] !== maxValues.maxRevenus ||
+                  advancedFilters.ageRange[0] !== 18 ||
+                  advancedFilters.ageRange[1] !== maxValues.maxAge;
+
+                const hasFilters = searchQuery || qualificationFilter !== 'tous' || hasAdvancedFilters;
+
+                return hasFilters
+                  ? 'Aucun prospect ne correspond aux filtres'
+                  : 'Aucun prospect dans votre base de données';
+              })()}
             </div>
           ) : (
             <div className="overflow-x-auto">
