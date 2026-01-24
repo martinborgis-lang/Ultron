@@ -48,15 +48,12 @@ RÈGLES STRICTES :
 5. JAMAIS de signature - terminer par "Cordialement," uniquement
 
 FORMAT DE SORTIE : {"objet": "...", "corps": "..."}`,
-    userPromptTemplate: `Rédige un email pour :
-- Prénom : {{prenom}}
-- Nom : {{nom}}
-- Qualification : {{qualification}}
-- Besoins : {{besoins}}
-- Notes de l'appel : {{notes_appel}}
-- Date du RDV : {{date_rdv}}
+    userPromptTemplate: `Les données du prospect seront automatiquement fournies dans ce prompt.
 
-Retourne uniquement le JSON.`,
+IMPORTANT : N'utilise JAMAIS de placeholders comme {{prenom}} ou {{besoins}}.
+Les vraies données seront injectées directement dans le prompt.
+
+Rédige un email personnalisé et naturel en utilisant ces informations.`,
     fixedEmailSubject: '',
     fixedEmailBody: '',
   },
@@ -73,12 +70,12 @@ RÈGLES :
 4. JAMAIS de signature - terminer par "Cordialement," uniquement
 
 FORMAT DE SORTIE : {"objet": "...", "corps": "..."}`,
-    userPromptTemplate: `Rédige un email de rappel pour :
-- Prénom : {{prenom}}
-- Nom : {{nom}}
-- Date du RDV : {{date_rdv}}
+    userPromptTemplate: `Les données du prospect seront automatiquement fournies.
 
-Retourne uniquement le JSON.`,
+IMPORTANT : N'utilise JAMAIS de placeholders comme {{prenom}} ou {{date_rdv}}.
+Les vraies données seront injectées directement dans le prompt.
+
+Rédige un email de rappel personnalisé avec les informations du prospect.`,
     fixedEmailSubject: '',
     fixedEmailBody: '',
   },
@@ -95,12 +92,12 @@ RÈGLES :
 4. JAMAIS de signature - terminer par "Cordialement," uniquement
 
 FORMAT DE SORTIE : {"objet": "...", "corps": "..."}`,
-    userPromptTemplate: `Rédige un email pour :
-- Prénom : {{prenom}}
-- Nom : {{nom}}
-- Besoins : {{besoins}}
+    userPromptTemplate: `Les données du prospect seront automatiquement fournies.
 
-Retourne uniquement le JSON.`,
+IMPORTANT : N'utilise JAMAIS de placeholders comme {{prenom}} ou {{besoins}}.
+Les vraies données seront injectées directement dans le prompt.
+
+Rédige un email sobre pour accompagner la plaquette en pièce jointe.`,
     fixedEmailSubject: '',
     fixedEmailBody: '',
   },
