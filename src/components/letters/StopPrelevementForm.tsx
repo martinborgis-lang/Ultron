@@ -121,7 +121,7 @@ export function StopPrelevementForm({ prospect, onBack, onGenerate, isGenerating
             <select
               value={formData.compagnie}
               onChange={(e) => updateField('compagnie', e.target.value)}
-              className="w-full border rounded-md p-2"
+              className="w-full border rounded-md p-2 bg-white dark:bg-gray-800 dark:border-gray-600 dark:text-white"
             >
               <option value="">Sélectionner...</option>
               {COMPAGNIES.map(c => (
@@ -169,7 +169,7 @@ export function StopPrelevementForm({ prospect, onBack, onGenerate, isGenerating
             <select
               value={formData.frequence}
               onChange={(e) => updateField('frequence', e.target.value)}
-              className="w-full border rounded-md p-2"
+              className="w-full border rounded-md p-2 bg-white dark:bg-gray-800 dark:border-gray-600 dark:text-white"
             >
               <option value="mensuel">Mensuel</option>
               <option value="trimestriel">Trimestriel</option>

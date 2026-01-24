@@ -159,7 +159,7 @@ export function RachatLetterForm({ prospect, onBack, onGenerate, isGenerating }:
             <select
               value={formData.compagnie}
               onChange={(e) => updateField('compagnie', e.target.value)}
-              className="w-full border rounded-md p-2"
+              className="w-full border rounded-md p-2 bg-white dark:bg-gray-800 dark:border-gray-600 dark:text-white"
             >
               <option value="">Sélectionner...</option>
               {COMPAGNIES.map(c => (
@@ -180,7 +180,7 @@ export function RachatLetterForm({ prospect, onBack, onGenerate, isGenerating }:
             <select
               value={formData.typeContrat}
               onChange={(e) => updateField('typeContrat', e.target.value)}
-              className="w-full border rounded-md p-2"
+              className="w-full border rounded-md p-2 bg-white dark:bg-gray-800 dark:border-gray-600 dark:text-white"
             >
               {TYPES_CONTRAT.map(t => (
                 <option key={t.value} value={t.value}>{t.label}</option>
