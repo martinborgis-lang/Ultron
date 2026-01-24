@@ -2,6 +2,9 @@
 
 import Link from 'next/link';
 import { useEffect } from 'react';
+import { DashboardMockup } from '@/components/landing/DashboardMockup';
+import { PipelineMockup } from '@/components/landing/PipelineMockup';
+import { ProspectsMockup } from '@/components/landing/ProspectsMockup';
 
 export default function LandingPage() {
   useEffect(() => {
@@ -359,11 +362,34 @@ export default function LandingPage() {
           border-radius: 6px; padding: 6px 12px; font-size: 0.75rem;
           color: var(--text-muted); display: flex; align-items: center; gap: 6px;
         }
-        .browser-content { overflow: hidden; }
+        .browser-content {
+          overflow: hidden;
+          height: 400px;
+          background: #111827;
+        }
+        #hero .browser-content > div {
+          transform: scaleX(0.85) scaleY(0.9);
+          transform-origin: center center;
+          position: relative;
+          left: 50%;
+          top: calc(50% + 85px);
+          margin-left: -50%;
+          margin-top: -50%;
+        }
         .browser-content img {
           width: 100%; height: auto; display: block; transition: transform 8s ease-in-out;
         }
         .browser-mockup:hover .browser-content img { transform: translateY(-15%); }
+        .browser-content > div {
+          height: 120%;
+          transform: scale(1);
+          transform-origin: top center;
+          width: 100%;
+          margin: 0;
+          position: relative;
+          top: -10px;
+          left: -10px;
+        }
         .float-badge {
           position: absolute; top: -15px; right: -15px;
           background: rgba(5, 10, 20, 0.95); border: 1px solid var(--border);
@@ -439,6 +465,24 @@ export default function LandingPage() {
         .feature-browser:hover {
           transform: translateY(-5px);
           box-shadow: 0 30px 60px -12px rgba(0, 0, 0, 0.6), var(--glow);
+        }
+        .feature-browser .browser-content {
+          height: 350px;
+          background: #111827;
+        }
+        .feature-browser .browser-content > div {
+          height: 115%;
+          transform: scale(0.85);
+          transform-origin: top center;
+          width: 110%;
+          margin: 0;
+          position: relative;
+          top: 2px;
+          left: -30px;
+        }
+        .feature-block.reverse .feature-browser .browser-content > div {
+          top: -5px;
+          left: 0;
         }
         .feature-browser .browser-content img { transition: transform 6s ease-in-out; }
         .feature-browser:hover .browser-content img { transform: translateY(-10%); }
@@ -523,6 +567,26 @@ export default function LandingPage() {
           .section-header h2 { font-size: 1.75rem; }
           .stat-item h4 { font-size: 1.75rem; }
           .footer-bottom { flex-direction: column; gap: 16px; text-align: center; }
+          .browser-content { height: 300px; }
+          .browser-content > div {
+            height: 120%;
+            transform: scale(0.7);
+            top: -8px;
+            left: 0;
+          }
+          .feature-browser .browser-content { height: 250px; }
+          .feature-browser .browser-content > div {
+            height: 115%;
+            transform: scale(0.65);
+            top: -6px;
+            left: 0;
+          }
+        }
+
+        @keyframes pointAppear {
+          0% { r: 0; opacity: 0; }
+          50% { r: 4; opacity: 1; }
+          100% { r: 3; opacity: 1; }
         }
       `}</style>
 
@@ -606,7 +670,7 @@ export default function LandingPage() {
                   </div>
                 </div>
                 <div className="browser-content">
-                  <img src="/images/dashboard-placeholder.svg" alt="Dashboard Ultron" />
+                  <DashboardMockup />
                 </div>
               </div>
             </div>
@@ -669,7 +733,7 @@ export default function LandingPage() {
                     </div>
                   </div>
                   <div className="browser-content">
-                    <img src="/images/dashboard-placeholder.svg" alt="Dashboard" />
+                    <DashboardMockup />
                   </div>
                 </div>
               </div>
@@ -707,7 +771,47 @@ export default function LandingPage() {
                     </div>
                   </div>
                   <div className="browser-content">
-                    <img src="/images/pipeline-placeholder.svg" alt="Pipeline" />
+                    <PipelineMockup />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="feature-block reveal">
+              <div className="feature-text">
+                <div className="feature-icon">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                    <circle cx="8.5" cy="7" r="4"/>
+                    <path d="M20 8v6M23 11h-6"/>
+                  </svg>
+                </div>
+                <h3>Gestion complète des prospects</h3>
+                <p>Base de données centralisée avec recherche avancée, filtres intelligents et qualification IA automatique.</p>
+                <ul className="feature-list">
+                  <li><svg className="check-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>Recherche et filtres avancés</li>
+                  <li><svg className="check-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>Scoring IA en temps réel</li>
+                  <li><svg className="check-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>Actions rapides intégrées</li>
+                  <li><svg className="check-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>Export et suivi complet</li>
+                </ul>
+              </div>
+              <div className="feature-visual">
+                <div className="feature-browser">
+                  <div className="browser-header">
+                    <div className="browser-dots">
+                      <div className="browser-dot dot-red"></div>
+                      <div className="browser-dot dot-yellow"></div>
+                      <div className="browser-dot dot-green"></div>
+                    </div>
+                    <div className="browser-url">
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" style={{color: 'var(--accent)'}}>
+                        <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2z"/>
+                      </svg>
+                      ultron-ai.pro/prospects
+                    </div>
+                  </div>
+                  <div className="browser-content">
+                    <ProspectsMockup />
                   </div>
                 </div>
               </div>
