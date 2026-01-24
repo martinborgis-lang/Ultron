@@ -31,16 +31,42 @@ export async function POST(request: NextRequest) {
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
     );
 
+    console.log('[Extension Login] Tentative de connexion pour:', email);
+
     const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
 
     if (authError || !authData.session) {
+      console.log('[Extension Login] ❌ Échec auth:', authError?.message);
       return NextResponse.json(
         { error: 'Email ou mot de passe incorrect' },
         { status: 401, headers: corsHeaders() }
       );
+    }
+
+    // Log détaillé du token pour diagnostic
+    const accessToken = authData.session.access_token;
+    console.log('[Extension Login] ✅ Auth réussie pour:', authData.user.email);
+    console.log('[Extension Login] Token preview:', accessToken.substring(0, 50) + '...');
+
+    // Vérifier l'algorithme du token
+    try {
+      const headerBase64 = accessToken.split('.')[0];
+      const headerJson = Buffer.from(headerBase64, 'base64').toString('utf-8');
+      const header = JSON.parse(headerJson);
+      console.log('[Extension Login] Token algorithm:', header.alg);
+      console.log('[Extension Login] Token type:', header.typ);
+
+      if (header.alg !== 'HS256') {
+        console.error('[Extension Login] ⚠️ ATTENTION: Token NON-Supabase détecté! Algo:', header.alg);
+        console.error('[Extension Login] Ce token ne fonctionnera pas avec l\'API extension!');
+      } else {
+        console.log('[Extension Login] ✅ Token Supabase valide (HS256)');
+      }
+    } catch (e) {
+      console.log('[Extension Login] Impossible de décoder le header JWT');
     }
 
     // Get user info

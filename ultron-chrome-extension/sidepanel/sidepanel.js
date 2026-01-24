@@ -193,11 +193,18 @@ document.getElementById('open-popup-btn')?.addEventListener('click', () => {
 chrome.storage.onChanged.addListener((changes, namespace) => {
   if (namespace === 'local') {
     if (changes.userToken) {
+      console.log('Ultron [SIDEPANEL]: Storage change détecté pour userToken');
       userToken = changes.userToken.newValue;
       if (userToken) {
+        console.log('Ultron [SIDEPANEL]: Nouveau token reçu, rechargement...');
+        // Masquer le message d'erreur s'il existe
+        const errorDiv = document.getElementById('logout-error-message');
+        if (errorDiv) errorDiv.remove();
+
         showMainContent();
         loadProspects();
       } else {
+        console.log('Ultron [SIDEPANEL]: Token supprimé, affichage login');
         showLoginRequired();
       }
     }
@@ -206,6 +213,32 @@ chrome.storage.onChanged.addListener((changes, namespace) => {
       loadProspectDetails(changes.selectedProspectId.newValue);
     }
   }
+});
+
+// Listen for TOKEN_UPDATED message from popup
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.type === 'TOKEN_UPDATED') {
+    console.log('Ultron [SIDEPANEL]: Message TOKEN_UPDATED reçu');
+    if (message.token) {
+      userToken = message.token;
+      // Vérifier l'algo du nouveau token
+      try {
+        const headerBase64 = userToken.split('.')[0];
+        const headerJson = atob(headerBase64);
+        const header = JSON.parse(headerJson);
+        console.log('Ultron [SIDEPANEL]: Nouveau token algo:', header.alg);
+      } catch (e) {}
+
+      // Masquer le message d'erreur s'il existe
+      const errorDiv = document.getElementById('logout-error-message');
+      if (errorDiv) errorDiv.remove();
+
+      showMainContent();
+      loadProspects();
+    }
+    sendResponse({ success: true });
+  }
+  return true;
 });
 
 function setupTabs() {

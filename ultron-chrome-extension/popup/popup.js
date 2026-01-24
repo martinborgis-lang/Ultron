@@ -85,13 +85,19 @@ async function handleLogin() {
         console.log('Ultron [LOGIN]: Impossible de décoder le token:', e.message);
       }
 
+      console.log('Ultron [LOGIN]: Sauvegarde token dans storage...');
       await chrome.storage.local.set({ userToken, userEmail });
+      console.log('Ultron [LOGIN]: ✅ Token sauvegardé');
 
       showLoggedInUI();
       loadProspects();
 
-      // Notify content script if on Google Meet
+      // Notifier le sidepanel et le content script du nouveau token
       try {
+        console.log('Ultron [LOGIN]: Broadcast TOKEN_UPDATED...');
+        // Broadcast à tous les contextes de l'extension
+        chrome.runtime.sendMessage({ type: 'TOKEN_UPDATED', token: userToken });
+
         const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
         if (tab && tab.url && tab.url.includes('meet.google.com')) {
           chrome.tabs.sendMessage(tab.id, {
@@ -100,7 +106,7 @@ async function handleLogin() {
           });
         }
       } catch (e) {
-        console.log('Could not notify content script:', e);
+        console.log('Ultron [LOGIN]: Notification broadcast:', e.message);
       }
     } else {
       loginError.textContent = data.error || 'Erreur de connexion';
