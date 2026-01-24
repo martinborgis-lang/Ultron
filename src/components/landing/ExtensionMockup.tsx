@@ -8,13 +8,18 @@ export function ExtensionMockup() {
 
   useEffect(() => {
     setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!mounted) return;
+
     // Simulation de démarrage d'enregistrement après 2 secondes
     const timer = setTimeout(() => {
       setRecording(true);
     }, 2000);
 
     return () => clearTimeout(timer);
-  }, []);
+  }, [mounted]);
 
   if (!mounted) return null;
 
@@ -62,7 +67,7 @@ export function ExtensionMockup() {
         <div className="bg-gray-800 rounded-lg p-3 text-xs space-y-2 max-h-32 overflow-y-auto">
           <div className="flex gap-2">
             <span className="text-blue-400 font-medium">Claire:</span>
-            <span className="text-gray-300">Bonjour, je m'intéresse à l'optimisation de mon patrimoine...</span>
+            <span className="text-gray-300">Bonjour, je m&apos;intéresse à l&apos;optimisation de mon patrimoine...</span>
           </div>
           <div className="flex gap-2">
             <span className="text-green-400 font-medium">Conseiller:</span>
@@ -71,7 +76,7 @@ export function ExtensionMockup() {
           {recording && (
             <div className="flex gap-2">
               <span className="text-blue-400 font-medium">Claire:</span>
-              <span className="text-gray-300">J'ai environ 150k€ d'épargne et je cherche à optimiser...</span>
+              <span className="text-gray-300">J&apos;ai environ 150k€ d&apos;épargne et je cherche à optimiser...</span>
               <span className="text-blue-500 animate-pulse">|</span>
             </div>
           )}
@@ -89,7 +94,7 @@ export function ExtensionMockup() {
               </svg>
               <span className="text-xs font-medium text-blue-300">Question suggérée</span>
             </div>
-            <p className="text-xs text-gray-300">"Avez-vous des projets d'investissement à moyen terme ?"</p>
+            <p className="text-xs text-gray-300">&quot;Avez-vous des projets d&apos;investissement à moyen terme ?&quot;</p>
           </div>
 
           <div className="bg-amber-900/20 border border-amber-700 rounded-lg p-3">
@@ -99,7 +104,7 @@ export function ExtensionMockup() {
               </svg>
               <span className="text-xs font-medium text-amber-300">Objection détectée</span>
             </div>
-            <p className="text-xs text-gray-300">"Je ne suis pas sûr des frais..." → Expliquer la transparence tarifaire</p>
+            <p className="text-xs text-gray-300">&quot;Je ne suis pas sûr des frais...&quot; → Expliquer la transparence tarifaire</p>
           </div>
         </div>
       </div>

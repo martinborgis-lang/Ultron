@@ -24,6 +24,10 @@ export function AssistantMockup() {
 
   useEffect(() => {
     setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!mounted) return;
 
     // Simulation d'une nouvelle question après 4 secondes
     const timer = setTimeout(() => {
@@ -52,7 +56,7 @@ export function AssistantMockup() {
     }, 4000);
 
     return () => clearTimeout(timer);
-  }, []);
+  }, [mounted]);
 
   if (!mounted) return null;
 

@@ -280,7 +280,7 @@ export function LoginForm() {
           >
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
           </svg>
-          <span style={{ fontWeight: 500 }}>Retour à l'accueil</span>
+          <span style={{ fontWeight: 500 }}>Retour à l&apos;accueil</span>
         </Link>
       </div>
     </div>

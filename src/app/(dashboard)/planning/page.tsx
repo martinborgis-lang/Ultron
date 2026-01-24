@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Plus, List, Calendar, CheckCircle2, Circle, Clock, User, Video, ExternalLink, X, Play } from 'lucide-react';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
@@ -38,7 +38,7 @@ export default function PlanningPage() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
 
-  const fetchEvents = async () => {
+  const fetchEvents = useCallback(async () => {
     setLoading(true);
     try {
       // En vue calendrier, on charge tous les événements pour avoir une vue globale
@@ -53,11 +53,11 @@ export default function PlanningPage() {
       console.error('Erreur fetch events:', error);
     }
     setLoading(false);
-  };
+  }, [filter, view]);
 
   useEffect(() => {
     fetchEvents();
-  }, [filter, view]);
+  }, [fetchEvents]);
 
   const handleComplete = async (id: string, completed: boolean) => {
     try {
