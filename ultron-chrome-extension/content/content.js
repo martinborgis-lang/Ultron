@@ -916,11 +916,19 @@ async function handleMessage(message, sendResponse) {
 
   // Handle transcription start from Side Panel
   if (message.type === 'START_TRANSCRIPTION') {
-    console.log('Ultron Content: Received START_TRANSCRIPTION');
-    userToken = message.token;
+    console.log('Ultron Content: Received START_TRANSCRIPTION, token from message:', message.token ? 'présent' : 'ABSENT');
+
+    // Utiliser le token du message, sinon récupérer du storage
+    if (message.token) {
+      userToken = message.token;
+    }
+
     startTranscriptionForSidePanel()
       .then(() => sendResponse({ success: true }))
-      .catch((err) => sendResponse({ success: false, error: err.message }));
+      .catch((err) => {
+        console.error('Ultron Content: Erreur transcription:', err);
+        sendResponse({ success: false, error: err.message });
+      });
   }
 
   // Handle transcription stop from Side Panel
@@ -951,6 +959,19 @@ let manualSpeakerOverride = null; // 'advisor' or 'prospect' - set by user toggl
 async function startTranscriptionForSidePanel() {
   console.log('Ultron Content: Starting transcription for Side Panel...');
 
+  // S'assurer qu'on a le token
+  if (!userToken) {
+    console.log('Ultron Content: Token absent, récupération du storage...');
+    const stored = await chrome.storage.local.get(['userToken']);
+    userToken = stored.userToken;
+  }
+
+  if (!userToken) {
+    throw new Error('Token non disponible - veuillez vous reconnecter via le popup Ultron');
+  }
+
+  console.log('Ultron Content: Token présent, appel API transcribe...');
+
   // Get Deepgram credentials
   const credResponse = await fetch(`${ULTRON_API_URL}/api/meeting/transcribe`, {
     headers: {
@@ -958,10 +979,13 @@ async function startTranscriptionForSidePanel() {
     },
   });
 
+  console.log('Ultron Content: Réponse API transcribe:', credResponse.status);
+
   const credentials = await credResponse.json();
 
   if (!credResponse.ok) {
-    throw new Error(credentials.error || 'Failed to get Deepgram credentials');
+    console.error('Ultron Content: Erreur API transcribe:', credentials);
+    throw new Error(credentials.error || `Erreur ${credResponse.status} - vérifiez votre connexion`);
   }
 
   console.log('Ultron Content: Got Deepgram credentials, connecting...');

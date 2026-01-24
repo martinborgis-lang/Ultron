@@ -41,8 +41,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   // 2. Charger les prospects
   await loadProspects();
 
-  // 3. Essayer de trouver le prospect par le meet_link
-  const prospectByMeet = findProspectByMeetUrl(currentMeetUrl);
+  // 3. Essayer de trouver le prospect par le meet_link ou le titre du meeting
+  const prospectByMeet = await findProspectByMeetUrl(currentMeetUrl);
 
   if (prospectByMeet) {
     // Prospect trouvé par le lien Meet - le sélectionner
@@ -79,27 +79,59 @@ async function detectCurrentMeetUrl() {
   }
 }
 
-// Trouver un prospect par son meet_link
-function findProspectByMeetUrl(meetUrl) {
-  if (!meetUrl || !prospects || prospects.length === 0) return null;
+// Trouver un prospect par son meet_link OU par le titre du meeting
+async function findProspectByMeetUrl(meetUrl) {
+  if (!prospects || prospects.length === 0) {
+    console.log('Ultron: Aucun prospect chargé');
+    return null;
+  }
 
-  // Extraire le code du meeting (ex: "abc-defg-hij" de "https://meet.google.com/abc-defg-hij")
-  const meetCodeMatch = meetUrl.match(/meet\.google\.com\/([a-z]{3}-[a-z]{4}-[a-z]{3})/i);
-  const meetCode = meetCodeMatch ? meetCodeMatch[1] : null;
+  // 1. Essayer de matcher par meet_link
+  if (meetUrl) {
+    const meetCodeMatch = meetUrl.match(/meet\.google\.com\/([a-z]{3}-[a-z]{4}-[a-z]{3})/i);
+    const meetCode = meetCodeMatch ? meetCodeMatch[1] : null;
 
-  console.log('Ultron: Recherche prospect avec meet_code:', meetCode);
+    console.log('Ultron: Recherche prospect avec meet_code:', meetCode);
 
-  for (const prospect of prospects) {
-    if (prospect.meet_link) {
-      // Vérifier si le meet_link contient le même code
-      if (prospect.meet_link.includes(meetCode) || meetUrl.includes(prospect.meet_link)) {
-        console.log('Ultron: Match trouvé:', prospect);
-        return prospect;
+    for (const prospect of prospects) {
+      if (prospect.meet_link && meetCode) {
+        if (prospect.meet_link.includes(meetCode) || meetUrl.includes(prospect.meet_link)) {
+          console.log('Ultron: Match trouvé par meet_link:', prospect);
+          return prospect;
+        }
       }
     }
   }
 
-  console.log('Ultron: Aucun prospect trouvé avec ce meet_link');
+  // 2. Essayer de matcher par le titre du meeting (via le titre du tab)
+  try {
+    const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+    const meetTab = tabs.find(t => t.url?.includes('meet.google.com'));
+
+    if (meetTab && meetTab.title) {
+      const meetingTitle = meetTab.title.toLowerCase();
+      console.log('Ultron: Recherche par titre du meeting:', meetingTitle);
+
+      for (const prospect of prospects) {
+        const firstName = (prospect.prenom || prospect.firstName || '').toLowerCase();
+        const lastName = (prospect.nom || prospect.lastName || '').toLowerCase();
+
+        // Vérifier si le nom du prospect est dans le titre du meeting
+        if (firstName && meetingTitle.includes(firstName)) {
+          console.log('Ultron: Match trouvé par prénom:', prospect);
+          return prospect;
+        }
+        if (lastName && meetingTitle.includes(lastName)) {
+          console.log('Ultron: Match trouvé par nom:', prospect);
+          return prospect;
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Ultron: Erreur recherche par titre:', error);
+  }
+
+  console.log('Ultron: Aucun prospect trouvé');
   return null;
 }
 
@@ -176,14 +208,31 @@ function showMainContent() {
 
 async function loadProspects() {
   try {
+    console.log('Ultron: Chargement des prospects, token:', userToken ? 'présent' : 'ABSENT');
+
+    if (!userToken) {
+      // Essayer de récupérer le token du storage
+      const stored = await chrome.storage.local.get(['userToken']);
+      userToken = stored.userToken;
+      console.log('Ultron: Token récupéré du storage:', userToken ? 'présent' : 'ABSENT');
+    }
+
+    if (!userToken) {
+      throw new Error('Token non disponible - veuillez vous reconnecter');
+    }
+
     const response = await fetch(`${ULTRON_API_URL}/api/extension/prospects`, {
       headers: {
         'Authorization': `Bearer ${userToken}`,
       },
     });
 
+    console.log('Ultron: Réponse API prospects:', response.status, response.statusText);
+
     if (!response.ok) {
-      throw new Error('Failed to load prospects');
+      const errorData = await response.json().catch(() => ({}));
+      console.error('Ultron: Erreur API prospects:', errorData);
+      throw new Error(errorData.error || `Erreur ${response.status}`);
     }
 
     const data = await response.json();
@@ -492,6 +541,18 @@ async function startTranscription() {
   try {
     statusDot.className = 'status-dot connecting';
     transcriptionText.innerHTML = '<p class="transcription-placeholder">Connexion en cours...</p>';
+
+    // S'assurer qu'on a le token
+    if (!userToken) {
+      const stored = await chrome.storage.local.get(['userToken']);
+      userToken = stored.userToken;
+    }
+
+    if (!userToken) {
+      throw new Error('Token non disponible - veuillez vous reconnecter');
+    }
+
+    console.log('Ultron: Démarrage transcription avec token:', userToken ? 'présent' : 'ABSENT');
 
     // Get the active Google Meet tab
     const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
