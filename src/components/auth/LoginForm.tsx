@@ -4,10 +4,6 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Loader2 } from 'lucide-react';
 
 export function LoginForm() {
   const router = useRouter();
@@ -40,81 +36,212 @@ export function LoginForm() {
 
   return (
     <div className="relative">
-      {/* Glassmorphism card */}
-      <div className="bg-white/10 backdrop-blur-xl rounded-2xl border border-white/20 shadow-2xl shadow-black/20 overflow-hidden">
+      {/* Card avec le même style que la landing page */}
+      <div
+        style={{
+          background: 'var(--bg-card)',
+          border: '1px solid var(--border)',
+          borderRadius: '12px',
+          overflow: 'hidden',
+          boxShadow: '0 40px 80px -20px rgba(0, 0, 0, 0.6), var(--glow)'
+        }}
+      >
         {/* Header */}
-        <div className="text-center pt-8 pb-6 px-8">
-          <div className="flex justify-center mb-6">
-            <div className="flex items-center gap-2">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-500 flex items-center justify-center">
-                <span className="text-white font-bold text-lg">U</span>
+        <div className="text-center pt-12 pb-8 px-8">
+          <div className="flex justify-center mb-8">
+            <Link href="/" className="flex items-center gap-2 text-decoration-none">
+              <div
+                style={{
+                  width: '32px',
+                  height: '32px',
+                  background: 'linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%)',
+                  borderRadius: '8px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+              >
+                <span style={{ color: 'white', fontWeight: 700, fontSize: '1.1rem' }}>U</span>
               </div>
-              <span className="text-2xl font-bold text-white">ULTRON</span>
-            </div>
+              <span
+                style={{
+                  fontWeight: 700,
+                  fontSize: '1.25rem',
+                  color: 'var(--text-white)',
+                  textDecoration: 'none'
+                }}
+              >
+                ULTRON
+              </span>
+            </Link>
           </div>
-          <h1 className="text-2xl font-bold text-white mb-2">Connexion</h1>
-          <p className="text-white/60">Connectez-vous pour accéder à votre espace</p>
+          <h1 style={{
+            fontSize: '2rem',
+            fontWeight: 700,
+            marginBottom: '12px',
+            color: 'var(--text-white)',
+            letterSpacing: '-0.03em'
+          }}>
+            Connexion
+          </h1>
+          <p style={{ color: 'var(--text-gray)', fontSize: '1rem' }}>
+            Connectez-vous pour accéder à votre espace
+          </p>
         </div>
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="px-8 pb-8">
-          <div className="space-y-5">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
             {error && (
-              <div className="bg-red-500/20 border border-red-500/30 text-red-200 text-sm p-3 rounded-lg backdrop-blur-sm">
+              <div
+                style={{
+                  background: 'rgba(239, 68, 68, 0.1)',
+                  border: '1px solid rgba(239, 68, 68, 0.2)',
+                  color: '#fca5a5',
+                  fontSize: '0.875rem',
+                  padding: '12px 16px',
+                  borderRadius: '8px'
+                }}
+              >
                 {error}
               </div>
             )}
 
-            <div className="space-y-2">
-              <Label htmlFor="email" className="text-white/80">
+            <div>
+              <label
+                htmlFor="email"
+                style={{
+                  display: 'block',
+                  marginBottom: '8px',
+                  fontSize: '0.875rem',
+                  fontWeight: 500,
+                  color: 'var(--text-gray)'
+                }}
+              >
                 Email
-              </Label>
-              <Input
+              </label>
+              <input
                 id="email"
                 type="email"
                 placeholder="vous@exemple.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="bg-white/10 border-white/20 text-white placeholder:text-white/40 focus:border-indigo-400 focus:ring-indigo-400/20"
+                style={{
+                  width: '100%',
+                  padding: '12px 16px',
+                  fontSize: '1rem',
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  border: '1px solid var(--border)',
+                  borderRadius: '8px',
+                  color: 'var(--text-white)',
+                  transition: 'var(--transition)'
+                }}
+                onFocus={(e) => {
+                  e.target.style.borderColor = 'var(--primary)';
+                  e.target.style.outline = 'none';
+                  e.target.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)';
+                }}
+                onBlur={(e) => {
+                  e.target.style.borderColor = 'var(--border)';
+                  e.target.style.boxShadow = 'none';
+                }}
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="password" className="text-white/80">
+            <div>
+              <label
+                htmlFor="password"
+                style={{
+                  display: 'block',
+                  marginBottom: '8px',
+                  fontSize: '0.875rem',
+                  fontWeight: 500,
+                  color: 'var(--text-gray)'
+                }}
+              >
                 Mot de passe
-              </Label>
-              <Input
+              </label>
+              <input
                 id="password"
                 type="password"
                 placeholder="Votre mot de passe"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                className="bg-white/10 border-white/20 text-white placeholder:text-white/40 focus:border-indigo-400 focus:ring-indigo-400/20"
+                style={{
+                  width: '100%',
+                  padding: '12px 16px',
+                  fontSize: '1rem',
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  border: '1px solid var(--border)',
+                  borderRadius: '8px',
+                  color: 'var(--text-white)',
+                  transition: 'var(--transition)'
+                }}
+                onFocus={(e) => {
+                  e.target.style.borderColor = 'var(--primary)';
+                  e.target.style.outline = 'none';
+                  e.target.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)';
+                }}
+                onBlur={(e) => {
+                  e.target.style.borderColor = 'var(--border)';
+                  e.target.style.boxShadow = 'none';
+                }}
               />
             </div>
 
-            <Button
+            <button
               type="submit"
-              className="w-full bg-gradient-to-r from-indigo-500 to-violet-500 hover:from-indigo-600 hover:to-violet-600 text-white py-6 rounded-xl shadow-lg shadow-indigo-500/25 transition-all hover:shadow-xl hover:shadow-indigo-500/40"
               disabled={loading}
+              className="btn btn-primary"
+              style={{
+                width: '100%',
+                padding: '14px 24px',
+                fontSize: '1rem',
+                fontWeight: 500,
+                marginTop: '8px'
+              }}
             >
               {loading ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <svg
+                    className="animate-spin"
+                    style={{ width: '16px', height: '16px', marginRight: '8px' }}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 2v4m6 6h4m-6 6v4m-6-6H2" />
+                  </svg>
                   Connexion...
                 </>
               ) : (
                 'Se connecter'
               )}
-            </Button>
+            </button>
 
-            <p className="text-sm text-white/50 text-center pt-2">
+            <p style={{
+              textAlign: 'center',
+              fontSize: '0.875rem',
+              color: 'var(--text-muted)',
+              marginTop: '12px'
+            }}>
               Pas encore de compte ?{' '}
               <Link
                 href="/register"
-                className="text-indigo-400 hover:text-indigo-300 font-medium transition-colors"
+                style={{
+                  color: 'var(--primary)',
+                  textDecoration: 'none',
+                  fontWeight: 500,
+                  transition: 'var(--transition)'
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.color = 'var(--primary-dark)';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.color = 'var(--primary)';
+                }}
               >
                 Créer un compte
               </Link>
@@ -127,12 +254,33 @@ export function LoginForm() {
       <div className="text-center mt-8">
         <Link
           href="/"
-          className="inline-flex items-center gap-2 text-sm text-white/60 hover:text-white/90 transition-all duration-200 hover:scale-105 group"
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '8px',
+            fontSize: '0.875rem',
+            color: 'var(--text-muted)',
+            textDecoration: 'none',
+            transition: 'var(--transition)'
+          }}
+          onMouseOver={(e) => {
+            e.currentTarget.style.color = 'var(--text-white)';
+            e.currentTarget.style.transform = 'scale(1.05)';
+          }}
+          onMouseOut={(e) => {
+            e.currentTarget.style.color = 'var(--text-muted)';
+            e.currentTarget.style.transform = 'scale(1)';
+          }}
         >
-          <svg className="w-4 h-4 transition-transform group-hover:-translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg
+            style={{ width: '16px', height: '16px', transition: 'var(--transition)' }}
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
           </svg>
-          <span className="font-medium">Retour à l'accueil</span>
+          <span style={{ fontWeight: 500 }}>Retour à l'accueil</span>
         </Link>
       </div>
     </div>
