@@ -248,7 +248,7 @@ Email court et professionnel pour présenter la plaquette en pièce jointe.`,
         }}
       >
         {/* Header */}
-        <div className="text-center pt-6 pb-4 px-4 sm:px-3">
+        <div className="text-center pt-10 pb-6 px-6 sm:px-4">
           <div className="flex justify-center mb-6">
             <Link href="/" className="flex items-center gap-2 text-decoration-none">
               <div
@@ -294,7 +294,7 @@ Email court et professionnel pour présenter la plaquette en pièce jointe.`,
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="px-4 pb-4 sm:px-3 sm:pb-3">
+        <form onSubmit={handleSubmit} className="px-8 pb-8 sm:px-6 sm:pb-6">
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
             {error && (
               <div
