@@ -248,7 +248,7 @@ Email court et professionnel pour présenter la plaquette en pièce jointe.`,
         }}
       >
         {/* Header */}
-        <div className="text-center pt-8 pb-6 px-6 sm:px-4">
+        <div className="text-center pt-6 pb-4 px-4 sm:px-3">
           <div className="flex justify-center mb-6">
             <Link href="/" className="flex items-center gap-2 text-decoration-none">
               <div
@@ -262,7 +262,9 @@ Email court et professionnel pour présenter la plaquette en pièce jointe.`,
                   justifyContent: 'center'
                 }}
               >
-                <span style={{ color: 'white', fontWeight: 700, fontSize: '1.1rem' }}>U</span>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style={{ color: 'white' }}>
+                  <path d="M21 16.5c0 .38-.21.71-.53.88l-7.9 4.44c-.16.12-.36.18-.57.18-.21 0-.41-.06-.57-.18l-7.9-4.44A.991.991 0 013 16.5v-9c0-.38.21-.71.53-.88l7.9-4.44c.16-.12.36-.18.57-.18.21 0 .41.06.57.18l7.9 4.44c.32.17.53.5.53.88v9z"/>
+                </svg>
               </div>
               <span
                 style={{
@@ -291,7 +293,7 @@ Email court et professionnel pour présenter la plaquette en pièce jointe.`,
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="px-6 pb-6 sm:px-4 sm:pb-4">
+        <form onSubmit={handleSubmit} className="px-4 pb-4 sm:px-3 sm:pb-3">
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
             {error && (
               <div
