@@ -46,27 +46,52 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Log détaillé du token pour diagnostic
-    const accessToken = authData.session.access_token;
+    // Log TRÈS détaillé pour diagnostic
     console.log('[Extension Login] ✅ Auth réussie pour:', authData.user.email);
-    console.log('[Extension Login] Token preview:', accessToken.substring(0, 50) + '...');
+    console.log('[Extension Login] User ID:', authData.user.id);
+    console.log('[Extension Login] Auth provider:', authData.user.app_metadata?.provider || 'email');
 
-    // Vérifier l'algorithme du token
+    // Examiner la structure de la session
+    const session = authData.session;
+    console.log('[Extension Login] Session keys:', Object.keys(session));
+    console.log('[Extension Login] access_token existe:', !!session.access_token);
+    console.log('[Extension Login] provider_token existe:', !!session.provider_token);
+    console.log('[Extension Login] refresh_token existe:', !!session.refresh_token);
+
+    // Vérifier les deux tokens s'ils existent
+    const accessToken = session.access_token;
+    const providerToken = session.provider_token;
+
+    console.log('[Extension Login] access_token preview:', accessToken?.substring(0, 50) + '...');
+    if (providerToken) {
+      console.log('[Extension Login] ⚠️ provider_token EXISTE:', providerToken.substring(0, 50) + '...');
+    }
+
+    // Vérifier l'algorithme du access_token
     try {
       const headerBase64 = accessToken.split('.')[0];
       const headerJson = Buffer.from(headerBase64, 'base64').toString('utf-8');
       const header = JSON.parse(headerJson);
-      console.log('[Extension Login] Token algorithm:', header.alg);
-      console.log('[Extension Login] Token type:', header.typ);
+      console.log('[Extension Login] access_token algorithm:', header.alg);
+      console.log('[Extension Login] access_token type:', header.typ);
 
       if (header.alg !== 'HS256') {
-        console.error('[Extension Login] ⚠️ ATTENTION: Token NON-Supabase détecté! Algo:', header.alg);
-        console.error('[Extension Login] Ce token ne fonctionnera pas avec l\'API extension!');
+        console.error('[Extension Login] ⚠️ CRITIQUE: access_token n\'est PAS HS256!');
+        console.error('[Extension Login] Algo détecté:', header.alg);
+        console.error('[Extension Login] Ceci est ANORMAL - Supabase devrait toujours retourner HS256');
+
+        // Si provider_token existe et access_token est ES256, c'est très bizarre
+        if (providerToken) {
+          try {
+            const providerHeader = JSON.parse(Buffer.from(providerToken.split('.')[0], 'base64').toString('utf-8'));
+            console.log('[Extension Login] provider_token algorithm:', providerHeader.alg);
+          } catch {}
+        }
       } else {
-        console.log('[Extension Login] ✅ Token Supabase valide (HS256)');
+        console.log('[Extension Login] ✅ access_token est bien HS256 (Supabase)');
       }
     } catch (e) {
-      console.log('[Extension Login] Impossible de décoder le header JWT');
+      console.log('[Extension Login] Erreur décodage header JWT:', e);
     }
 
     // Get user info
