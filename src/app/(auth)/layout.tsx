@@ -19,7 +19,7 @@ export default function AuthLayout({
   children: React.ReactNode;
 }) {
   return (
-    <>
+    <div>
       {/* Same CSS variables and styles as landing page */}
       <style jsx global>{`
         :root {
@@ -82,7 +82,7 @@ export default function AuthLayout({
         }
       `}</style>
 
-      <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+      {/* Font is already loaded by the main page.tsx */}
 
       <div className="auth-container">
         {/* Particle Background */}
@@ -95,6 +95,6 @@ export default function AuthLayout({
           </div>
         </div>
       </div>
-    </>
+    </div>
   );
 }

@@ -102,10 +102,11 @@ export async function GET(request: NextRequest) {
 
     // Si le service retourne déjà un format avec total/count (futur)
     // On transforme les données même dans ce cas
-    if (prospects && typeof prospects === 'object' && 'data' in prospects && Array.isArray(prospects.data)) {
+    if (prospects && typeof prospects === 'object' && 'data' in prospects && Array.isArray((prospects as any).data)) {
+      const prospectsWithData = prospects as { data: ProspectData[]; [key: string]: any };
       return NextResponse.json({
-        ...prospects,
-        data: prospects.data.map(transformToUnifiedFormat)
+        ...prospectsWithData,
+        data: prospectsWithData.data.map(transformToUnifiedFormat)
       });
     }
 
