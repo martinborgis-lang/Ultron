@@ -47,8 +47,8 @@ export function LoginForm() {
         }}
       >
         {/* Header */}
-        <div className="text-center pt-12 pb-8 px-8">
-          <div className="flex justify-center mb-8">
+        <div className="text-center pt-8 pb-6 px-6 sm:px-4">
+          <div className="flex justify-center mb-6">
             <Link href="/" className="flex items-center gap-2 text-decoration-none">
               <div
                 style={{
@@ -76,21 +76,21 @@ export function LoginForm() {
             </Link>
           </div>
           <h1 style={{
-            fontSize: '2rem',
+            fontSize: '1.75rem',
             fontWeight: 700,
-            marginBottom: '12px',
+            marginBottom: '8px',
             color: 'var(--text-white)',
             letterSpacing: '-0.03em'
           }}>
             Connexion
           </h1>
-          <p style={{ color: 'var(--text-gray)', fontSize: '1rem' }}>
+          <p style={{ color: 'var(--text-gray)', fontSize: '0.95rem', padding: '0 12px' }}>
             Connectez-vous pour accéder à votre espace
           </p>
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="px-8 pb-8">
+        <form onSubmit={handleSubmit} className="px-6 pb-6 sm:px-4 sm:pb-4">
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
             {error && (
               <div

@@ -5,6 +5,8 @@ import { useEffect } from 'react';
 import { DashboardMockup } from '@/components/landing/DashboardMockup';
 import { PipelineMockup } from '@/components/landing/PipelineMockup';
 import { ProspectsMockup } from '@/components/landing/ProspectsMockup';
+import { ExtensionMockup } from '@/components/landing/ExtensionMockup';
+import { AssistantMockup } from '@/components/landing/AssistantMockup';
 
 export default function LandingPage() {
   useEffect(() => {
@@ -397,6 +399,7 @@ export default function LandingPage() {
           box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
           display: flex; align-items: center; gap: 10px;
           animation: float 5s ease-in-out infinite; z-index: 10;
+          min-width: 140px; white-space: nowrap;
         }
         @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
         .float-badge-icon {
@@ -621,8 +624,11 @@ export default function LandingPage() {
             position: relative;
             top: auto;
             right: auto;
-            margin-bottom: 16px;
+            margin: 0 auto 16px auto;
             transform: none;
+            animation: none;
+            justify-content: center;
+            max-width: fit-content;
           }
         }
 
@@ -872,6 +878,92 @@ export default function LandingPage() {
                   </div>
                   <div className="browser-content">
                     <ProspectsMockup />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Extension Chrome Section */}
+        <section id="extension-chrome" style={{ padding: '100px 0' }}>
+          <div className="landing-container">
+            <div className="feature-block reveal">
+              <div className="feature-text">
+                <div className="feature-icon">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.94-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/>
+                  </svg>
+                </div>
+                <h3>Extension Chrome intelligente</h3>
+                <p>Enregistrez vos RDV Google Meet et obtenez une transcription PDF complète avec analyse IA en temps réel. Questions suggérées et réponses aux objections incluses.</p>
+                <ul className="feature-list">
+                  <li><svg className="check-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>Transcription automatique Google Meet</li>
+                  <li><svg className="check-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>Export PDF complet</li>
+                  <li><svg className="check-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>Questions suggérées temps réel</li>
+                  <li><svg className="check-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>Réponses aux objections IA</li>
+                </ul>
+              </div>
+              <div className="feature-visual">
+                <div className="feature-browser">
+                  <div className="browser-header">
+                    <div className="browser-dots">
+                      <div className="browser-dot dot-red"></div>
+                      <div className="browser-dot dot-yellow"></div>
+                      <div className="browser-dot dot-green"></div>
+                    </div>
+                    <div className="browser-url">
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" style={{color: 'var(--accent)'}}>
+                        <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2z"/>
+                      </svg>
+                      Extension Chrome Ultron
+                    </div>
+                  </div>
+                  <div className="browser-content">
+                    <ExtensionMockup />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Assistant IA Section */}
+        <section id="assistant-ia" style={{ padding: '100px 0' }}>
+          <div className="landing-container">
+            <div className="feature-block reverse reveal">
+              <div className="feature-text">
+                <div className="feature-icon">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M12 2a2 2 0 012 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 017 7h1a1 1 0 011 1v3a1 1 0 01-1 1h-1v1a2 2 0 01-2 2H5a2 2 0 01-2-2v-1H2a1 1 0 01-1-1v-3a1 1 0 011-1h1a7 7 0 017-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 012-2z"/>
+                  </svg>
+                </div>
+                <h3>Assistant IA conversationnel</h3>
+                <p>Interrogez votre base de données en langage naturel. Obtenez des statistiques sur mesure, des analyses détaillées et des insights métier instantanément.</p>
+                <ul className="feature-list">
+                  <li><svg className="check-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>Requêtes en français naturel</li>
+                  <li><svg className="check-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>Statistiques instantanées</li>
+                  <li><svg className="check-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>Analyses prédictives</li>
+                  <li><svg className="check-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>Export données automatique</li>
+                </ul>
+              </div>
+              <div className="feature-visual">
+                <div className="feature-browser">
+                  <div className="browser-header">
+                    <div className="browser-dots">
+                      <div className="browser-dot dot-red"></div>
+                      <div className="browser-dot dot-yellow"></div>
+                      <div className="browser-dot dot-green"></div>
+                    </div>
+                    <div className="browser-url">
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" style={{color: 'var(--accent)'}}>
+                        <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2z"/>
+                      </svg>
+                      ultron-ai.pro/assistant
+                    </div>
+                  </div>
+                  <div className="browser-content">
+                    <AssistantMockup />
                   </div>
                 </div>
               </div>
