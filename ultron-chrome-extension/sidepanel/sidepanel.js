@@ -234,6 +234,32 @@ function showLoginRequired() {
   mainContent.classList.add('hidden');
 }
 
+// Force logout et afficher message d'erreur
+async function forceLogout(message) {
+  console.log('Ultron [LOGOUT]: Déconnexion forcée -', message);
+
+  // Effacer le token du storage
+  await chrome.storage.local.remove(['userToken', 'selectedProspectId']);
+  userToken = null;
+
+  // Afficher le login avec message d'erreur
+  showLoginRequired();
+
+  // Afficher le message d'erreur dans l'UI
+  const loginRequired = document.getElementById('login-required');
+  if (loginRequired) {
+    // Ajouter un message d'erreur visible
+    let errorDiv = document.getElementById('logout-error-message');
+    if (!errorDiv) {
+      errorDiv = document.createElement('div');
+      errorDiv.id = 'logout-error-message';
+      errorDiv.style.cssText = 'background: #fef2f2; border: 1px solid #ef4444; color: #dc2626; padding: 12px; border-radius: 8px; margin-bottom: 16px; font-size: 13px; text-align: center;';
+      loginRequired.insertBefore(errorDiv, loginRequired.firstChild);
+    }
+    errorDiv.textContent = message;
+  }
+}
+
 function showMainContent() {
   loginRequired.classList.add('hidden');
   mainContent.classList.remove('hidden');
@@ -259,6 +285,23 @@ async function loadProspects() {
       throw new Error('Token non disponible - veuillez vous reconnecter');
     }
 
+    // Diagnostic: vérifier l'algorithme du token JWT
+    try {
+      const headerBase64 = userToken.split('.')[0];
+      const headerJson = atob(headerBase64);
+      const header = JSON.parse(headerJson);
+      console.log('Ultron [TOKEN]: Algorithme JWT:', header.alg);
+      if (header.alg !== 'HS256') {
+        console.warn('Ultron [TOKEN]: ⚠️ ATTENTION - Token utilise', header.alg, 'mais Supabase attend HS256!');
+        console.warn('Ultron [TOKEN]: Ce token n\'est PAS un token Supabase valide.');
+        console.warn('Ultron [TOKEN]: Forçage déconnexion pour permettre re-auth...');
+        await forceLogout('Token invalide (mauvais type). Veuillez vous reconnecter.');
+        return;
+      }
+    } catch (e) {
+      console.log('Ultron [TOKEN]: Impossible de décoder le header JWT:', e.message);
+    }
+
     console.log('Ultron [BUG1]: Envoi requête fetch...');
     const response = await fetch(apiUrl, {
       headers: {
@@ -272,6 +315,14 @@ async function loadProspects() {
       const errorText = await response.text();
       console.error('Ultron [BUG1]: ❌ ERREUR API - Status:', response.status);
       console.error('Ultron [BUG1]: ❌ ERREUR API - Body:', errorText);
+
+      // Si 401 Unauthorized, forcer la déconnexion
+      if (response.status === 401) {
+        console.error('Ultron [BUG1]: ⚠️ Token rejeté par le serveur - déconnexion forcée');
+        await forceLogout('Session expirée ou token invalide. Veuillez vous reconnecter.');
+        return;
+      }
+
       try {
         const errorData = JSON.parse(errorText);
         throw new Error(errorData.error || `Erreur ${response.status}`);

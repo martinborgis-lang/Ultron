@@ -70,6 +70,21 @@ async function handleLogin() {
       userEmail = email;
       isLoggedIn = true;
 
+      // Vérifier que c'est bien un token Supabase (HS256)
+      try {
+        const headerBase64 = userToken.split('.')[0];
+        const headerJson = atob(headerBase64);
+        const header = JSON.parse(headerJson);
+        console.log('Ultron [LOGIN]: Token reçu - Algorithme:', header.alg);
+        if (header.alg !== 'HS256') {
+          console.error('Ultron [LOGIN]: ⚠️ ERREUR - Token non-Supabase reçu! Algo:', header.alg);
+        } else {
+          console.log('Ultron [LOGIN]: ✅ Token Supabase valide (HS256)');
+        }
+      } catch (e) {
+        console.log('Ultron [LOGIN]: Impossible de décoder le token:', e.message);
+      }
+
       await chrome.storage.local.set({ userToken, userEmail });
 
       showLoggedInUI();
