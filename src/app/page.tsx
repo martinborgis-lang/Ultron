@@ -445,6 +445,42 @@ export default function LandingPage() {
         .feature-block.reverse { grid-template-columns: 1.2fr 1fr; }
         .feature-block.reverse .feature-text { order: 2; }
         .feature-block.reverse .feature-visual { order: 1; }
+        .feature-block.vertical {
+          grid-template-columns: 1fr;
+          gap: 40px;
+          max-width: 900px;
+          margin-left: auto;
+          margin-right: auto;
+        }
+        .feature-block.vertical .feature-text {
+          text-align: center;
+          max-width: 600px;
+          margin: 0 auto;
+        }
+        .feature-block.vertical .feature-list {
+          display: inline-flex;
+          flex-wrap: wrap;
+          justify-content: center;
+          gap: 8px 24px;
+        }
+        .feature-block.vertical .feature-icon {
+          margin: 0 auto 20px;
+        }
+        .feature-block.vertical .feature-visual {
+          display: flex;
+          justify-content: center;
+          width: 100%;
+        }
+        .feature-block.vertical .feature-browser {
+          width: 100%;
+          max-width: 800px;
+        }
+        .feature-block.vertical .feature-browser .browser-content > div {
+          left: 0;
+          width: 100%;
+          transform: scale(0.85);
+          transform-origin: top center;
+        }
         .feature-icon {
           width: 50px; height: 50px;
           background: linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(6, 182, 212, 0.15));
@@ -805,7 +841,7 @@ export default function LandingPage() {
               </div>
             </div>
 
-            <div className="feature-block reverse reveal">
+            <div className="feature-block vertical reveal">
               <div className="feature-text">
                 <div className="feature-icon">
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
