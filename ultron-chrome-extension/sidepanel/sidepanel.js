@@ -25,10 +25,16 @@ const tabsSection = document.getElementById('tabs-section');
 
 // Initialize
 document.addEventListener('DOMContentLoaded', async () => {
+  console.log('=== ULTRON SIDEPANEL INIT ===');
+
   const stored = await chrome.storage.local.get(['userToken', 'selectedProspectId']);
   userToken = stored.userToken;
 
+  console.log('Ultron [INIT]: Token from storage:', userToken ? 'PRÉSENT (' + userToken.substring(0, 20) + '...)' : 'ABSENT');
+  console.log('Ultron [INIT]: selectedProspectId from storage:', stored.selectedProspectId || 'AUCUN');
+
   if (!userToken) {
+    console.log('Ultron [INIT]: Pas de token, affichage login required');
     showLoginRequired();
     return;
   }
@@ -38,23 +44,31 @@ document.addEventListener('DOMContentLoaded', async () => {
   // 1. Récupérer l'URL Google Meet de l'onglet actif
   await detectCurrentMeetUrl();
 
-  // 2. Charger les prospects
+  // 2. Charger les prospects (BUG 1 - dropdown)
+  console.log('Ultron [BUG1]: Appel loadProspects()...');
   await loadProspects();
+  console.log('Ultron [BUG1]: loadProspects() terminé, prospects chargés:', prospects.length);
 
-  // 3. Essayer de trouver le prospect par le meet_link ou le titre du meeting
+  // 3. Essayer de trouver le prospect par le meet_link ou le titre du meeting (BUG 2)
+  console.log('Ultron [BUG2]: Recherche du prospect pour ce meeting...');
   const prospectByMeet = await findProspectByMeetUrl(currentMeetUrl);
+
+  console.log('Ultron [BUG2]: Résultat findProspectByMeetUrl:', prospectByMeet ? `TROUVÉ: ${prospectByMeet.prenom || prospectByMeet.firstName} ${prospectByMeet.nom || prospectByMeet.lastName}` : 'NON TROUVÉ');
 
   if (prospectByMeet) {
     // Prospect trouvé par le lien Meet - le sélectionner
-    console.log('Ultron: Prospect trouvé par meet_link:', prospectByMeet.id);
+    console.log('Ultron [BUG2]: ✅ Sélection du prospect trouvé par meeting:', prospectByMeet.id);
     prospectSelect.value = prospectByMeet.id;
     await chrome.storage.local.set({ selectedProspectId: prospectByMeet.id });
     await loadProspectDetails(prospectByMeet.id);
   } else if (stored.selectedProspectId) {
     // Fallback: utiliser le prospect précédemment sélectionné
-    console.log('Ultron: Fallback vers selectedProspectId:', stored.selectedProspectId);
+    console.log('Ultron [BUG2]: ⚠️ FALLBACK vers ancien selectedProspectId:', stored.selectedProspectId);
+    console.log('Ultron [BUG2]: C\'est probablement la cause du mauvais prospect affiché!');
     prospectSelect.value = stored.selectedProspectId;
     await loadProspectDetails(stored.selectedProspectId);
+  } else {
+    console.log('Ultron [BUG2]: Aucun prospect sélectionné');
   }
 
   // Setup tabs
@@ -62,6 +76,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Setup transcription
   setupTranscription();
+
+  console.log('=== ULTRON SIDEPANEL INIT TERMINÉ ===');
 });
 
 // Détecter l'URL Google Meet de l'onglet actif
@@ -81,8 +97,12 @@ async function detectCurrentMeetUrl() {
 
 // Trouver un prospect par son meet_link OU par le titre du meeting
 async function findProspectByMeetUrl(meetUrl) {
+  console.log('Ultron [BUG2]: === RECHERCHE PROSPECT ===');
+  console.log('Ultron [BUG2]: Meet URL:', meetUrl || 'AUCUNE');
+  console.log('Ultron [BUG2]: Nombre de prospects chargés:', prospects?.length || 0);
+
   if (!prospects || prospects.length === 0) {
-    console.log('Ultron: Aucun prospect chargé');
+    console.log('Ultron [BUG2]: ❌ Aucun prospect chargé - impossible de matcher');
     return null;
   }
 
@@ -91,47 +111,60 @@ async function findProspectByMeetUrl(meetUrl) {
     const meetCodeMatch = meetUrl.match(/meet\.google\.com\/([a-z]{3}-[a-z]{4}-[a-z]{3})/i);
     const meetCode = meetCodeMatch ? meetCodeMatch[1] : null;
 
-    console.log('Ultron: Recherche prospect avec meet_code:', meetCode);
+    console.log('Ultron [BUG2]: Code meeting extrait:', meetCode || 'AUCUN');
+    console.log('Ultron [BUG2]: Recherche par meet_link...');
 
     for (const prospect of prospects) {
-      if (prospect.meet_link && meetCode) {
-        if (prospect.meet_link.includes(meetCode) || meetUrl.includes(prospect.meet_link)) {
-          console.log('Ultron: Match trouvé par meet_link:', prospect);
+      if (prospect.meet_link) {
+        console.log(`Ultron [BUG2]:   Comparaison: "${meetCode}" vs meet_link "${prospect.meet_link}"`);
+        if (meetCode && (prospect.meet_link.includes(meetCode) || meetUrl.includes(prospect.meet_link))) {
+          console.log('Ultron [BUG2]: ✅ MATCH par meet_link:', prospect.prenom || prospect.firstName, prospect.nom || prospect.lastName);
           return prospect;
         }
       }
     }
+    console.log('Ultron [BUG2]: Aucun match par meet_link');
   }
 
   // 2. Essayer de matcher par le titre du meeting (via le titre du tab)
+  console.log('Ultron [BUG2]: Recherche par titre du tab...');
   try {
     const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
     const meetTab = tabs.find(t => t.url?.includes('meet.google.com'));
 
+    console.log('Ultron [BUG2]: Tab Meet trouvé:', meetTab ? 'OUI' : 'NON');
+
     if (meetTab && meetTab.title) {
       const meetingTitle = meetTab.title.toLowerCase();
-      console.log('Ultron: Recherche par titre du meeting:', meetingTitle);
+      console.log('Ultron [BUG2]: Titre du tab:', meetTab.title);
+      console.log('Ultron [BUG2]: Titre normalisé:', meetingTitle);
 
       for (const prospect of prospects) {
         const firstName = (prospect.prenom || prospect.firstName || '').toLowerCase();
         const lastName = (prospect.nom || prospect.lastName || '').toLowerCase();
 
+        console.log(`Ultron [BUG2]:   Test prospect: prénom="${firstName}", nom="${lastName}"`);
+
         // Vérifier si le nom du prospect est dans le titre du meeting
-        if (firstName && meetingTitle.includes(firstName)) {
-          console.log('Ultron: Match trouvé par prénom:', prospect);
+        if (firstName && firstName.length > 2 && meetingTitle.includes(firstName)) {
+          console.log('Ultron [BUG2]: ✅ MATCH par prénom!', firstName, 'trouvé dans', meetingTitle);
           return prospect;
         }
-        if (lastName && meetingTitle.includes(lastName)) {
-          console.log('Ultron: Match trouvé par nom:', prospect);
+        if (lastName && lastName.length > 2 && meetingTitle.includes(lastName)) {
+          console.log('Ultron [BUG2]: ✅ MATCH par nom!', lastName, 'trouvé dans', meetingTitle);
           return prospect;
         }
       }
+      console.log('Ultron [BUG2]: Aucun match par titre');
+    } else {
+      console.log('Ultron [BUG2]: Pas de titre de tab disponible');
     }
   } catch (error) {
-    console.error('Ultron: Erreur recherche par titre:', error);
+    console.error('Ultron [BUG2]: Erreur recherche par titre:', error);
   }
 
-  console.log('Ultron: Aucun prospect trouvé');
+  console.log('Ultron [BUG2]: ❌ AUCUN PROSPECT TROUVÉ - fallback vers storage');
+  console.log('Ultron [BUG2]: === FIN RECHERCHE PROSPECT ===');
   return null;
 }
 
@@ -207,36 +240,54 @@ function showMainContent() {
 }
 
 async function loadProspects() {
+  const apiUrl = `${ULTRON_API_URL}/api/extension/prospects`;
+  console.log('Ultron [BUG1]: === CHARGEMENT DROPDOWN ===');
+  console.log('Ultron [BUG1]: URL API:', apiUrl);
+
   try {
-    console.log('Ultron: Chargement des prospects, token:', userToken ? 'présent' : 'ABSENT');
+    console.log('Ultron [BUG1]: Token actuel:', userToken ? 'présent (' + userToken.substring(0, 20) + '...)' : 'ABSENT');
 
     if (!userToken) {
       // Essayer de récupérer le token du storage
       const stored = await chrome.storage.local.get(['userToken']);
       userToken = stored.userToken;
-      console.log('Ultron: Token récupéré du storage:', userToken ? 'présent' : 'ABSENT');
+      console.log('Ultron [BUG1]: Token récupéré du storage:', userToken ? 'présent' : 'ABSENT');
     }
 
     if (!userToken) {
+      console.error('Ultron [BUG1]: ❌ PAS DE TOKEN - Impossible d\'appeler l\'API');
       throw new Error('Token non disponible - veuillez vous reconnecter');
     }
 
-    const response = await fetch(`${ULTRON_API_URL}/api/extension/prospects`, {
+    console.log('Ultron [BUG1]: Envoi requête fetch...');
+    const response = await fetch(apiUrl, {
       headers: {
         'Authorization': `Bearer ${userToken}`,
       },
     });
 
-    console.log('Ultron: Réponse API prospects:', response.status, response.statusText);
+    console.log('Ultron [BUG1]: Réponse reçue - Status:', response.status, response.statusText);
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      console.error('Ultron: Erreur API prospects:', errorData);
-      throw new Error(errorData.error || `Erreur ${response.status}`);
+      const errorText = await response.text();
+      console.error('Ultron [BUG1]: ❌ ERREUR API - Status:', response.status);
+      console.error('Ultron [BUG1]: ❌ ERREUR API - Body:', errorText);
+      try {
+        const errorData = JSON.parse(errorText);
+        throw new Error(errorData.error || `Erreur ${response.status}`);
+      } catch {
+        throw new Error(`Erreur ${response.status}: ${errorText.substring(0, 100)}`);
+      }
     }
 
     const data = await response.json();
     prospects = data.prospects || [];
+
+    console.log('Ultron [BUG1]: ✅ Prospects reçus:', prospects.length);
+    console.log('Ultron [BUG1]: Liste des prospects:');
+    prospects.forEach((p, i) => {
+      console.log(`  ${i + 1}. ${p.prenom || p.firstName || '?'} ${p.nom || p.lastName || '?'} (ID: ${p.id}, meet_link: ${p.meet_link || 'AUCUN'})`);
+    });
 
     // Populate select
     prospectSelect.innerHTML = '<option value="">Selectionner un prospect...</option>';
@@ -249,8 +300,11 @@ async function loadProspects() {
       prospectSelect.appendChild(option);
     });
 
+    console.log('Ultron [BUG1]: === FIN CHARGEMENT DROPDOWN ===');
+
   } catch (error) {
-    console.error('Error loading prospects:', error);
+    console.error('Ultron [BUG1]: ❌ EXCEPTION:', error.message);
+    console.error('Ultron [BUG1]: Stack:', error.stack);
     prospectSelect.innerHTML = '<option value="">Erreur de chargement</option>';
   }
 }
