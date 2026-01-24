@@ -78,15 +78,16 @@ export function LoginForm() {
             </Link>
           </div>
           <h1 style={{
-            fontSize: '1.75rem',
+            fontSize: '1.5rem',
             fontWeight: 700,
             marginBottom: '8px',
             color: 'var(--text-white)',
-            letterSpacing: '-0.03em'
+            letterSpacing: '-0.03em',
+            padding: '0 20px'
           }}>
             Connexion
           </h1>
-          <p style={{ color: 'var(--text-gray)', fontSize: '0.95rem', padding: '0 12px' }}>
+          <p style={{ color: 'var(--text-gray)', fontSize: '0.9rem', padding: '0 24px' }}>
             Connectez-vous pour accéder à votre espace
           </p>
         </div>
