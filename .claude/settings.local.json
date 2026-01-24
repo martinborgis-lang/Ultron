@@ -20,7 +20,11 @@
       "Bash(node:*)",
       "Bash(npx supabase:*)",
       "Bash(npm install:*)",
-      "Bash(start http://localhost:3002)"
+      "Bash(start http://localhost:3002)",
+      "Bash(git checkout:*)",
+      "Bash(timeout 120s npm run build)",
+      "Bash(timeout 90s npm run build)",
+      "Bash(timeout 60s npm run build)"
     ],
     "deny": [],
     "ask": []

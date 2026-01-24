@@ -173,18 +173,9 @@ export class CommissionService {
     let totalCAEntreprise = 0;
     let totalVentes = 0;
 
-    interface SaleData {
-      advisor_id: string;
-      commissions_calculees: CommissionCalculation;
-      prospect?: {
-        first_name?: string;
-        last_name?: string;
-      };
-    }
+    const salesByAdvisor: Record<string, any> = {};
 
-    const salesByAdvisor: Record<string, SaleData[]> = {};
-
-    sales?.forEach((sale: SaleData) => {
+    sales?.forEach((sale: any) => {
       const commissions = sale.commissions_calculees as CommissionCalculation;
 
       totalCommissionsConseiller += commissions.totalConseiller;

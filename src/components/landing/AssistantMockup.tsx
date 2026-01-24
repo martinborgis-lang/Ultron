@@ -2,9 +2,19 @@
 
 import { useEffect, useState } from 'react';
 
+interface MessageData {
+  [key: string]: string | number;
+}
+
+interface Message {
+  type: 'user' | 'assistant';
+  content: string;
+  data?: MessageData;
+}
+
 export function AssistantMockup() {
   const [mounted, setMounted] = useState(false);
-  const [messages, setMessages] = useState([
+  const [messages, setMessages] = useState<Message[]>([
     {
       type: 'user',
       content: 'Combien de prospects chauds avons-nous ce mois ?'
