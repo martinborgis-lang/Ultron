@@ -29,6 +29,7 @@ import {
 import { ActivityTimeline } from '@/components/crm/ActivityTimeline';
 import { ProspectTasks } from '@/components/crm/ProspectTasks';
 import { SaleClosureForm } from '@/components/crm/SaleClosureForm';
+import { LetterGeneratorModal } from '@/components/letters/LetterGeneratorModal';
 import { CrmProspect, CrmActivity, CrmTask, PipelineStage } from '@/types/crm';
 import { EmailLog } from '@/types/email';
 import {
@@ -49,6 +50,7 @@ import {
   ChevronDown,
   ChevronUp,
   Sparkles,
+  FileText,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -83,6 +85,7 @@ export default function ProspectDetailPage() {
   const [editMode, setEditMode] = useState(false);
   const [formData, setFormData] = useState<Partial<CrmProspect>>({});
   const [isSheetMode, setIsSheetMode] = useState(false);
+  const [showLetterModal, setShowLetterModal] = useState(false);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -381,6 +384,14 @@ export default function ProspectDetailPage() {
             </>
           ) : (
             <>
+              <Button
+                variant="outline"
+                onClick={() => setShowLetterModal(true)}
+                className="flex items-center gap-2"
+              >
+                <FileText className="h-4 w-4" />
+                Générer une lettre
+              </Button>
               <Button variant="outline" onClick={() => setEditMode(true)}>
                 Modifier
               </Button>
@@ -836,6 +847,21 @@ export default function ProspectDetailPage() {
           )}
         </div>
       </div>
+
+      {/* Letter Generator Modal */}
+      <LetterGeneratorModal
+        prospect={{
+          id: prospect.id,
+          prenom: prospect.first_name,
+          nom: prospect.last_name,
+          first_name: prospect.first_name,
+          last_name: prospect.last_name,
+          email: prospect.email || '',
+          telephone: prospect.phone || '',
+        }}
+        isOpen={showLetterModal}
+        onClose={() => setShowLetterModal(false)}
+      />
     </div>
   );
 }
