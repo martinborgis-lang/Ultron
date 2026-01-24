@@ -45,31 +45,31 @@ export function DashboardMockup() {
       {/* Header avec titre */}
       <div className="bg-gray-800 border-b border-gray-700 p-3">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-white">Dashboard</h2>
-          <button className="text-sm text-gray-400 hover:text-gray-200 flex items-center gap-1">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <h2 className="text-lg sm:text-base font-semibold text-white">Dashboard</h2>
+          <button className="text-sm sm:text-xs text-gray-400 hover:text-gray-200 flex items-center gap-1">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="sm:w-3 sm:h-3">
               <path d="M1 4v6h6"/><path d="M3 10L8 5l5.5 5.5L20 3"/>
             </svg>
-            Actualiser
+            <span className="hidden sm:inline">Actualiser</span>
           </button>
         </div>
       </div>
 
       {/* Stats Cards */}
-      <div className="p-4">
-        <div className="grid grid-cols-4 gap-3 mb-4">
+      <div className="p-4 sm:p-2">
+        <div className="grid grid-cols-4 sm:grid-cols-2 gap-3 sm:gap-2 mb-4">
           {[
             { label: 'Prospects Chauds', value: 8, color: 'bg-red-500', bgColor: 'bg-red-900/20' },
             { label: 'Prospects Tièdes', value: 15, color: 'bg-amber-500', bgColor: 'bg-amber-900/20' },
             { label: 'Prospects Froids', value: 23, color: 'bg-blue-500', bgColor: 'bg-blue-900/20' },
             { label: 'Emails Envoyés', value: 42, color: 'bg-green-500', bgColor: 'bg-green-900/20' }
           ].map((stat, i) => (
-            <div key={i} className={`${stat.bgColor} rounded-lg p-3 border border-gray-700`}>
-              <div className="flex items-center">
-                <div className={`w-3 h-3 ${stat.color} rounded-full mr-3`}></div>
-                <div>
-                  <p className="text-xs text-gray-400 mb-1">{stat.label}</p>
-                  <p className="text-lg font-bold text-white">
+            <div key={i} className={`${stat.bgColor} rounded-lg p-3 sm:p-2 border border-gray-700`}>
+              <div className="flex items-center sm:flex-col sm:items-start sm:text-center">
+                <div className={`w-3 h-3 sm:w-2 sm:h-2 ${stat.color} rounded-full mr-3 sm:mr-0 sm:mb-1 sm:mx-auto`}></div>
+                <div className="sm:w-full">
+                  <p className="text-xs sm:text-[10px] text-gray-400 mb-1 sm:truncate">{stat.label}</p>
+                  <p className="text-lg sm:text-base font-bold text-white">
                     {animate ? <CounterAnimation target={stat.value} duration={2000 + i * 200} /> : '0'}
                   </p>
                 </div>
@@ -79,11 +79,11 @@ export function DashboardMockup() {
         </div>
 
         {/* Chart and Activity Feed */}
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-3 sm:grid-cols-1 gap-4 sm:gap-2">
           {/* Chart Area */}
-          <div className="col-span-2">
-            <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
-              <h3 className="text-sm font-medium text-white mb-3">Évolution des Prospects (30j)</h3>
+          <div className="col-span-2 sm:col-span-1">
+            <div className="bg-gray-800 rounded-lg p-4 sm:p-3 border border-gray-700">
+              <h3 className="text-sm sm:text-xs font-medium text-white mb-3 sm:mb-2">Évolution des Prospects (30j)</h3>
               <div className="relative h-32">
                 {/* Chart avec animation */}
                 <svg className="w-full h-full" viewBox="0 0 300 100">
@@ -139,18 +139,18 @@ export function DashboardMockup() {
                   ))}
                 </svg>
               </div>
-              <div className="flex justify-between text-xs text-gray-400 mt-2">
+              <div className="flex justify-between text-xs sm:text-[10px] text-gray-400 mt-2">
                 <span>01/01</span>
-                <span>15/01</span>
+                <span className="hidden sm:inline">15/01</span>
                 <span>30/01</span>
               </div>
             </div>
           </div>
 
           {/* Activity Feed */}
-          <div>
-            <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
-              <h3 className="text-sm font-medium text-white mb-3">Activité Récente</h3>
+          <div className="sm:order-first">
+            <div className="bg-gray-800 rounded-lg p-4 sm:p-3 border border-gray-700">
+              <h3 className="text-sm sm:text-xs font-medium text-white mb-3 sm:mb-2">Activité Récente</h3>
               <div className="space-y-3">
                 {[
                   { action: 'Nouveau prospect', name: 'Marie Dubois', time: 'Il y a 2 min', color: 'bg-green-500' },
@@ -159,14 +159,14 @@ export function DashboardMockup() {
                   { action: 'Email envoyé', name: 'Paul Durand', time: 'Il y a 2h', color: 'bg-purple-500' },
                   { action: 'Nouveau prospect', name: 'Sophie Leroy', time: 'Il y a 3h', color: 'bg-green-500' }
                 ].map((activity, i) => (
-                  <div key={i} className="flex items-start gap-3">
-                    <div className={`w-2 h-2 ${activity.color} rounded-full mt-1.5 flex-shrink-0`}></div>
+                  <div key={i} className="flex items-start gap-3 sm:gap-2">
+                    <div className={`w-2 h-2 sm:w-1.5 sm:h-1.5 ${activity.color} rounded-full mt-1.5 sm:mt-1 flex-shrink-0`}></div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs text-white">
+                      <p className="text-xs sm:text-[10px] text-white">
                         <span className="font-medium">{activity.action}</span>
                       </p>
-                      <p className="text-xs text-gray-400 truncate">{activity.name}</p>
-                      <p className="text-xs text-gray-500">{activity.time}</p>
+                      <p className="text-xs sm:text-[10px] text-gray-400 truncate">{activity.name}</p>
+                      <p className="text-xs sm:text-[9px] text-gray-500">{activity.time}</p>
                     </div>
                   </div>
                 ))}
@@ -176,14 +176,14 @@ export function DashboardMockup() {
         </div>
 
         {/* Recent Prospects Table */}
-        <div className="mt-4">
+        <div className="mt-4 sm:mt-2">
           <div className="bg-gray-800 rounded-lg border border-gray-700">
-            <div className="p-3 border-b border-gray-700">
-              <h3 className="text-sm font-medium text-white">Top Prospects</h3>
+            <div className="p-3 sm:p-2 border-b border-gray-700">
+              <h3 className="text-sm sm:text-xs font-medium text-white">Top Prospects</h3>
             </div>
             <div className="overflow-hidden">
               <table className="w-full">
-                <thead>
+                <thead className="sm:hidden">
                   <tr className="border-b border-gray-700">
                     <th className="text-left text-xs font-medium text-gray-400 uppercase tracking-wider p-3">Nom</th>
                     <th className="text-left text-xs font-medium text-gray-400 uppercase tracking-wider p-3">Qualification</th>
@@ -191,23 +191,32 @@ export function DashboardMockup() {
                     <th className="text-left text-xs font-medium text-gray-400 uppercase tracking-wider p-3">Statut</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-700">
+                <tbody className="divide-y divide-gray-700 sm:divide-y-0">
                   {[
                     { nom: 'Marie Dubois', qualification: 'CHAUD', score: 95, statut: 'RDV: 15/01', qualColor: 'bg-red-900/30 text-red-300' },
                     { nom: 'Jean Martin', qualification: 'CHAUD', score: 88, statut: 'RDV Pris', qualColor: 'bg-red-900/30 text-red-300' },
                     { nom: 'Claire Simon', qualification: 'TIEDE', score: 72, statut: 'Contacté', qualColor: 'bg-amber-900/30 text-amber-300' },
                     { nom: 'Paul Durand', qualification: 'TIEDE', score: 68, statut: 'À rappeler', qualColor: 'bg-amber-900/30 text-amber-300' },
                     { nom: 'Sophie Leroy', qualification: 'FROID', score: 45, statut: 'Nouveau', qualColor: 'bg-blue-900/30 text-blue-300' }
-                  ].map((prospect, i) => (
-                    <tr key={i} className="hover:bg-gray-700/50">
-                      <td className="p-3 text-sm text-white">{prospect.nom}</td>
-                      <td className="p-3">
+                  ].slice(0, 3).map((prospect, i) => (
+                    <tr key={i} className="hover:bg-gray-700/50 sm:block sm:p-3 sm:mb-2 sm:bg-gray-800/50 sm:rounded-lg sm:border sm:border-gray-600">
+                      <td className="p-3 sm:p-0 sm:mb-2 text-sm sm:text-xs text-white sm:flex sm:justify-between sm:items-center">
+                        <span>{prospect.nom}</span>
+                        <span className={`sm:inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${prospect.qualColor} hidden`}>
+                          {prospect.qualification}
+                        </span>
+                      </td>
+                      <td className="p-3 sm:hidden">
                         <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${prospect.qualColor}`}>
                           {prospect.qualification}
                         </span>
                       </td>
-                      <td className="p-3 text-sm text-white font-medium">{prospect.score}/100</td>
-                      <td className="p-3 text-sm text-gray-400">{prospect.statut}</td>
+                      <td className="p-3 sm:p-0 sm:inline-block sm:mr-4 text-sm sm:text-xs text-white font-medium">
+                        <span className="sm:text-gray-400 sm:font-normal hidden sm:inline">Score: </span>{prospect.score}/100
+                      </td>
+                      <td className="p-3 sm:p-0 sm:inline-block text-sm sm:text-xs text-gray-400">
+                        <span className="hidden sm:inline">Statut: </span>{prospect.statut}
+                      </td>
                     </tr>
                   ))}
                 </tbody>

@@ -109,24 +109,25 @@ export function ProspectsMockup() {
   return (
     <div className="w-full h-full bg-gray-900 overflow-hidden relative">
       {/* Header */}
-      <div className="bg-gray-800 border-b border-gray-700 p-3">
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-lg font-semibold text-white">Prospects</h2>
-          <button className="text-sm bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-md">
-            + Nouveau prospect
+      <div className="bg-gray-800 border-b border-gray-700 p-3 sm:p-2">
+        <div className="flex items-center justify-between mb-3 sm:mb-2">
+          <h2 className="text-lg sm:text-base font-semibold text-white">Prospects</h2>
+          <button className="text-sm sm:text-xs bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 sm:px-2 sm:py-1 rounded-md">
+            <span className="sm:hidden">+ Nouveau prospect</span>
+            <span className="hidden sm:inline">+ Nouveau</span>
           </button>
         </div>
 
         {/* Filters and Search */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 sm:flex-col sm:gap-2">
           {/* Search */}
-          <div className="relative flex-1 max-w-md">
+          <div className="relative flex-1 max-w-md sm:w-full sm:max-w-none">
             <input
               type="text"
               placeholder="Rechercher..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full px-4 py-1.5 border border-gray-600 rounded-md bg-gray-700 text-white text-xs"
+              className="w-full px-4 py-1.5 sm:py-1 border border-gray-600 rounded-md bg-gray-700 text-white text-xs"
             />
             {searchTerm && (
               <button
@@ -141,7 +142,7 @@ export function ProspectsMockup() {
           </div>
 
           {/* Qualification Filters */}
-          <div className="flex gap-2">
+          <div className="flex gap-2 sm:w-full sm:justify-between sm:gap-1">
             {[
               { key: 'tous', label: 'Tous', count: prospects.length },
               { key: 'CHAUD', label: 'Chauds', count: prospects.filter(p => p.qualification === 'CHAUD').length },
@@ -151,13 +152,14 @@ export function ProspectsMockup() {
               <button
                 key={filter.key}
                 onClick={() => setSelectedFilter(filter.key)}
-                className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
+                className={`text-xs sm:text-[10px] px-3 py-1.5 sm:px-2 sm:py-1 rounded-full border transition-colors sm:flex-1 sm:text-center ${
                   selectedFilter === filter.key
                     ? 'bg-blue-900/30 text-blue-300 border-blue-700'
                     : 'bg-gray-700 text-gray-300 border-gray-600 hover:bg-gray-600'
                 }`}
               >
-                {filter.label} ({filter.count})
+                <span className="sm:hidden">{filter.label} ({filter.count})</span>
+                <span className="hidden sm:inline">{filter.label.slice(0, 1)}{filter.count}</span>
               </button>
             ))}
           </div>
@@ -174,8 +176,8 @@ export function ProspectsMockup() {
       </div>
 
       {/* Table */}
-      <div className="overflow-x-auto">
-        <table className="w-full">
+      <div className="overflow-x-auto sm:overflow-hidden">
+        <table className="w-full sm:hidden">
           <thead>
             <tr className="border-b border-gray-700 bg-gray-800">
               <th className="text-left text-xs font-medium text-gray-400 uppercase tracking-wider px-3 py-2">Nom</th>
@@ -250,6 +252,45 @@ export function ProspectsMockup() {
             ))}
           </tbody>
         </table>
+
+        {/* Mobile Cards Version */}
+        <div className="hidden sm:block px-4">
+          {filteredProspects.slice(0, 4).map((prospect, index) => (
+            <div key={prospect.id} className="bg-gray-800 border border-gray-700 rounded-lg p-3 mb-3">
+              <div className="flex items-center justify-between mb-2">
+                <div>
+                  <div className="text-sm font-medium text-white">
+                    {prospect.prenom} {prospect.nom}
+                  </div>
+                  <div className="text-xs text-gray-400">{prospect.email}</div>
+                </div>
+                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getQualificationColor(prospect.qualification)}`}>
+                  {prospect.qualification}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <div className="flex items-center mr-3">
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" className="text-blue-500">
+                      <path d="M12 2a2 2 0 012 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 017 7h1a1 1 0 011 1v3a1 1 0 01-1 1h-1v1a2 2 0 01-2 2H5a2 2 0 01-2-2v-1H2a1 1 0 01-1-1v-3a1 1 0 011-1h1a7 7 0 017-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 012-2z"/>
+                    </svg>
+                    <span className="text-xs font-medium text-white ml-1">{prospect.score}/100</span>
+                  </div>
+                  <div className="text-xs text-gray-400">{prospect.statut}</div>
+                </div>
+                <div className="flex gap-1">
+                  <button className="text-xs bg-gray-700 hover:bg-gray-600 text-gray-300 px-2 py-1 rounded">
+                    Voir
+                  </button>
+                  <button className="text-xs bg-blue-900/20 hover:bg-blue-900/40 text-blue-400 px-2 py-1 rounded">
+                    Email
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* Empty State */}

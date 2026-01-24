@@ -563,24 +563,84 @@ export default function LandingPage() {
         }
         @media (max-width: 768px) {
           .nav-menu { display: none; }
-          .hero-content h1 { font-size: 2rem; }
+          .hero-content h1 { font-size: 2rem; line-height: 1.1; }
+          .hero-content p { font-size: 0.95rem; }
           .section-header h2 { font-size: 1.75rem; }
           .stat-item h4 { font-size: 1.75rem; }
           .footer-bottom { flex-direction: column; gap: 16px; text-align: center; }
-          .browser-content { height: 300px; }
+
+          /* Mobile mockups optimizations */
+          .browser-content { height: 280px; }
           .browser-content > div {
             height: 120%;
-            transform: scale(0.7);
-            top: -8px;
-            left: 0;
+            transform: scale(0.6);
+            top: -5px;
+            left: -10px;
           }
-          .feature-browser .browser-content { height: 250px; }
+
+          .feature-browser .browser-content { height: 220px; }
           .feature-browser .browser-content > div {
             height: 115%;
-            transform: scale(0.65);
-            top: -6px;
-            left: 0;
+            transform: scale(0.55);
+            top: -3px;
+            left: -8px;
           }
+
+          /* Hero mockup mobile specific */
+          #hero .browser-content { height: 300px; }
+          #hero .browser-content > div {
+            transform: scaleX(0.7) scaleY(0.75);
+            top: calc(50% + 40px);
+            left: 50%;
+            margin-left: -50%;
+            margin-top: -50%;
+          }
+
+          /* Mobile navigation improvements */
+          .landing-container { padding: 0 20px; }
+          .nav-inner { padding: 12px 0; }
+          .nav-cta { gap: 8px; }
+          .btn { padding: 8px 16px; font-size: 0.875rem; }
+
+          /* Mobile stats grid */
+          .stats-grid { grid-template-columns: 1fr 1fr; gap: 20px; }
+
+          /* Mobile hero adjustments */
+          .hero-buttons { flex-direction: column; gap: 12px; width: 100%; }
+          .hero-buttons .btn { width: 100%; justify-content: center; }
+
+          /* Mobile feature cards */
+          .features-grid { gap: 16px; }
+          .feature-card { padding: 24px 20px; }
+
+          /* Mobile CTA */
+          .cta-box { padding: 50px 24px; margin: 0 20px; }
+
+          /* Mobile float badge */
+          .float-badge {
+            position: relative;
+            top: auto;
+            right: auto;
+            margin-bottom: 16px;
+            transform: none;
+          }
+        }
+
+        @media (max-width: 480px) {
+          .hero-content h1 { font-size: 1.75rem; }
+          .stats-grid { grid-template-columns: 1fr; }
+          .stat-item { text-align: center; }
+
+          /* Very small screens - stack everything */
+          .browser-content { height: 250px; }
+          .feature-browser .browser-content { height: 200px; }
+
+          #hero .browser-content > div {
+            transform: scaleX(0.6) scaleY(0.65);
+          }
+
+          .landing-container { padding: 0 16px; }
+          .cta-box { padding: 40px 20px; }
         }
 
         @keyframes pointAppear {

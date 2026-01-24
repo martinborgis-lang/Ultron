@@ -241,147 +241,116 @@ Email court et professionnel pour présenter la plaquette en pièce jointe.`,
 
   return (
     <div className="relative">
-      {/* Floating elements for visual depth */}
-      <div className="absolute -inset-4 bg-gradient-to-r from-indigo-500/10 via-purple-500/10 to-indigo-500/10 rounded-3xl blur-xl opacity-70 animate-pulse"></div>
-      <div className="absolute -inset-2 bg-gradient-to-r from-indigo-400/5 via-violet-400/5 to-purple-400/5 rounded-2xl"></div>
-
       {/* Glassmorphism card */}
-      <div className="relative bg-white/5 backdrop-blur-2xl rounded-2xl border border-white/10 shadow-2xl shadow-black/30 overflow-hidden">
-        {/* Gradient overlay */}
-        <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/10 via-transparent to-violet-500/10 pointer-events-none"></div>
-
+      <div className="bg-white/10 backdrop-blur-xl rounded-2xl border border-white/20 shadow-2xl shadow-black/20 overflow-hidden">
         {/* Header */}
-        <div className="relative text-center pt-8 pb-6 px-8">
+        <div className="text-center pt-8 pb-6 px-8">
           <div className="flex justify-center mb-6">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-500 via-indigo-600 to-violet-600 flex items-center justify-center shadow-lg shadow-indigo-500/25 border border-indigo-400/20">
-                <span className="text-white font-bold text-xl">U</span>
+            <div className="flex items-center gap-2">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-500 flex items-center justify-center">
+                <span className="text-white font-bold text-lg">U</span>
               </div>
-              <span className="text-3xl font-bold text-white tracking-tight">ULTRON</span>
+              <span className="text-2xl font-bold text-white">ULTRON</span>
             </div>
           </div>
-          <h1 className="text-3xl font-bold text-white mb-2 tracking-tight">Créer un compte</h1>
-          <p className="text-white/70 text-lg">Inscrivez-vous pour commencer à automatiser votre prospection</p>
+          <h1 className="text-2xl font-bold text-white mb-2">Créer un compte</h1>
+          <p className="text-white/60">Inscrivez-vous pour commencer</p>
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="relative px-8 pb-8">
+        <form onSubmit={handleSubmit} className="px-8 pb-8">
           <div className="space-y-5">
             {error && (
-              <div className="relative bg-red-500/20 border border-red-500/30 text-red-100 text-sm p-4 rounded-xl backdrop-blur-sm shadow-lg">
-                <div className="flex items-center">
-                  <svg className="w-5 h-5 mr-3 text-red-300" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                  </svg>
-                  {error}
-                </div>
+              <div className="bg-red-500/20 border border-red-500/30 text-red-200 text-sm p-3 rounded-lg backdrop-blur-sm">
+                {error}
               </div>
             )}
 
-            <div className="space-y-3">
-              <Label htmlFor="fullName" className="text-white/90 font-medium text-sm">
+            <div className="space-y-2">
+              <Label htmlFor="fullName" className="text-white/80">
                 Nom complet
               </Label>
-              <div className="relative">
-                <Input
-                  id="fullName"
-                  type="text"
-                  placeholder="Jean Dupont"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  required
-                  className="bg-white/5 border-white/10 text-white placeholder:text-white/40 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/20 h-12 px-4 rounded-xl backdrop-blur-sm transition-all"
-                />
-                <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-indigo-500/5 to-violet-500/5 pointer-events-none"></div>
-              </div>
+              <Input
+                id="fullName"
+                type="text"
+                placeholder="Jean Dupont"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                required
+                className="bg-white/10 border-white/20 text-white placeholder:text-white/40 focus:border-indigo-400 focus:ring-indigo-400/20"
+              />
             </div>
 
-            <div className="space-y-3">
-              <Label htmlFor="companyName" className="text-white/90 font-medium text-sm">
+            <div className="space-y-2">
+              <Label htmlFor="companyName" className="text-white/80">
                 Nom de l&apos;entreprise
               </Label>
-              <div className="relative">
-                <Input
-                  id="companyName"
-                  type="text"
-                  placeholder="Cabinet Patrimoine"
-                  value={companyName}
-                  onChange={(e) => setCompanyName(e.target.value)}
-                  required
-                  className="bg-white/5 border-white/10 text-white placeholder:text-white/40 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/20 h-12 px-4 rounded-xl backdrop-blur-sm transition-all"
-                />
-                <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-indigo-500/5 to-violet-500/5 pointer-events-none"></div>
-              </div>
+              <Input
+                id="companyName"
+                type="text"
+                placeholder="Cabinet Patrimoine"
+                value={companyName}
+                onChange={(e) => setCompanyName(e.target.value)}
+                required
+                className="bg-white/10 border-white/20 text-white placeholder:text-white/40 focus:border-indigo-400 focus:ring-indigo-400/20"
+              />
             </div>
 
-            <div className="space-y-3">
-              <Label htmlFor="email" className="text-white/90 font-medium text-sm">
+            <div className="space-y-2">
+              <Label htmlFor="email" className="text-white/80">
                 Adresse email
               </Label>
-              <div className="relative">
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="vous@exemple.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  className="bg-white/5 border-white/10 text-white placeholder:text-white/40 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/20 h-12 px-4 rounded-xl backdrop-blur-sm transition-all"
-                />
-                <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-indigo-500/5 to-violet-500/5 pointer-events-none"></div>
-              </div>
+              <Input
+                id="email"
+                type="email"
+                placeholder="vous@exemple.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                className="bg-white/10 border-white/20 text-white placeholder:text-white/40 focus:border-indigo-400 focus:ring-indigo-400/20"
+              />
             </div>
 
-            <div className="space-y-3">
-              <Label htmlFor="password" className="text-white/90 font-medium text-sm">
+            <div className="space-y-2">
+              <Label htmlFor="password" className="text-white/80">
                 Mot de passe
               </Label>
-              <div className="relative">
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="Minimum 6 caractères"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  minLength={6}
-                  required
-                  className="bg-white/5 border-white/10 text-white placeholder:text-white/40 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/20 h-12 px-4 rounded-xl backdrop-blur-sm transition-all"
-                />
-                <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-indigo-500/5 to-violet-500/5 pointer-events-none"></div>
-              </div>
+              <Input
+                id="password"
+                type="password"
+                placeholder="Minimum 6 caractères"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                minLength={6}
+                required
+                className="bg-white/10 border-white/20 text-white placeholder:text-white/40 focus:border-indigo-400 focus:ring-indigo-400/20"
+              />
             </div>
 
-            <div className="pt-2">
-              <Button
-                type="submit"
-                className="relative w-full bg-gradient-to-r from-indigo-500 via-indigo-600 to-violet-600 hover:from-indigo-600 hover:via-indigo-700 hover:to-violet-700 text-white py-4 rounded-xl shadow-xl shadow-indigo-500/30 transition-all duration-300 hover:shadow-2xl hover:shadow-indigo-500/40 hover:-translate-y-0.5 font-semibold text-lg tracking-wide"
-                disabled={loading}
+            <Button
+              type="submit"
+              className="w-full bg-gradient-to-r from-indigo-500 to-violet-500 hover:from-indigo-600 hover:to-violet-600 text-white py-6 rounded-xl shadow-lg shadow-indigo-500/25 transition-all hover:shadow-xl hover:shadow-indigo-500/40"
+              disabled={loading}
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Création en cours...
+                </>
+              ) : (
+                'Créer mon compte'
+              )}
+            </Button>
+
+            <p className="text-sm text-white/50 text-center pt-2">
+              Déjà un compte ?{' '}
+              <Link
+                href="/login"
+                className="text-indigo-400 hover:text-indigo-300 font-medium transition-colors"
               >
-                <div className="absolute inset-0 bg-gradient-to-r from-white/10 to-white/5 rounded-xl opacity-0 hover:opacity-100 transition-opacity pointer-events-none"></div>
-                <span className="relative flex items-center justify-center">
-                  {loading ? (
-                    <>
-                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                      Création en cours...
-                    </>
-                  ) : (
-                    'Créer mon compte'
-                  )}
-                </span>
-              </Button>
-            </div>
-
-            <div className="pt-4 text-center">
-              <p className="text-white/60 text-sm">
-                Déjà un compte ?{' '}
-                <Link
-                  href="/login"
-                  className="text-indigo-400 hover:text-indigo-300 font-semibold transition-colors duration-200 hover:underline"
-                >
-                  Se connecter
-                </Link>
-              </p>
-            </div>
+                Se connecter
+              </Link>
+            </p>
           </div>
         </form>
       </div>
