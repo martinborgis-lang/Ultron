@@ -79,12 +79,12 @@ export function RachatLetterForm({ prospect, onBack, onGenerate, isGenerating }:
   return (
     <div className="space-y-6">
       {/* Bouton retour */}
-      <button onClick={onBack} className="flex items-center text-gray-500 hover:text-gray-700">
+      <button onClick={onBack} className="flex items-center text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200">
         <ArrowLeft className="h-4 w-4 mr-1" /> Retour
       </button>
 
       {/* Section : Informations du client */}
-      <div className="border rounded-lg p-4 bg-gray-50">
+      <div className="border rounded-lg p-4 bg-gray-50 dark:bg-gray-800">
         <h4 className="font-medium mb-3 flex items-center gap-2">
           <User className="h-4 w-4" /> Informations du client
         </h4>
@@ -220,7 +220,7 @@ export function RachatLetterForm({ prospect, onBack, onGenerate, isGenerating }:
         <h4 className="font-medium mb-3">Type d'opération</h4>
 
         <div className="space-y-3">
-          <label className="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
+          <label className="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700">
             <input
               type="radio"
               name="typeOperation"
@@ -229,11 +229,11 @@ export function RachatLetterForm({ prospect, onBack, onGenerate, isGenerating }:
             />
             <div>
               <div className="font-medium">Rachat total</div>
-              <div className="text-sm text-gray-500">Récupérer l'intégralité des fonds</div>
+              <div className="text-sm text-gray-500 dark:text-gray-400">Récupérer l'intégralité des fonds</div>
             </div>
           </label>
 
-          <label className="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
+          <label className="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700">
             <input
               type="radio"
               name="typeOperation"
@@ -242,7 +242,7 @@ export function RachatLetterForm({ prospect, onBack, onGenerate, isGenerating }:
             />
             <div className="flex-1">
               <div className="font-medium">Rachat partiel</div>
-              <div className="text-sm text-gray-500">Récupérer une partie des fonds</div>
+              <div className="text-sm text-gray-500 dark:text-gray-400">Récupérer une partie des fonds</div>
               {formData.typeOperation === 'rachat_partiel' && (
                 <Input
                   type="number"
@@ -255,7 +255,7 @@ export function RachatLetterForm({ prospect, onBack, onGenerate, isGenerating }:
             </div>
           </label>
 
-          <label className="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
+          <label className="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700">
             <input
               type="radio"
               name="typeOperation"
@@ -264,7 +264,7 @@ export function RachatLetterForm({ prospect, onBack, onGenerate, isGenerating }:
             />
             <div>
               <div className="font-medium">Transfert (même assureur)</div>
-              <div className="text-sm text-gray-500">Conserve l'antériorité fiscale</div>
+              <div className="text-sm text-gray-500 dark:text-gray-400">Conserve l'antériorité fiscale</div>
             </div>
           </label>
         </div>

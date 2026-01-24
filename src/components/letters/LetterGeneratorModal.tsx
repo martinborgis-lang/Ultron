@@ -132,14 +132,14 @@ export function LetterGeneratorModal({ prospect, isOpen, onClose }: LetterGenera
           <div className="grid grid-cols-2 gap-4 py-6">
             <button
               onClick={() => handleSelectType('rachat')}
-              className="flex flex-col items-center gap-3 p-6 border-2 rounded-xl hover:border-indigo-500 hover:bg-indigo-50 transition-all"
+              className="flex flex-col items-center gap-3 p-6 border-2 rounded-xl hover:border-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-950 transition-all"
             >
-              <div className="p-3 bg-indigo-100 rounded-full">
-                <ArrowRightLeft className="h-6 w-6 text-indigo-600" />
+              <div className="p-3 bg-indigo-100 dark:bg-indigo-900 rounded-full">
+                <ArrowRightLeft className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />
               </div>
               <div className="text-center">
                 <h3 className="font-semibold">Rachat / Transfert</h3>
-                <p className="text-sm text-gray-500 mt-1">
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                   Récupérer les fonds d'un contrat existant
                 </p>
               </div>
@@ -147,14 +147,14 @@ export function LetterGeneratorModal({ prospect, isOpen, onClose }: LetterGenera
 
             <button
               onClick={() => handleSelectType('stop_prelevement')}
-              className="flex flex-col items-center gap-3 p-6 border-2 rounded-xl hover:border-orange-500 hover:bg-orange-50 transition-all"
+              className="flex flex-col items-center gap-3 p-6 border-2 rounded-xl hover:border-orange-500 hover:bg-orange-50 dark:hover:bg-orange-950 transition-all"
             >
-              <div className="p-3 bg-orange-100 rounded-full">
-                <Ban className="h-6 w-6 text-orange-600" />
+              <div className="p-3 bg-orange-100 dark:bg-orange-900 rounded-full">
+                <Ban className="h-6 w-6 text-orange-600 dark:text-orange-400" />
               </div>
               <div className="text-center">
                 <h3 className="font-semibold">Stop Prélèvement</h3>
-                <p className="text-sm text-gray-500 mt-1">
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                   Arrêter les versements automatiques
                 </p>
               </div>
@@ -185,12 +185,12 @@ export function LetterGeneratorModal({ prospect, isOpen, onClose }: LetterGenera
         {step === 'preview' && (
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <button onClick={handleBack} className="flex items-center text-gray-500 hover:text-gray-700">
+              <button onClick={handleBack} className="flex items-center text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200">
                 <ArrowLeft className="h-4 w-4 mr-1" /> Modifier
               </button>
               <button
                 onClick={() => handleGenerate(formData)}
-                className="flex items-center text-indigo-600 hover:text-indigo-700"
+                className="flex items-center text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300"
                 disabled={isGenerating}
               >
                 <RefreshCw className={`h-4 w-4 mr-1 ${isGenerating ? 'animate-spin' : ''}`} />
@@ -199,8 +199,8 @@ export function LetterGeneratorModal({ prospect, isOpen, onClose }: LetterGenera
             </div>
 
             {/* Zone de prévisualisation */}
-            <div className="border rounded-lg p-6 bg-white shadow-inner max-h-80 overflow-y-auto">
-              <pre className="whitespace-pre-wrap font-serif text-sm leading-relaxed">
+            <div className="border rounded-lg p-6 bg-white dark:bg-gray-800 shadow-inner max-h-80 overflow-y-auto">
+              <pre className="whitespace-pre-wrap font-serif text-sm leading-relaxed text-gray-900 dark:text-gray-100">
                 {generatedLetter}
               </pre>
             </div>
