@@ -24,13 +24,13 @@ export default function LandingPage() {
 
     const initParticles = () => {
       particles = [];
-      for (let i = 0; i < 50; i++) {
+      for (let i = 0; i < 80; i++) {
         particles.push({
           x: Math.random() * width,
           y: Math.random() * height,
-          vx: (Math.random() - 0.5) * 0.3,
-          vy: (Math.random() - 0.5) * 0.3,
-          size: Math.random() * 1.5 + 0.5
+          vx: (Math.random() - 0.5) * 0.4,
+          vy: (Math.random() - 0.5) * 0.4,
+          size: Math.random() * 2 + 1
         });
       }
     };
@@ -44,7 +44,19 @@ export default function LandingPage() {
         if (p.x < 0 || p.x > width) p.vx *= -1;
         if (p.y < 0 || p.y > height) p.vy *= -1;
 
-        ctx.fillStyle = 'rgba(59, 130, 246, 0.6)';
+        // Particules avec gradient radial pour plus de visibilité
+        const gradient = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size * 3);
+        gradient.addColorStop(0, 'rgba(59, 130, 246, 0.8)');
+        gradient.addColorStop(0.5, 'rgba(6, 182, 212, 0.4)');
+        gradient.addColorStop(1, 'rgba(59, 130, 246, 0)');
+
+        ctx.fillStyle = gradient;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size * 3, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Centre plus brillant
+        ctx.fillStyle = 'rgba(59, 130, 246, 0.9)';
         ctx.beginPath();
         ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
         ctx.fill();
@@ -53,9 +65,10 @@ export default function LandingPage() {
           const p2 = particles[j];
           const dist = Math.hypot(p.x - p2.x, p.y - p2.y);
 
-          if (dist < 120) {
-            ctx.strokeStyle = `rgba(59, 130, 246, ${0.15 * (1 - dist / 120)})`;
-            ctx.lineWidth = 0.5;
+          if (dist < 150) {
+            const opacity = 0.3 * (1 - dist / 150);
+            ctx.strokeStyle = `rgba(59, 130, 246, ${opacity})`;
+            ctx.lineWidth = 1;
             ctx.beginPath();
             ctx.moveTo(p.x, p.y);
             ctx.lineTo(p2.x, p2.y);
@@ -139,7 +152,7 @@ export default function LandingPage() {
     <>
       <style jsx global>{`
         :root {
-          --bg-deep: #050a14;
+          --bg-deep: #0a0f1c;
           --bg-card: rgba(15, 23, 42, 0.8);
           --bg-card-solid: #0f172a;
           --primary: #3b82f6;
@@ -158,7 +171,7 @@ export default function LandingPage() {
         html { scroll-behavior: smooth; }
         body {
           font-family: 'Manrope', -apple-system, BlinkMacSystemFont, sans-serif;
-          background-color: var(--bg-deep);
+          background: linear-gradient(135deg, var(--bg-deep) 0%, #0d1421 25%, #111827 50%, #0f172a 75%, var(--bg-deep) 100%);
           color: var(--text-white);
           overflow-x: hidden;
           line-height: 1.6;
@@ -217,8 +230,20 @@ export default function LandingPage() {
           position: relative; min-height: 100vh; display: flex;
           align-items: center; padding: 120px 0 80px; overflow: hidden;
         }
+        #hero::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: radial-gradient(circle at 30% 40%, rgba(59, 130, 246, 0.05) 0%, transparent 50%),
+                      radial-gradient(circle at 70% 80%, rgba(6, 182, 212, 0.03) 0%, transparent 50%);
+          pointer-events: none;
+          z-index: 1;
+        }
         #hero-canvas {
-          position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; opacity: 0.5;
+          position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; opacity: 0.8;
         }
         .hero-grid {
           display: grid; grid-template-columns: 1fr 1.3fr; gap: 50px;
