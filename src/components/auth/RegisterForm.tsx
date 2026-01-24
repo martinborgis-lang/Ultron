@@ -244,7 +244,9 @@ Email court et professionnel pour présenter la plaquette en pièce jointe.`,
           border: '1px solid var(--border)',
           borderRadius: '12px',
           overflow: 'hidden',
-          boxShadow: '0 40px 80px -20px rgba(0, 0, 0, 0.6), var(--glow)'
+          boxShadow: '0 40px 80px -20px rgba(0, 0, 0, 0.6), var(--glow)',
+          paddingTop: '70px',
+          paddingBottom: '70px'
         }}
       >
         {/* Header */}
@@ -295,10 +297,12 @@ Email court et professionnel pour présenter la plaquette en pièce jointe.`,
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="px-10 pb-10 sm:px-8 sm:pb-8">
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px' }}>
             {error && (
               <div
                 style={{
+                  width: '100%',
+                  maxWidth: '300px',
                   background: 'rgba(239, 68, 68, 0.1)',
                   border: '1px solid rgba(239, 68, 68, 0.2)',
                   color: '#fca5a5',
@@ -311,7 +315,7 @@ Email court et professionnel pour présenter la plaquette en pièce jointe.`,
               </div>
             )}
 
-            <div>
+            <div style={{ width: '100%', maxWidth: '300px' }}>
               <label
                 htmlFor="fullName"
                 style={{
@@ -333,10 +337,9 @@ Email court et professionnel pour présenter la plaquette en pièce jointe.`,
                 required
                 style={{
                   width: '100%',
-                  maxWidth: '100%',
                   boxSizing: 'border-box' as const,
-                  padding: '12px 16px',
-                  fontSize: '1rem',
+                  padding: '10px 14px',
+                  fontSize: '0.9rem',
                   background: 'rgba(255, 255, 255, 0.05)',
                   border: '1px solid var(--border)',
                   borderRadius: '8px',
@@ -355,7 +358,7 @@ Email court et professionnel pour présenter la plaquette en pièce jointe.`,
               />
             </div>
 
-            <div>
+            <div style={{ width: '100%', maxWidth: '300px' }}>
               <label
                 htmlFor="companyName"
                 style={{
@@ -377,10 +380,9 @@ Email court et professionnel pour présenter la plaquette en pièce jointe.`,
                 required
                 style={{
                   width: '100%',
-                  maxWidth: '100%',
                   boxSizing: 'border-box' as const,
-                  padding: '12px 16px',
-                  fontSize: '1rem',
+                  padding: '10px 14px',
+                  fontSize: '0.9rem',
                   background: 'rgba(255, 255, 255, 0.05)',
                   border: '1px solid var(--border)',
                   borderRadius: '8px',
@@ -399,7 +401,7 @@ Email court et professionnel pour présenter la plaquette en pièce jointe.`,
               />
             </div>
 
-            <div>
+            <div style={{ width: '100%', maxWidth: '300px' }}>
               <label
                 htmlFor="email"
                 style={{
@@ -421,10 +423,9 @@ Email court et professionnel pour présenter la plaquette en pièce jointe.`,
                 required
                 style={{
                   width: '100%',
-                  maxWidth: '100%',
                   boxSizing: 'border-box' as const,
-                  padding: '12px 16px',
-                  fontSize: '1rem',
+                  padding: '10px 14px',
+                  fontSize: '0.9rem',
                   background: 'rgba(255, 255, 255, 0.05)',
                   border: '1px solid var(--border)',
                   borderRadius: '8px',
@@ -443,7 +444,7 @@ Email court et professionnel pour présenter la plaquette en pièce jointe.`,
               />
             </div>
 
-            <div>
+            <div style={{ width: '100%', maxWidth: '300px' }}>
               <label
                 htmlFor="password"
                 style={{
@@ -466,10 +467,9 @@ Email court et professionnel pour présenter la plaquette en pièce jointe.`,
                 required
                 style={{
                   width: '100%',
-                  maxWidth: '100%',
                   boxSizing: 'border-box' as const,
-                  padding: '12px 16px',
-                  fontSize: '1rem',
+                  padding: '10px 14px',
+                  fontSize: '0.9rem',
                   background: 'rgba(255, 255, 255, 0.05)',
                   border: '1px solid var(--border)',
                   borderRadius: '8px',
@@ -494,8 +494,9 @@ Email court et professionnel pour présenter la plaquette en pièce jointe.`,
               className="btn btn-primary"
               style={{
                 width: '100%',
-                padding: '14px 24px',
-                fontSize: '1rem',
+                maxWidth: '300px',
+                padding: '10px 20px',
+                fontSize: '0.9rem',
                 fontWeight: 500,
                 marginTop: '8px'
               }}
