@@ -135,20 +135,22 @@ Je vous prie d'agréer, Madame, Monsieur, l'expression de mes salutations distin
 [Nom Prénom]`;
 
 function buildRachatUserPrompt(data: any): string {
-  const typeOp = {
+  const typeOpMap = {
     'rachat_total': 'rachat total',
     'rachat_partiel': `rachat partiel de ${data.montantRachatPartiel} €`,
     'transfert': 'transfert',
-  }[data.typeOperation] || 'rachat';
+  };
+  const typeOp = typeOpMap[data.typeOperation as keyof typeof typeOpMap] || 'rachat';
 
-  const typeContrat = {
+  const typeContratMap = {
     'assurance_vie': "contrat d'assurance-vie",
     'per': 'Plan Épargne Retraite (PER)',
     'pea': 'Plan d\'Épargne en Actions (PEA)',
     'compte_titre': 'compte-titres',
     'perp': 'Plan d\'Épargne Retraite Populaire (PERP)',
     'capitalisation': 'contrat de capitalisation',
-  }[data.typeContrat] || 'contrat';
+  };
+  const typeContrat = typeContratMap[data.typeContrat as keyof typeof typeContratMap] || 'contrat';
 
   const compagnie = data.compagnie === 'Autre' ? data.autreCompagnie : data.compagnie;
 
@@ -191,12 +193,13 @@ CONTRAT DESTINATION : ${data.nouveauContratNumero}`;
 
 function buildStopPrelevementUserPrompt(data: any): string {
   const compagnie = data.compagnie === 'Autre' ? data.autreCompagnie : data.compagnie;
-  const freq = {
+  const freqMap = {
     'mensuel': 'mensuel',
     'trimestriel': 'trimestriel',
     'semestriel': 'semestriel',
     'annuel': 'annuel',
-  }[data.frequence] || 'mensuel';
+  };
+  const freq = freqMap[data.frequence as keyof typeof freqMap] || 'mensuel';
 
   return `Rédige une lettre d'arrêt de prélèvement :
 

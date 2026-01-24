@@ -852,10 +852,10 @@ export default function ProspectDetailPage() {
       <LetterGeneratorModal
         prospect={{
           id: prospect.id,
-          prenom: prospect.first_name,
-          nom: prospect.last_name,
-          first_name: prospect.first_name,
-          last_name: prospect.last_name,
+          prenom: prospect.first_name || undefined,
+          nom: prospect.last_name || undefined,
+          first_name: prospect.first_name || undefined,
+          last_name: prospect.last_name || undefined,
           email: prospect.email || '',
           telephone: prospect.phone || '',
         }}
