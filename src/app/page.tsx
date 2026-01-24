@@ -122,7 +122,7 @@ export default function LandingPage() {
       tiltListenersAdded = true;
     }
 
-    // Scroll reveal
+    // Enhanced scroll reveal with 3D animations
     const observer = new IntersectionObserver((entries) => {
       entries.forEach(entry => {
         if (entry.isIntersecting) {
@@ -133,9 +133,82 @@ export default function LandingPage() {
 
     document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
 
+    // Parallax and 3D scroll effects
+    const handleScroll = () => {
+      const scrolled = window.pageYOffset;
+      const parallax = scrolled * 0.5;
+      const rotation = scrolled * 0.05;
+
+      // Hero parallax
+      const heroCanvas = document.getElementById('hero-canvas');
+      if (heroCanvas) {
+        heroCanvas.style.transform = `translateY(${parallax}px) rotateZ(${rotation * 0.1}deg)`;
+      }
+
+      // Feature cards 3D transform
+      document.querySelectorAll('.feature-card').forEach((card, index) => {
+        const rect = card.getBoundingClientRect();
+        const isVisible = rect.top < window.innerHeight && rect.bottom > 0;
+
+        if (isVisible) {
+          const progress = 1 - (rect.top / window.innerHeight);
+          const translateY = (progress - 0.5) * 20;
+          const rotateX = (progress - 0.5) * 10;
+          const rotateY = Math.sin(scrolled * 0.001 + index) * 5;
+
+          (card as HTMLElement).style.transform = `
+            translateY(${translateY}px)
+            rotateX(${rotateX}deg)
+            rotateY(${rotateY}deg)
+            translateZ(0)
+          `;
+        }
+      });
+
+      // Browser mockups floating effect
+      document.querySelectorAll('.browser-mockup').forEach((mockup, index) => {
+        const rect = mockup.getBoundingClientRect();
+        const isVisible = rect.top < window.innerHeight && rect.bottom > 0;
+
+        if (isVisible) {
+          const progress = 1 - (rect.top / window.innerHeight);
+          const float = Math.sin(Date.now() * 0.001 + index * 2) * 10;
+          const tilt = (progress - 0.5) * 15;
+
+          (mockup as HTMLElement).style.transform = `
+            translateY(${float}px)
+            rotateY(${tilt}deg)
+            translateZ(0)
+          `;
+        }
+      });
+
+      // Stats animation on scroll
+      document.querySelectorAll('.stat-item').forEach((stat, index) => {
+        const rect = stat.getBoundingClientRect();
+        const isVisible = rect.top < window.innerHeight && rect.bottom > 0;
+
+        if (isVisible) {
+          const progress = 1 - (rect.top / window.innerHeight);
+          const scale = 0.8 + (progress * 0.2);
+          const rotateZ = Math.sin(scrolled * 0.002 + index) * 3;
+
+          (stat as HTMLElement).style.transform = `
+            scale(${scale})
+            rotateZ(${rotateZ}deg)
+            translateZ(0)
+          `;
+        }
+      });
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    handleScroll(); // Initial call
+
     // Cleanup function
     return () => {
       window.removeEventListener('resize', resize);
+      window.removeEventListener('scroll', handleScroll);
       if (animationId) {
         cancelAnimationFrame(animationId);
       }
@@ -312,6 +385,10 @@ export default function LandingPage() {
           padding: 50px 0; background: rgba(255, 255, 255, 0.01);
         }
         .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 40px; text-align: center; }
+        .stat-item {
+          transform-style: preserve-3d;
+          transition: var(--transition);
+        }
         .stat-item h4 {
           font-size: 2.25rem; font-weight: 700; margin-bottom: 6px;
           background: linear-gradient(135deg, var(--text-white) 0%, var(--primary) 100%);
@@ -369,7 +446,10 @@ export default function LandingPage() {
         .features-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
         .feature-card {
           background: var(--bg-card); border: 1px solid var(--border);
-          border-radius: 16px; padding: 32px 28px; transition: var(--transition);
+          border-radius: 16px; padding: 32px 28px;
+          transition: var(--transition);
+          transform-style: preserve-3d;
+          perspective: 1000px;
         }
         .feature-card:hover {
           transform: translateY(-5px); border-color: rgba(59, 130, 246, 0.3);
