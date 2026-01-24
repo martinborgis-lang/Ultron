@@ -15,6 +15,7 @@ export default function LandingPage() {
     let width = 0;
     let height = 0;
     let particles: Array<{x: number; y: number; vx: number; vy: number; size: number}> = [];
+    let animationId: number;
 
     const resize = () => {
       width = canvas.width = window.innerWidth;
@@ -63,47 +64,49 @@ export default function LandingPage() {
         }
       });
 
-      requestAnimationFrame(animate);
+      animationId = requestAnimationFrame(animate);
     };
+
+    // Initialize canvas
+    window.addEventListener('resize', resize);
+    resize();
+    initParticles();
+    animate();
 
     // 3D Tilt effect
     const card = document.getElementById('tilt-card');
     const heroSection = document.getElementById('hero');
+    let tiltListenersAdded = false;
 
-    if (window.innerWidth > 1024 && card && heroSection) {
-      const handleMouseMove = (e: MouseEvent) => {
-        const rect = heroSection.getBoundingClientRect();
-        const xAxis = (rect.width / 2 - (e.clientX - rect.left)) / 40;
-        const yAxis = (rect.height / 2 - (e.clientY - rect.top)) / 40;
-        card.style.transform = `rotateY(${xAxis}deg) rotateX(${yAxis}deg)`;
-      };
+    const handleMouseMove = (e: MouseEvent) => {
+      if (card && window.innerWidth > 1024) {
+        const rect = heroSection?.getBoundingClientRect();
+        if (rect) {
+          const xAxis = (rect.width / 2 - (e.clientX - rect.left)) / 40;
+          const yAxis = (rect.height / 2 - (e.clientY - rect.top)) / 40;
+          card.style.transform = `rotateY(${xAxis}deg) rotateX(${yAxis}deg)`;
+        }
+      }
+    };
 
-      const handleMouseLeave = () => {
+    const handleMouseLeave = () => {
+      if (card) {
         card.style.transition = 'transform 0.5s ease';
         card.style.transform = 'rotateY(0deg) rotateX(0deg)';
-      };
+      }
+    };
 
-      const handleMouseEnter = () => {
+    const handleMouseEnter = () => {
+      if (card) {
         card.style.transition = 'none';
-      };
+      }
+    };
 
+    if (window.innerWidth > 1024 && card && heroSection) {
       heroSection.addEventListener('mousemove', handleMouseMove);
       heroSection.addEventListener('mouseleave', handleMouseLeave);
       heroSection.addEventListener('mouseenter', handleMouseEnter);
-
-      const cleanup = () => {
-        heroSection.removeEventListener('mousemove', handleMouseMove);
-        heroSection.removeEventListener('mouseleave', handleMouseLeave);
-        heroSection.removeEventListener('mouseenter', handleMouseEnter);
-        window.removeEventListener('resize', resize);
-      };
-
-      window.addEventListener('resize', resize);
-      resize();
-      initParticles();
-      animate();
-
-      return cleanup;
+      tiltListenersAdded = true;
     }
 
     // Scroll reveal
@@ -117,13 +120,18 @@ export default function LandingPage() {
 
     document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
 
-    window.addEventListener('resize', resize);
-    resize();
-    initParticles();
-    animate();
-
+    // Cleanup function
     return () => {
       window.removeEventListener('resize', resize);
+      if (animationId) {
+        cancelAnimationFrame(animationId);
+      }
+      if (tiltListenersAdded && heroSection) {
+        heroSection.removeEventListener('mousemove', handleMouseMove);
+        heroSection.removeEventListener('mouseleave', handleMouseLeave);
+        heroSection.removeEventListener('mouseenter', handleMouseEnter);
+      }
+      observer.disconnect();
     };
   }, []);
 
