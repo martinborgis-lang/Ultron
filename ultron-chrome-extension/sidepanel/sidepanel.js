@@ -5,6 +5,7 @@ let userToken = null;
 let currentProspect = null;
 let currentAnalysis = null;
 let prospects = [];
+let currentMeetUrl = null; // URL du meeting Google Meet actuel
 
 // Transcription state
 let isTranscribing = false;
@@ -33,10 +34,25 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   showMainContent();
+
+  // 1. Récupérer l'URL Google Meet de l'onglet actif
+  await detectCurrentMeetUrl();
+
+  // 2. Charger les prospects
   await loadProspects();
 
-  // If a prospect was previously selected, select it
-  if (stored.selectedProspectId) {
+  // 3. Essayer de trouver le prospect par le meet_link
+  const prospectByMeet = findProspectByMeetUrl(currentMeetUrl);
+
+  if (prospectByMeet) {
+    // Prospect trouvé par le lien Meet - le sélectionner
+    console.log('Ultron: Prospect trouvé par meet_link:', prospectByMeet.id);
+    prospectSelect.value = prospectByMeet.id;
+    await chrome.storage.local.set({ selectedProspectId: prospectByMeet.id });
+    await loadProspectDetails(prospectByMeet.id);
+  } else if (stored.selectedProspectId) {
+    // Fallback: utiliser le prospect précédemment sélectionné
+    console.log('Ultron: Fallback vers selectedProspectId:', stored.selectedProspectId);
     prospectSelect.value = stored.selectedProspectId;
     await loadProspectDetails(stored.selectedProspectId);
   }
@@ -47,6 +63,45 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Setup transcription
   setupTranscription();
 });
+
+// Détecter l'URL Google Meet de l'onglet actif
+async function detectCurrentMeetUrl() {
+  try {
+    const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+    const meetTab = tabs.find(t => t.url?.includes('meet.google.com'));
+
+    if (meetTab && meetTab.url) {
+      currentMeetUrl = meetTab.url;
+      console.log('Ultron: Meet URL détectée:', currentMeetUrl);
+    }
+  } catch (error) {
+    console.error('Ultron: Erreur détection URL Meet:', error);
+  }
+}
+
+// Trouver un prospect par son meet_link
+function findProspectByMeetUrl(meetUrl) {
+  if (!meetUrl || !prospects || prospects.length === 0) return null;
+
+  // Extraire le code du meeting (ex: "abc-defg-hij" de "https://meet.google.com/abc-defg-hij")
+  const meetCodeMatch = meetUrl.match(/meet\.google\.com\/([a-z]{3}-[a-z]{4}-[a-z]{3})/i);
+  const meetCode = meetCodeMatch ? meetCodeMatch[1] : null;
+
+  console.log('Ultron: Recherche prospect avec meet_code:', meetCode);
+
+  for (const prospect of prospects) {
+    if (prospect.meet_link) {
+      // Vérifier si le meet_link contient le même code
+      if (prospect.meet_link.includes(meetCode) || meetUrl.includes(prospect.meet_link)) {
+        console.log('Ultron: Match trouvé:', prospect);
+        return prospect;
+      }
+    }
+  }
+
+  console.log('Ultron: Aucun prospect trouvé avec ce meet_link');
+  return null;
+}
 
 // Event listeners
 prospectSelect.addEventListener('change', async (e) => {
