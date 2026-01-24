@@ -20,6 +20,7 @@ export async function GET(request: NextRequest) {
     // Verify authorization header
     const authHeader = request.headers.get('Authorization');
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      console.log('[Extension API] Pas de header Authorization');
       return NextResponse.json(
         { error: 'Non authentifie' },
         { status: 401, headers: corsHeaders() }
@@ -27,6 +28,25 @@ export async function GET(request: NextRequest) {
     }
 
     const token = authHeader.replace('Bearer ', '');
+
+    // Log token info for debugging
+    const tokenPreview = token.substring(0, 50) + '...';
+    console.log('[Extension API] Token reçu (preview):', tokenPreview);
+
+    // Try to decode JWT header to see algorithm
+    try {
+      const headerBase64 = token.split('.')[0];
+      const headerJson = Buffer.from(headerBase64, 'base64').toString('utf-8');
+      const header = JSON.parse(headerJson);
+      console.log('[Extension API] Token header:', header);
+
+      if (header.alg !== 'HS256') {
+        console.log('[Extension API] ⚠️ Token utilise algo', header.alg, '- attendu HS256 (Supabase)');
+        console.log('[Extension API] Ce token n\'est probablement PAS un token Supabase!');
+      }
+    } catch (e) {
+      console.log('[Extension API] Impossible de décoder le header JWT');
+    }
 
     // Verify token with Supabase
     const supabase = createClient(
@@ -37,11 +57,15 @@ export async function GET(request: NextRequest) {
     const { data: { user: authUser }, error: authError } = await supabase.auth.getUser(token);
 
     if (authError || !authUser) {
+      console.log('[Extension API] ❌ Token rejeté par Supabase:', authError?.message || 'No user');
+      console.log('[Extension API] Conseil: L\'utilisateur doit se RE-CONNECTER via le popup Ultron');
       return NextResponse.json(
-        { error: 'Token invalide' },
+        { error: 'Token invalide - veuillez vous reconnecter via le popup Ultron', details: authError?.message },
         { status: 401, headers: corsHeaders() }
       );
     }
+
+    console.log('[Extension API] ✅ Token valide pour user:', authUser.email);
 
     // Get user and organization
     const adminClient = createAdminClient();
