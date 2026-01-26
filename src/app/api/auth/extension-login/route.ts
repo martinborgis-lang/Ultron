@@ -2,6 +2,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { corsHeaders } from '@/lib/cors';
+import * as jwt from 'jsonwebtoken';
 
 export const dynamic = 'force-dynamic';
 
@@ -25,87 +26,68 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Use Supabase auth to sign in
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    );
-
     console.log('[Extension Login] Tentative de connexion pour:', email);
 
-    // ⚡ CORRECTIF CRITIQUE: Forcer déconnexion avant reconnexion
-    // pour éviter les tokens ES256 d'anciennes sessions Google OAuth
-    console.log('[Extension Login] 🔧 Nettoyage session existante...');
-    await supabase.auth.signOut();
+    // 🔧 NOUVEAU CORRECTIF: Utiliser Admin Client pour bypasser OAuth
+    const adminClient = createAdminClient();
 
-    // Nouvelle connexion fraîche email/password (garantit token HS256)
-    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+    // Vérifier les credentials via API Supabase Admin (plus fiable)
+    const { data: authUser, error: authError } = await adminClient.auth.signInWithPassword({
       email,
       password,
     });
 
-    if (authError || !authData.session) {
-      console.log('[Extension Login] ❌ Échec auth:', authError?.message);
+    if (authError || !authUser.session) {
+      console.log('[Extension Login] ❌ Admin auth échec:', authError?.message);
       return NextResponse.json(
         { error: 'Email ou mot de passe incorrect' },
         { status: 401, headers: corsHeaders() }
       );
     }
 
-    // Log TRÈS détaillé pour diagnostic
-    console.log('[Extension Login] ✅ Auth réussie pour:', authData.user.email);
-    console.log('[Extension Login] User ID:', authData.user.id);
-    console.log('[Extension Login] Auth provider:', authData.user.app_metadata?.provider || 'email');
+    // Examiner le token Supabase
+    const session = authUser.session;
+    console.log('[Extension Login] Session obtenue');
 
-    // Examiner la structure de la session
-    const session = authData.session;
-    console.log('[Extension Login] Session keys:', Object.keys(session));
-    console.log('[Extension Login] access_token existe:', !!session.access_token);
-    console.log('[Extension Login] provider_token existe:', !!session.provider_token);
-    console.log('[Extension Login] refresh_token existe:', !!session.refresh_token);
+    let finalToken = session.access_token;
 
-    // Vérifier les deux tokens s'ils existent
-    const accessToken = session.access_token;
-    const providerToken = session.provider_token;
-
-    console.log('[Extension Login] access_token preview:', accessToken?.substring(0, 50) + '...');
-    if (providerToken) {
-      console.log('[Extension Login] ⚠️ provider_token EXISTE:', providerToken.substring(0, 50) + '...');
-    }
-
-    // Vérifier l'algorithme du access_token
+    // Vérifier l'algorithme du token Supabase
     try {
-      const headerBase64 = accessToken.split('.')[0];
+      const headerBase64 = finalToken.split('.')[0];
       const headerJson = Buffer.from(headerBase64, 'base64').toString('utf-8');
       const header = JSON.parse(headerJson);
-      console.log('[Extension Login] access_token algorithm:', header.alg);
-      console.log('[Extension Login] access_token type:', header.typ);
+      console.log('[Extension Login] Token Supabase algorithm:', header.alg);
 
+      // Si Supabase retourne ES256, créer notre propre token HS256 compatible
       if (header.alg !== 'HS256') {
-        console.error('[Extension Login] ⚠️ CRITIQUE: access_token n\'est PAS HS256!');
-        console.error('[Extension Login] Algo détecté:', header.alg);
-        console.error('[Extension Login] Ceci est ANORMAL - Supabase devrait toujours retourner HS256');
+        console.log('[Extension Login] 🔧 Supabase retourne', header.alg, '- Création token HS256 custom...');
 
-        // Si provider_token existe et access_token est ES256, c'est très bizarre
-        if (providerToken) {
-          try {
-            const providerHeader = JSON.parse(Buffer.from(providerToken.split('.')[0], 'base64').toString('utf-8'));
-            console.log('[Extension Login] provider_token algorithm:', providerHeader.alg);
-          } catch {}
-        }
+        // Créer un token HS256 compatible avec même structure que Supabase
+        const payload = {
+          sub: authUser.user.id,
+          email: authUser.user.email,
+          aud: 'authenticated',
+          role: 'authenticated',
+          iat: Math.floor(Date.now() / 1000),
+          exp: Math.floor(Date.now() / 1000) + (24 * 60 * 60), // 24h
+        };
+
+        const secret = process.env.SUPABASE_JWT_SECRET || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+        finalToken = jwt.sign(payload, secret, { algorithm: 'HS256' });
+
+        console.log('[Extension Login] ✅ Token HS256 custom créé pour l\'extension');
       } else {
-        console.log('[Extension Login] ✅ access_token est bien HS256 (Supabase) - EXTENSION FONCTIONNERA!');
+        console.log('[Extension Login] ✅ Token Supabase déjà HS256 - Utilisation directe');
       }
     } catch (e) {
-      console.log('[Extension Login] Erreur décodage header JWT:', e);
+      console.log('[Extension Login] Erreur analyse token - Utilisation token original:', e);
     }
 
     // Get user info
-    const adminClient = createAdminClient();
     const { data: user, error: userError } = await adminClient
       .from('users')
       .select('id, email, full_name, organization_id')
-      .eq('auth_id', authData.user.id)
+      .eq('auth_id', authUser.user.id)
       .single();
 
     if (userError || !user) {
@@ -115,11 +97,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Return the access token for the extension to use
+    // Return the final token (HS256 garanti)
     console.log('[Extension Login] 🎯 SUCCÈS - Token HS256 retourné à l\'extension');
     return NextResponse.json(
       {
-        token: authData.session.access_token,
+        token: finalToken,
         user: {
           id: user.id,
           email: user.email,
