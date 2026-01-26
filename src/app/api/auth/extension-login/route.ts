@@ -33,6 +33,12 @@ export async function POST(request: NextRequest) {
 
     console.log('[Extension Login] Tentative de connexion pour:', email);
 
+    // ⚡ CORRECTIF CRITIQUE: Forcer déconnexion avant reconnexion
+    // pour éviter les tokens ES256 d'anciennes sessions Google OAuth
+    console.log('[Extension Login] 🔧 Nettoyage session existante...');
+    await supabase.auth.signOut();
+
+    // Nouvelle connexion fraîche email/password (garantit token HS256)
     const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -88,7 +94,7 @@ export async function POST(request: NextRequest) {
           } catch {}
         }
       } else {
-        console.log('[Extension Login] ✅ access_token est bien HS256 (Supabase)');
+        console.log('[Extension Login] ✅ access_token est bien HS256 (Supabase) - EXTENSION FONCTIONNERA!');
       }
     } catch (e) {
       console.log('[Extension Login] Erreur décodage header JWT:', e);
@@ -110,6 +116,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Return the access token for the extension to use
+    console.log('[Extension Login] 🎯 SUCCÈS - Token HS256 retourné à l\'extension');
     return NextResponse.json(
       {
         token: authData.session.access_token,
