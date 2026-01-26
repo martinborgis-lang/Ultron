@@ -145,31 +145,76 @@ export async function GET(request: NextRequest) {
           }
 
           // Option 3: Si toujours pas trouvé, recherche directe dans crm_prospects par prénom/nom
-          if (!prospectId && prospectName && prospectName.length >= 2) {
+          if (!prospectId && prospectName && prospectName.length >= 2 && startDate) {
             console.log('[Extension Calendar] 🔍 Recherche directe dans crm_prospects:', prospectName);
 
             // Séparer prénom et nom intelligemment
             const nameParts = prospectName.trim().split(/\s+/);
             const prenom = nameParts[0]?.toLowerCase();
             const nom = nameParts.slice(1).join(' ').toLowerCase() || prenom; // Si un seul mot, utiliser comme nom
+            const dateOnly = startDate.split('T')[0]; // "2025-01-25"
 
-            console.log(`[Extension Calendar] 🔍 Recherche: prenom="${prenom}", nom="${nom}"`);
+            console.log(`[Extension Calendar] 🔍 Recherche: prenom="${prenom}", nom="${nom}", date="${dateOnly}"`);
 
             try {
-              // Recherche avec prénom ET nom (ou permutation)
-              const { data: prospectByName } = await adminClient
+              // Recherche TOUS les prospects correspondants (pas .single()!)
+              const { data: prospects } = await adminClient
                 .from('crm_prospects')
-                .select('id, first_name, last_name')
+                .select('id, first_name, last_name, expected_close_date, updated_at, created_at')
                 .eq('organization_id', user.organization_id)
-                .or(`and(first_name.ilike.%${prenom}%,last_name.ilike.%${nom}%),and(last_name.ilike.%${prenom}%,first_name.ilike.%${nom}%)`)
-                .single();
+                .or(`and(first_name.ilike.%${prenom}%,last_name.ilike.%${nom}%),and(last_name.ilike.%${prenom}%,first_name.ilike.%${nom}%)`);
 
-              if (prospectByName?.id) {
-                prospectId = prospectByName.id;
-                console.log('[Extension Calendar] ✅ Prospect trouvé dans crm_prospects:', prospectId, `(${prospectByName.first_name} ${prospectByName.last_name})`);
+              if (prospects && prospects.length > 0) {
+                if (prospects.length === 1) {
+                  // Un seul résultat → on le prend
+                  prospectId = prospects[0].id;
+                  console.log(`[Extension Calendar] ✅ Prospect unique trouvé: ${prospectId} (${prospects[0].first_name} ${prospects[0].last_name})`);
+                } else {
+                  // ⚠️ PLUSIEURS prospects avec le même nom → filtrage intelligent
+                  console.log(`[Extension Calendar] ⚠️ ${prospects.length} prospects trouvés avec ce nom, résolution des doublons...`);
+
+                  // Stratégie 1: Chercher celui avec expected_close_date proche de l'événement
+                  let selectedProspect = prospects.find(p => {
+                    if (!p.expected_close_date) return false;
+                    const prospectDate = new Date(p.expected_close_date).toISOString().split('T')[0];
+                    return prospectDate === dateOnly;
+                  });
+
+                  // Stratégie 2: Si pas de match par date, chercher dans les événements liés
+                  if (!selectedProspect) {
+                    console.log('[Extension Calendar] 📅 Recherche par événements liés...');
+                    for (const prospect of prospects) {
+                      const { data: relatedEvents } = await adminClient
+                        .from('crm_events')
+                        .select('id')
+                        .eq('prospect_id', prospect.id)
+                        .gte('start_date', `${dateOnly}T00:00:00`)
+                        .lte('start_date', `${dateOnly}T23:59:59`)
+                        .limit(1);
+
+                      if (relatedEvents && relatedEvents.length > 0) {
+                        selectedProspect = prospect;
+                        console.log(`[Extension Calendar] ✅ Match trouvé via événement lié: ${prospect.id}`);
+                        break;
+                      }
+                    }
+                  }
+
+                  // Stratégie 3: Fallback - prendre le plus récent (updated_at)
+                  if (!selectedProspect) {
+                    selectedProspect = prospects.sort((a, b) =>
+                      new Date(b.updated_at || b.created_at).getTime() -
+                      new Date(a.updated_at || a.created_at).getTime()
+                    )[0];
+                    console.log(`[Extension Calendar] ⚠️ Pas de match précis, prise du plus récent: ${selectedProspect.id} (${selectedProspect.first_name} ${selectedProspect.last_name})`);
+                  }
+
+                  prospectId = selectedProspect.id;
+                  console.log(`[Extension Calendar] 🎯 Prospect sélectionné: ${prospectId}`);
+                }
               }
             } catch (searchError) {
-              console.log('[Extension Calendar] ⚠️ Aucun prospect trouvé dans crm_prospects pour:', prospectName);
+              console.log('[Extension Calendar] ⚠️ Erreur recherche crm_prospects:', searchError instanceof Error ? searchError.message : String(searchError));
             }
           }
 
