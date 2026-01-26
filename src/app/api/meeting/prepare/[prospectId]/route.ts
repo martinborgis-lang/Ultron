@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { google } from 'googleapis';
 import { getValidCredentials, GoogleCredentials } from '@/lib/google';
+import { validateExtensionToken } from '@/lib/extension-auth';
 
 interface Organization {
   id: string;
@@ -17,28 +18,21 @@ export async function GET(
 ) {
   try {
     const { prospectId } = await params;
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
 
-    if (!user) {
+    // Valider le token d'extension
+    const authHeader = request.headers.get('Authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
     }
 
-    // Récupérer l'utilisateur et son organisation
-    const { data: userData } = await supabase
-      .from('users')
-      .select('organization_id')
-      .eq('auth_id', user.id)
-      .single();
+    const token = authHeader.replace('Bearer ', '');
+    const auth = await validateExtensionToken(token);
 
-    if (!userData?.organization_id) {
-      return NextResponse.json(
-        { error: 'Organisation non trouvée' },
-        { status: 404 }
-      );
+    if (!auth) {
+      return NextResponse.json({ error: 'Token invalide' }, { status: 401 });
     }
+
+    const userData = auth.dbUser;
 
     // Récupérer l'organisation avec data_mode
     const { data: org } = await supabase

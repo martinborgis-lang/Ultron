@@ -427,6 +427,9 @@ async function loadProspectDetails(prospectId) {
     currentProspect = data.prospect;
     const interactions = data.interactions || [];
 
+    // 🐛 DEBUG: Log des données prospect complètes
+    console.log('Ultron [DEBUG]: Données prospect complètes:', JSON.stringify(currentProspect, null, 2));
+
     // Display prospect info
     displayProspectInfo(currentProspect);
 
@@ -460,6 +463,12 @@ function displayProspectInfo(prospect) {
   document.getElementById('prospect-email').textContent = prospect.email || 'N/A';
   document.getElementById('prospect-phone').textContent = prospect.telephone || prospect.phone || 'N/A';
   document.getElementById('prospect-rdv').textContent = prospect.date_rdv || 'Non planifie';
+  // 🐛 DEBUG: Vérifications mapping
+  console.log('Ultron [DEBUG]: prospect.revenus =', prospect.revenus, ', prospect.revenus_annuels =', prospect.revenus_annuels);
+  console.log('Ultron [DEBUG]: prospect.patrimoine =', prospect.patrimoine, ', prospect.patrimoine_estime =', prospect.patrimoine_estime);
+  console.log('Ultron [DEBUG]: prospect.age =', prospect.age);
+  console.log('Ultron [DEBUG]: prospect.profession =', prospect.profession, ', prospect.situation_pro =', prospect.situation_pro);
+
   document.getElementById('prospect-profession').textContent = prospect.situation_pro || prospect.profession || 'N/A';
   document.getElementById('prospect-revenus').textContent = formatCurrency(prospect.revenus || prospect.revenus_annuels);
   document.getElementById('prospect-patrimoine').textContent = formatCurrency(prospect.patrimoine || prospect.patrimoine_estime);

@@ -319,16 +319,15 @@ function displayProspectInfo(prospect) {
 }
 
 function showProspectSelector() {
-  const container = document.getElementById('ultron-prospect-info');
-  container.innerHTML = `
-    <div class="ultron-selector">
-      <p>Selectionnez le prospect pour ce RDV :</p>
-      <input type="text" id="ultron-search" placeholder="Rechercher un prospect...">
-      <div id="ultron-search-results"></div>
-    </div>
-  `;
+  // 🚫 DÉSACTIVÉ: Popup remplacé par le side panel
+  console.log('Ultron [INFO]: Popup prospect sélecteur désactivé - utilisez le side panel');
 
-  document.getElementById('ultron-search').addEventListener('input', debounce(searchProspects, 300));
+  // Ouvrir le side panel au lieu du popup
+  try {
+    chrome.runtime.sendMessage({ type: 'OPEN_SIDE_PANEL' });
+  } catch (e) {
+    console.log('Ultron [INFO]: Impossible d\'ouvrir le side panel:', e.message);
+  }
 }
 
 async function searchProspects(e) {
