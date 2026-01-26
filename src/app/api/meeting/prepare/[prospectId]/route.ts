@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { google } from 'googleapis';
 import { getValidCredentials, GoogleCredentials } from '@/lib/google';
@@ -35,7 +34,8 @@ export async function GET(
     const userData = auth.dbUser;
 
     // Récupérer l'organisation avec data_mode
-    const { data: org } = await supabase
+    const adminClient = createAdminClient();
+    const { data: org } = await adminClient
       .from('organizations')
       .select('id, data_mode, google_sheet_id, google_credentials')
       .eq('id', userData.organization_id)
@@ -54,7 +54,7 @@ export async function GET(
     if (organization.data_mode === 'crm') {
       return await getProspectCRM(prospectId, organization.id);
     } else {
-      return await getProspectSheet(prospectId, organization, supabase);
+      return await getProspectSheet(prospectId, organization, adminClient);
     }
   } catch (error: unknown) {
     console.error('Erreur meeting prepare:', error);
@@ -180,7 +180,7 @@ async function getProspectCRM(prospectId: string, organizationId: string) {
 async function getProspectSheet(
   prospectId: string,
   organization: Organization,
-  supabase: Awaited<ReturnType<typeof createClient>>
+  adminClient: ReturnType<typeof createAdminClient>
 ) {
   if (!organization.google_credentials || !organization.google_sheet_id) {
     return NextResponse.json(
@@ -194,7 +194,7 @@ async function getProspectSheet(
 
   // Update credentials if refreshed
   if (credentials !== organization.google_credentials) {
-    await supabase
+    await adminClient
       .from('organizations')
       .update({ google_credentials: credentials })
       .eq('id', organization.id);
@@ -253,7 +253,7 @@ async function getProspectSheet(
   };
 
   // Récupérer l'historique des emails depuis email_logs
-  const { data: emailLogs } = await supabase
+  const { data: emailLogs } = await adminClient
     .from('email_logs')
     .select('*')
     .eq('organization_id', organization.id)
