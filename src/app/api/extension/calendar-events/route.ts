@@ -125,9 +125,9 @@ export async function GET(request: NextRequest) {
             }
           }
 
-          // Option 2: Si pas trouvé par meet_link, chercher par nom + date
+          // Option 2: Si pas trouvé par meet_link, chercher par nom + date dans crm_events
           if (!prospectId && prospectName && startDate) {
-            console.log('[Extension Calendar] 👤 Recherche par nom + date:', prospectName, startDate);
+            console.log('[Extension Calendar] 👤 Recherche par nom + date dans crm_events:', prospectName, startDate);
             const dateOnly = startDate.split('T')[0];
             const { data: eventByName } = await adminClient
               .from('crm_events')
@@ -140,7 +140,36 @@ export async function GET(request: NextRequest) {
 
             if (eventByName?.prospect_id) {
               prospectId = eventByName.prospect_id;
-              console.log('[Extension Calendar] ✅ Prospect trouvé par nom+date:', prospectId);
+              console.log('[Extension Calendar] ✅ Prospect trouvé par nom+date dans crm_events:', prospectId);
+            }
+          }
+
+          // Option 3: Si toujours pas trouvé, recherche directe dans crm_prospects par prénom/nom
+          if (!prospectId && prospectName && prospectName.length >= 2) {
+            console.log('[Extension Calendar] 🔍 Recherche directe dans crm_prospects:', prospectName);
+
+            // Séparer prénom et nom intelligemment
+            const nameParts = prospectName.trim().split(/\s+/);
+            const prenom = nameParts[0]?.toLowerCase();
+            const nom = nameParts.slice(1).join(' ').toLowerCase() || prenom; // Si un seul mot, utiliser comme nom
+
+            console.log(`[Extension Calendar] 🔍 Recherche: prenom="${prenom}", nom="${nom}"`);
+
+            try {
+              // Recherche avec prénom ET nom (ou permutation)
+              const { data: prospectByName } = await adminClient
+                .from('crm_prospects')
+                .select('id, first_name, last_name')
+                .eq('organization_id', user.organization_id)
+                .or(`and(first_name.ilike.%${prenom}%,last_name.ilike.%${nom}%),and(last_name.ilike.%${prenom}%,first_name.ilike.%${nom}%)`)
+                .single();
+
+              if (prospectByName?.id) {
+                prospectId = prospectByName.id;
+                console.log('[Extension Calendar] ✅ Prospect trouvé dans crm_prospects:', prospectId, `(${prospectByName.first_name} ${prospectByName.last_name})`);
+              }
+            } catch (searchError) {
+              console.log('[Extension Calendar] ⚠️ Aucun prospect trouvé dans crm_prospects pour:', prospectName);
             }
           }
 
@@ -228,21 +257,48 @@ export async function GET(request: NextRequest) {
  * "Call Martin DUPONT" → "Martin DUPONT"
  */
 function extractProspectName(title: string): string {
-  if (!title) return 'Prospect';
+  if (!title) return '';
 
-  // Remove common prefixes
-  const cleaned = title
-    .replace(/^(rdv|rendez-vous|réunion|meeting|call|entretien)\s+(avec\s+)?/i, '')
+  console.log(`[Extension Calendar] 🎯 Extraction nom depuis: "${title}"`);
+
+  // Nettoyer le titre : supprimer emojis et espaces en trop
+  let cleanTitle = title
+    .replace(/[\u{1F300}-\u{1F9FF}]/gu, '') // Supprimer tous les emojis
+    .replace(/[\u{2600}-\u{26FF}]/gu, '')   // Supprimer emojis misc
+    .replace(/[\u{2700}-\u{27BF}]/gu, '')   // Supprimer dingbats
     .trim();
 
-  // If nothing left after cleaning, return original title
-  if (!cleaned) return title;
+  console.log(`[Extension Calendar] 🧹 Titre nettoyé: "${cleanTitle}"`);
 
-  // Take first part (should be the name)
-  const parts = cleaned.split(/\s*[-–—]\s*/);
-  const name = parts[0].trim();
+  // Patterns à matcher (ordre de priorité)
+  const patterns = [
+    /(?:RDV|rdv)\s+avec\s+(.+)/i,           // "RDV avec Jules BORGIS"
+    /(?:RDV|rdv)\s*[-–—]\s*(.+)/i,          // "RDV - Jules BORGIS"
+    /(?:Réunion|réunion)\s+avec\s+(.+)/i,   // "Réunion avec Jules BORGIS"
+    /(?:Meeting|meeting)\s+avec\s+(.+)/i,   // "Meeting avec Jules BORGIS"
+    /(?:Call|call)\s+avec\s+(.+)/i,         // "Call avec Jules BORGIS"
+    /(?:Entretien|entretien)\s+avec\s+(.+)/i, // "Entretien avec Jules BORGIS"
+    /avec\s+(.+)/i,                         // Fallback "avec ..."
+  ];
 
-  return name || title;
+  for (const pattern of patterns) {
+    const match = cleanTitle.match(pattern);
+    if (match && match[1]) {
+      const name = match[1].trim()
+        .replace(/\s*[-–—].*$/, '') // Supprimer tout après un tiret
+        .trim();
+
+      if (name && name.length >= 2) {
+        console.log(`[Extension Calendar] ✅ Nom extrait: "${name}" depuis "${title}"`);
+        return name;
+      }
+    }
+  }
+
+  // Fallback : retourner le titre nettoyé si pas vide
+  const fallback = cleanTitle || title;
+  console.log(`[Extension Calendar] ⚠️ Pas de pattern trouvé, utilisation du titre: "${fallback}"`);
+  return fallback;
 }
 
 /**
