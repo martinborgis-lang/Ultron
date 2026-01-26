@@ -3,6 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { NextRequest, NextResponse } from 'next/server';
 import { readGoogleSheet, parseProspectsFromSheet, getValidCredentials } from '@/lib/google';
 import { corsHeaders } from '@/lib/cors';
+import { validateExtensionToken } from '@/lib/extension-auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -32,16 +33,9 @@ export async function GET(
     }
 
     const token = authHeader.replace('Bearer ', '');
+    const auth = await validateExtensionToken(token);
 
-    // Verify token with Supabase
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    );
-
-    const { data: { user: authUser }, error: authError } = await supabase.auth.getUser(token);
-
-    if (authError || !authUser) {
+    if (!auth) {
       return NextResponse.json(
         { error: 'Token invalide' },
         { status: 401, headers: corsHeaders() }
@@ -53,7 +47,7 @@ export async function GET(
     const { data: user, error: userError } = await adminClient
       .from('users')
       .select('id, organization_id')
-      .eq('auth_id', authUser.id)
+      .eq('auth_id', auth.authUser.id)
       .single();
 
     if (userError || !user) {

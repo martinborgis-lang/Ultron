@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js';
 import { NextRequest, NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 import { corsHeaders } from '@/lib/cors';
+import { validateExtensionToken } from '@/lib/extension-auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -28,16 +29,9 @@ export async function POST(request: NextRequest) {
     }
 
     const token = authHeader.replace('Bearer ', '');
+    const auth = await validateExtensionToken(token);
 
-    // Verify token with Supabase
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    );
-
-    const { data: { user: authUser }, error: authError } = await supabase.auth.getUser(token);
-
-    if (authError || !authUser) {
+    if (!auth) {
       return NextResponse.json(
         { error: 'Token invalide' },
         { status: 401, headers: corsHeaders() }

@@ -3,6 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { NextRequest, NextResponse } from 'next/server';
 import { readGoogleSheet, parseProspectsFromSheet, getValidCredentials, GoogleCredentials } from '@/lib/google';
 import { corsHeaders } from '@/lib/cors';
+import { validateExtensionToken } from '@/lib/extension-auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,7 +18,7 @@ export async function OPTIONS() {
 // GET /api/extension/prospects - Get prospects with upcoming appointments
 export async function GET(request: NextRequest) {
   try {
-    // Verify authorization header
+    // Valider le token d'extension (custom HS256 ou Supabase natif)
     const authHeader = request.headers.get('Authorization');
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       console.log('[Extension API] Pas de header Authorization');
@@ -28,61 +29,21 @@ export async function GET(request: NextRequest) {
     }
 
     const token = authHeader.replace('Bearer ', '');
+    const auth = await validateExtensionToken(token);
 
-    // Log token info for debugging
-    const tokenPreview = token.substring(0, 50) + '...';
-    console.log('[Extension API] Token reçu (preview):', tokenPreview);
-
-    // Try to decode JWT header to see algorithm
-    try {
-      const headerBase64 = token.split('.')[0];
-      const headerJson = Buffer.from(headerBase64, 'base64').toString('utf-8');
-      const header = JSON.parse(headerJson);
-      console.log('[Extension API] Token header:', header);
-
-      if (header.alg !== 'HS256') {
-        console.log('[Extension API] ⚠️ Token utilise algo', header.alg, '- attendu HS256 (Supabase)');
-        console.log('[Extension API] Ce token n\'est probablement PAS un token Supabase!');
-      }
-    } catch (e) {
-      console.log('[Extension API] Impossible de décoder le header JWT');
-    }
-
-    // Verify token with Supabase
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    );
-
-    const { data: { user: authUser }, error: authError } = await supabase.auth.getUser(token);
-
-    if (authError || !authUser) {
-      console.log('[Extension API] ❌ Token rejeté par Supabase:', authError?.message || 'No user');
-      console.log('[Extension API] Conseil: L\'utilisateur doit se RE-CONNECTER via le popup Ultron');
+    if (!auth) {
+      console.log('[Extension API] ❌ Token invalide');
       return NextResponse.json(
-        { error: 'Token invalide - veuillez vous reconnecter via le popup Ultron', details: authError?.message },
+        { error: 'Token invalide - veuillez vous reconnecter via le popup Ultron' },
         { status: 401, headers: corsHeaders() }
       );
     }
 
-    console.log('[Extension API] ✅ Token valide pour user:', authUser.email);
-
-    // Get user and organization
-    const adminClient = createAdminClient();
-    const { data: user, error: userError } = await adminClient
-      .from('users')
-      .select('id, organization_id')
-      .eq('auth_id', authUser.id)
-      .single();
-
-    if (userError || !user) {
-      return NextResponse.json(
-        { error: 'Utilisateur non trouve' },
-        { status: 404, headers: corsHeaders() }
-      );
-    }
+    console.log('[Extension API] ✅ Token valide pour user:', auth.dbUser.email);
+    const user = auth.dbUser;
 
     // Get organization with data_mode
+    const adminClient = createAdminClient();
     const { data: org, error: orgError } = await adminClient
       .from('organizations')
       .select('id, data_mode, google_sheet_id, google_credentials')

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { getDeepgramApiKey, getDeepgramWebSocketUrl } from '@/lib/deepgram';
 import { corsHeaders } from '@/lib/cors';
+import { validateExtensionToken } from '@/lib/extension-auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -19,7 +20,7 @@ export async function OPTIONS() {
  */
 export async function GET(request: NextRequest) {
   try {
-    // Verify authorization
+    // Valider le token d'extension
     const authHeader = request.headers.get('Authorization');
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return NextResponse.json(
@@ -29,16 +30,9 @@ export async function GET(request: NextRequest) {
     }
 
     const token = authHeader.replace('Bearer ', '');
+    const auth = await validateExtensionToken(token);
 
-    // Verify token with Supabase
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    );
-
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-
-    if (authError || !user) {
+    if (!auth) {
       return NextResponse.json(
         { error: 'Token invalide' },
         { status: 401, headers: corsHeaders() }
