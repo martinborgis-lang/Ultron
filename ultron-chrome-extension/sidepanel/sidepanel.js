@@ -185,18 +185,15 @@ prospectSelect.addEventListener('change', async (e) => {
       try {
         const eventData = JSON.parse(eventDataStr);
         console.log('Ultron [SELECT]: Données événement:', eventData);
+        console.log('Ultron [BUG2]: ✅ Utilisation du mapping Calendar → Ultron pour:', eventData.prospectName);
 
-        // Afficher les informations de l'événement
-        displayEventInfo(eventData);
-
-        // Essayer de trouver le prospect correspondant en base
-        await findAndDisplayProspectByName(eventData.prospectName);
+        // NOUVEAU: Utiliser loadProspectFromCalendarEvent pour obtenir l'ID Ultron
+        await loadProspectFromCalendarEvent(eventData);
 
       } catch (error) {
         console.error('Ultron [SELECT]: Erreur parsing event data:', error);
-        // Fallback vers l'ancien système
-        await chrome.storage.local.set({ selectedProspectId: prospectId });
-        await loadProspectDetails(prospectId);
+        // Fallback vers l'affichage de l'événement seul
+        displayCalendarEventOnly(eventData);
       }
     } else {
       // Ancien système de prospects
@@ -1308,4 +1305,198 @@ function displayNoProspectFound(prospectName) {
 function openMeetLink(meetLink) {
   console.log('Ultron [MEET]: Ouverture du lien Meet:', meetLink);
   chrome.tabs.create({ url: meetLink });
+}
+
+/**
+ * Extract prospect name from calendar event title
+ */
+function extractProspectNameFromTitle(title) {
+  if (!title) return '';
+
+  console.log('Ultron [EXTRACT]: Titre original:', title);
+
+  // Remove common prefixes and emojis
+  let cleaned = title
+    .replace(/^(🤝|📅|🔜|📍|🎥|📞|💼|👥)\s*/g, '') // Remove emojis
+    .replace(/^(rdv|rendez-vous|réunion|meeting|call|entretien)\s+(avec\s+)?/i, '') // Remove prefixes
+    .replace(/\s*-\s*\d{2}\/\d{2}.*$/g, '') // Remove trailing dates
+    .trim();
+
+  console.log('Ultron [EXTRACT]: Titre nettoyé:', cleaned);
+
+  // If nothing left after cleaning, try a different approach
+  if (!cleaned) {
+    // Look for patterns like "avec [NAME]" or "[NAME] -"
+    const withMatch = title.match(/avec\s+([^-\d]+)/i);
+    if (withMatch) {
+      cleaned = withMatch[1].trim();
+    } else {
+      // Take everything before first dash or number
+      const beforeDash = title.split(/\s*[-–—]\s*/)[0];
+      const beforeNumber = beforeDash.split(/\s*\d/)[0];
+      cleaned = beforeNumber.replace(/^(🤝|📅|🔜|📍|🎥|📞|💼|👥)\s*/g, '').trim();
+    }
+  }
+
+  console.log('Ultron [EXTRACT]: Nom prospect final:', cleaned);
+  return cleaned || title;
+}
+
+/**
+ * Load prospect from calendar event by searching in Ultron database
+ */
+async function loadProspectFromCalendarEvent(event) {
+  console.log('Ultron [CALENDAR]: === CHARGEMENT PROSPECT DEPUIS ÉVÉNEMENT ===');
+  console.log('Ultron [CALENDAR]: Événement:', event.title);
+
+  // 1. Extraire le nom du prospect depuis le titre
+  const prospectName = extractProspectNameFromTitle(event.title);
+  console.log('Ultron [CALENDAR]: Nom prospect extrait:', prospectName);
+
+  if (!prospectName || prospectName.length < 2) {
+    console.log('Ultron [CALENDAR]: ⚠️ Nom prospect trop court, affichage événement seul');
+    displayCalendarEventOnly(event);
+    return;
+  }
+
+  // 2. Rechercher le prospect en base Ultron
+  try {
+    console.log('Ultron [CALENDAR]: Recherche en base...');
+    const searchUrl = `${ULTRON_API_URL}/api/extension/search-prospect?query=${encodeURIComponent(prospectName)}`;
+
+    const searchResponse = await fetch(searchUrl, {
+      headers: { 'Authorization': `Bearer ${userToken}` }
+    });
+
+    console.log('Ultron [CALENDAR]: Réponse recherche - Status:', searchResponse.status);
+
+    if (searchResponse.ok) {
+      const data = await searchResponse.json();
+      console.log('Ultron [CALENDAR]: Données reçues:', data);
+
+      if (data.prospect && data.prospect.id) {
+        // 3. On a trouvé le prospect Ultron !
+        const ultronProspectId = data.prospect.id; // UUID Ultron
+        console.log('Ultron [CALENDAR]: ✅ Prospect Ultron trouvé:', ultronProspectId);
+        console.log('Ultron [CALENDAR]: Détails:', data.prospect.prenom, data.prospect.nom);
+
+        // 4. Enrichir currentProspect avec les données Calendar + Ultron
+        currentProspect = {
+          ...data.prospect,
+          calendarEvent: event,
+          meetLink: event.meetLink
+        };
+
+        // 5. Stocker l'ID Ultron dans storage (pas l'ID Calendar!)
+        await chrome.storage.local.set({ selectedProspectId: ultronProspectId });
+        console.log('Ultron [BUG2]: ✅ ID Ultron stocké en storage:', ultronProspectId);
+
+        // 6. Charger la fiche complète avec l'ID Ultron
+        console.log('Ultron [CALENDAR]: Chargement fiche complète...');
+        await loadProspectDetails(ultronProspectId);
+        return;
+      } else {
+        console.log('Ultron [CALENDAR]: ❌ Aucun prospect trouvé en base');
+      }
+    } else {
+      const errorText = await searchResponse.text();
+      console.log('Ultron [CALENDAR]: ❌ Erreur recherche:', searchResponse.status, errorText);
+    }
+  } catch (error) {
+    console.log('Ultron [CALENDAR]: ❌ Exception recherche:', error.message);
+  }
+
+  // Fallback : afficher les infos Calendar sans enrichissement
+  console.log('Ultron [CALENDAR]: ⚠️ Prospect non trouvé en base, affichage infos Calendar uniquement');
+  displayCalendarEventOnly(event);
+}
+
+/**
+ * Display calendar event info when prospect is not found in database
+ */
+function displayCalendarEventOnly(event) {
+  console.log('Ultron [CALENDAR]: Affichage événement Calendar seul');
+
+  prospectInfo.classList.remove('hidden');
+  tabsSection.classList.remove('hidden');
+
+  // Afficher le nom extrait de l'événement
+  const prospectName = extractProspectNameFromTitle(event.title);
+  document.getElementById('prospect-name').textContent = prospectName || 'Prospect';
+
+  // Afficher le statut de l'événement
+  const badge = document.getElementById('prospect-badge');
+  if (event.isPast) {
+    badge.className = 'badge badge-gray';
+    badge.textContent = '📅 RDV Passé';
+  } else {
+    badge.className = 'badge badge-green';
+    badge.textContent = '🔜 RDV Futur';
+  }
+
+  // Afficher les détails de l'événement uniquement
+  const eventDetails = `
+    <div class="prospect-details">
+      <div class="info-section">
+        <h3>📅 Informations Événement</h3>
+        <div class="detail-row">
+          <span class="label">Titre:</span>
+          <span class="value">${event.title}</span>
+        </div>
+        <div class="detail-row">
+          <span class="label">Date & Heure:</span>
+          <span class="value">${formatDisplayDate(event.startDate)}</span>
+        </div>
+        ${event.location ? `
+        <div class="detail-row">
+          <span class="label">Lieu:</span>
+          <span class="value">${event.location}</span>
+        </div>
+        ` : ''}
+        ${event.meetLink ? `
+        <div class="detail-row meet-link-row">
+          <span class="label">🎥 Google Meet:</span>
+          <span class="value">
+            <button onclick="openMeetLink('${event.meetLink}')" class="meet-btn">
+              Rejoindre le meeting
+            </button>
+          </span>
+        </div>
+        ` : ''}
+      </div>
+
+      <div class="info-section">
+        <h3>⚠️ Prospect non trouvé</h3>
+        <p>Le prospect "<strong>${prospectName}</strong>" n'a pas été trouvé dans la base de données Ultron.</p>
+        <p>Vous pouvez toujours utiliser les fonctionnalités générales de transcription et d'analyse.</p>
+      </div>
+    </div>
+  `;
+
+  // Injecter le HTML dans l'onglet overview
+  const overviewContent = document.getElementById('prospect-overview');
+  if (overviewContent) {
+    overviewContent.innerHTML = eventDetails;
+  }
+
+  // Vider les autres onglets
+  const otherTabs = ['prospect-analysis', 'prospect-interactions'];
+  otherTabs.forEach(tabId => {
+    const tab = document.getElementById(tabId);
+    if (tab) {
+      tab.innerHTML = '<p class="loading">Informations non disponibles (prospect non trouvé en base)</p>';
+    }
+  });
+
+  // Stocker l'événement comme prospect temporaire
+  currentProspect = {
+    id: event.id,
+    prenom: prospectName.split(' ')[0] || '',
+    nom: prospectName.split(' ').slice(1).join(' ') || prospectName,
+    calendarEvent: event,
+    meetLink: event.meetLink,
+    isCalendarOnly: true
+  };
+
+  console.log('Ultron [CALENDAR]: ✅ Événement Calendar affiché sans enrichissement');
 }

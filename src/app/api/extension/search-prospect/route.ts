@@ -37,9 +37,9 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Get query parameter
+    // Get query parameter (support both 'q' and 'query' for compatibility)
     const { searchParams } = new URL(request.url);
-    const query = searchParams.get('q')?.toLowerCase().trim();
+    const query = (searchParams.get('query') || searchParams.get('q'))?.toLowerCase().trim();
 
     if (!query || query.length < 2) {
       return NextResponse.json(
@@ -87,6 +87,85 @@ export async function GET(request: NextRequest) {
     }
   } catch (error) {
     console.error('Extension search error:', error);
+    return NextResponse.json(
+      { error: 'Erreur lors de la recherche' },
+      { status: 500, headers: corsHeaders() }
+    );
+  }
+}
+
+// POST /api/extension/search-prospect - Search prospects by name (for backward compatibility)
+export async function POST(request: NextRequest) {
+  try {
+    // Verify authorization header
+    const authHeader = request.headers.get('Authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return NextResponse.json(
+        { error: 'Non authentifie' },
+        { status: 401, headers: corsHeaders() }
+      );
+    }
+
+    const token = authHeader.replace('Bearer ', '');
+    const auth = await validateExtensionToken(token);
+
+    if (!auth) {
+      return NextResponse.json(
+        { error: 'Token invalide' },
+        { status: 401, headers: corsHeaders() }
+      );
+    }
+
+    // Get query from body
+    const body = await request.json();
+    const query = body.query?.toLowerCase().trim();
+
+    if (!query || query.length < 2) {
+      return NextResponse.json(
+        { prospects: [] },
+        { headers: corsHeaders() }
+      );
+    }
+
+    // Get user and organization
+    const adminClient = createAdminClient();
+    const { data: user, error: userError } = await adminClient
+      .from('users')
+      .select('id, organization_id')
+      .eq('auth_id', auth.authUser.id)
+      .single();
+
+    if (userError || !user) {
+      return NextResponse.json(
+        { error: 'Utilisateur non trouve' },
+        { status: 404, headers: corsHeaders() }
+      );
+    }
+
+    // Get organization with data_mode
+    const { data: org, error: orgError } = await adminClient
+      .from('organizations')
+      .select('id, data_mode, google_sheet_id, google_credentials')
+      .eq('id', user.organization_id)
+      .single();
+
+    if (orgError || !org) {
+      return NextResponse.json(
+        { error: 'Organisation non trouvee' },
+        { status: 404, headers: corsHeaders() }
+      );
+    }
+
+    // BI-MODE: Route based on data_mode
+    if (org.data_mode === 'crm') {
+      // CRM MODE - Query Supabase
+      return await searchProspectsCRM(adminClient, org.id, query);
+    } else {
+      // SHEET MODE - Query Google Sheets
+      return await searchProspectsSheet(adminClient, org, query);
+    }
+  } catch (error) {
+    console.error('Extension search POST error:', error);
     return NextResponse.json(
       { error: 'Erreur lors de la recherche' },
       { status: 500, headers: corsHeaders() }
