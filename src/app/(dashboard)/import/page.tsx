@@ -406,7 +406,7 @@ export default function ImportPage() {
   const mappedFieldsCount = Object.values(mapping).filter(value => value && value !== '__SKIP__').length;
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className="max-w-7xl mx-auto space-y-6 px-4">
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold">Importer des prospects</h1>
@@ -626,65 +626,72 @@ export default function ImportPage() {
 
             {/* Tableau de validation détaillé */}
             <div className="border rounded-lg overflow-hidden">
-              <div className="max-h-[500px] overflow-y-auto">
-                <Table>
+              <div className="max-h-[500px] overflow-y-auto overflow-x-auto min-w-0">
+                <Table className="w-full table-fixed min-w-[900px]">
                   <TableHeader className="sticky top-0 bg-background z-10 shadow-sm">
                     <TableRow>
-                      <TableHead className="w-[40px] bg-background">#</TableHead>
-                      <TableHead className="bg-background">Nom complet</TableHead>
-                      <TableHead className="bg-background">Email</TableHead>
-                      <TableHead className="bg-background">Téléphone</TableHead>
-                      <TableHead className="bg-background">Statut</TableHead>
-                      <TableHead className="bg-background">Action</TableHead>
-                      <TableHead className="w-[150px] bg-background">Décision</TableHead>
+                      <TableHead className="w-[50px] bg-background px-2">#</TableHead>
+                      <TableHead className="w-[160px] bg-background px-2">Nom complet</TableHead>
+                      <TableHead className="w-[180px] bg-background px-2">Email</TableHead>
+                      <TableHead className="w-[130px] bg-background px-2">Téléphone</TableHead>
+                      <TableHead className="w-[120px] bg-background px-2">Statut</TableHead>
+                      <TableHead className="w-[220px] bg-background px-2">Action</TableHead>
+                      <TableHead className="w-[140px] bg-background px-2">Décision</TableHead>
                     </TableRow>
                   </TableHeader>
                 <TableBody>
                   {validationResults.map((validation, index) => (
                     <TableRow key={index}>
-                      <TableCell className="font-mono text-sm">{index + 1}</TableCell>
-                      <TableCell>
-                        <div className="font-medium">
+                      <TableCell className="font-mono text-xs px-2 py-2">{index + 1}</TableCell>
+                      <TableCell className="px-2 py-2">
+                        <div className="font-medium text-sm truncate" title={`${validation.prospect.first_name || ''} ${validation.prospect.last_name || ''}`}>
                           {validation.prospect.first_name || ''} {validation.prospect.last_name || ''}
                         </div>
                         {validation.prospect.company && (
-                          <div className="text-xs text-muted-foreground">{validation.prospect.company}</div>
+                          <div className="text-xs text-muted-foreground truncate" title={String(validation.prospect.company || '')}>
+                            {validation.prospect.company}
+                          </div>
                         )}
                       </TableCell>
-                      <TableCell className="text-sm">{validation.prospect.email || '-'}</TableCell>
-                      <TableCell className="text-sm">{validation.prospect.phone || '-'}</TableCell>
-                      <TableCell>
+                      <TableCell className="text-xs px-2 py-2">
+                        <div className="truncate" title={String(validation.prospect.email || '-')}>
+                          {validation.prospect.email || '-'}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-xs px-2 py-2">
+                        <div className="truncate" title={String(validation.prospect.phone || '-')}>
+                          {validation.prospect.phone || '-'}
+                        </div>
+                      </TableCell>
+                      <TableCell className="px-2 py-2">
                         {validation.status === 'valid' && (
-                          <Badge className="bg-green-100 text-green-700 border-green-200">
+                          <Badge className="bg-green-100 text-green-700 border-green-200 text-xs">
                             <CheckCircle className="w-3 h-3 mr-1" />
                             Valide
                           </Badge>
                         )}
                         {validation.status === 'missing_fields' && (
-                          <Badge variant="destructive">
+                          <Badge variant="destructive" className="text-xs">
                             <X className="w-3 h-3 mr-1" />
-                            Champs manquants
+                            Manquant
                           </Badge>
                         )}
                         {validation.status === 'has_duplicates' && (
-                          <Badge className="bg-orange-100 text-orange-700 border-orange-200">
+                          <Badge className="bg-orange-100 text-orange-700 border-orange-200 text-xs">
                             <Users className="w-3 h-3 mr-1" />
                             Doublon
                           </Badge>
                         )}
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="px-2 py-2">
                         {validation.status === 'missing_fields' && (
-                          <div className="space-y-2">
-                            <div className="text-xs text-red-600">
-                              Manque: {validation.missingFields.map(f => REQUIRED_FIELD_LABELS[f]).join(', ')}
-                            </div>
+                          <div className="space-y-1">
                             {validation.missingFields.map((field) => (
-                              <div key={field} className="flex items-center gap-2">
-                                <span className="text-red-500 text-xs w-16">⚠️ {getFieldLabel(field)}</span>
+                              <div key={field} className="flex flex-col gap-1">
+                                <span className="text-red-500 text-xs">⚠️ {getFieldLabel(field)}</span>
                                 <Input
-                                  placeholder={`Saisir ${getFieldLabel(field)}`}
-                                  className="w-32 h-7 text-xs"
+                                  placeholder={`${getFieldLabel(field)}`}
+                                  className="w-full h-6 text-xs"
                                   value={manualValues[validation.index]?.[field] || ''}
                                   onChange={(e) => handleManualInput(validation.index, field, e.target.value)}
                                 />
@@ -694,29 +701,29 @@ export default function ImportPage() {
                         )}
                         {validation.status === 'has_duplicates' && (
                           <div className="text-xs text-orange-600">
-                            {validation.duplicates.length} doublon(s) trouvé(s)
+                            {validation.duplicates.length} doublon(s)
                           </div>
                         )}
                         {validation.status === 'valid' && (
                           <div className="text-xs text-green-600">
-                            Prêt pour l'import
+                            Prêt
                           </div>
                         )}
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="px-2 py-2">
                         <Select
                           value={validation.action}
                           onValueChange={(value: 'import' | 'skip') => {
                             handleActionChange(validation.index, value);
                           }}
                         >
-                          <SelectTrigger className="h-8">
+                          <SelectTrigger className="h-7 text-xs">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
                             {validation.status === 'has_duplicates' ? (
                               <>
-                                <SelectItem value="import">Importer quand même (créer doublon)</SelectItem>
+                                <SelectItem value="import">Importer</SelectItem>
                                 <SelectItem value="skip">Ignorer</SelectItem>
                               </>
                             ) : (
