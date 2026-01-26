@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
 import Anthropic from '@anthropic-ai/sdk';
+import { validateExtensionToken } from '@/lib/extension-auth';
 
 interface Prospect {
   prenom: string;
@@ -23,14 +23,22 @@ interface Interaction {
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
+    // Valider le token d'extension (custom HS256 ou Supabase natif)
+    const authHeader = request.headers.get('Authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      console.log('[analyze-prep] Pas de header Authorization');
       return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
     }
+
+    const token = authHeader.replace('Bearer ', '');
+    const auth = await validateExtensionToken(token);
+
+    if (!auth) {
+      console.log('[analyze-prep] ❌ Token invalide');
+      return NextResponse.json({ error: 'Token invalide' }, { status: 401 });
+    }
+
+    console.log('[analyze-prep] ✅ User authentifié:', auth.dbUser.email);
 
     const body = await request.json();
     const { prospect, interactions } = body as {
