@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
 
       // Appliquer le mapping
       Object.entries(mapping).forEach(([sourceCol, targetField]) => {
-        if (targetField && row[sourceCol] !== undefined && row[sourceCol] !== '') {
+        if (targetField && targetField !== '__SKIP__' && row[sourceCol] !== undefined && row[sourceCol] !== '') {
           let value: string | number | string[] | null = row[sourceCol];
 
           // Conversion de types pour certains champs

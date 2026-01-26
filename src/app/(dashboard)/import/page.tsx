@@ -27,7 +27,7 @@ import { cn } from '@/lib/utils';
 type Step = 'upload' | 'mapping' | 'importing' | 'done';
 
 const ULTRON_FIELDS = [
-  { value: '', label: '-- Ignorer --' },
+  { value: '__SKIP__', label: '-- Ignorer --' },
   { value: 'first_name', label: 'Prenom', group: 'Contact' },
   { value: 'last_name', label: 'Nom', group: 'Contact' },
   { value: 'email', label: 'Email', group: 'Contact' },
@@ -139,7 +139,8 @@ export default function ImportPage() {
         // Auto-mapping
         const autoMapping: Record<string, string> = {};
         headers.forEach((col) => {
-          autoMapping[col] = suggestMapping(col);
+          const suggestion = suggestMapping(col);
+          autoMapping[col] = suggestion || '__SKIP__'; // Utilise __SKIP__ au lieu de chaîne vide
         });
         setMapping(autoMapping);
 
@@ -214,7 +215,7 @@ export default function ImportPage() {
     }
   };
 
-  const mappedFieldsCount = Object.values(mapping).filter(Boolean).length;
+  const mappedFieldsCount = Object.values(mapping).filter(value => value && value !== '__SKIP__').length;
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
@@ -314,7 +315,7 @@ export default function ImportPage() {
                       </TableCell>
                       <TableCell>
                         <Select
-                          value={mapping[col] || ''}
+                          value={mapping[col] || '__SKIP__'}
                           onValueChange={(value) => setMapping({ ...mapping, [col]: value })}
                         >
                           <SelectTrigger>
@@ -343,7 +344,7 @@ export default function ImportPage() {
                   <TableHeader>
                     <TableRow>
                       {Object.entries(mapping)
-                        .filter(([, v]) => v)
+                        .filter(([, v]) => v && v !== '__SKIP__')
                         .map(([col, field]) => (
                           <TableHead key={col}>
                             {ULTRON_FIELDS.find((f) => f.value === field)?.label || field}
@@ -355,7 +356,7 @@ export default function ImportPage() {
                     {rows.slice(0, 3).map((row, i) => (
                       <TableRow key={i}>
                         {Object.entries(mapping)
-                          .filter(([, v]) => v)
+                          .filter(([, v]) => v && v !== '__SKIP__')
                           .map(([col]) => (
                             <TableCell key={col} className="text-sm">
                               {row[col]?.slice(0, 30) || '-'}
