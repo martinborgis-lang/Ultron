@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
 import Anthropic from '@anthropic-ai/sdk';
+import { validateExtensionToken } from '@/lib/extension-auth';
 import { corsHeaders } from '@/lib/cors';
 import type { RealtimeAnalysis } from '@/types/meeting';
 
@@ -47,6 +47,7 @@ export async function POST(request: NextRequest) {
     // Verify authorization
     const authHeader = request.headers.get('Authorization');
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      console.log('[meeting/analyze] Pas de header Authorization');
       return NextResponse.json(
         { error: 'Non authentifié' },
         { status: 401, headers: corsHeaders() }
@@ -54,21 +55,17 @@ export async function POST(request: NextRequest) {
     }
 
     const token = authHeader.replace('Bearer ', '');
+    const auth = await validateExtensionToken(token);
 
-    // Verify token
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    );
-
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-
-    if (authError || !user) {
+    if (!auth) {
+      console.log('[meeting/analyze] ❌ Token invalide');
       return NextResponse.json(
         { error: 'Token invalide' },
         { status: 401, headers: corsHeaders() }
       );
     }
+
+    console.log('[meeting/analyze] ✅ User authentifié:', auth.dbUser.email);
 
     const { prospect, transcript, conversationHistory } = await request.json();
 

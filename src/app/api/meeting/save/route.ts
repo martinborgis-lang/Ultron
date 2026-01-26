@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { createAdminClient } from '@/lib/supabase/admin';
 import Anthropic from '@anthropic-ai/sdk';
+import { validateExtensionToken } from '@/lib/extension-auth';
 import { corsHeaders } from '@/lib/cors';
 import { generateTranscriptPdf, generateTranscriptText } from '@/lib/pdf-generator';
 import type { TranscriptSegment, ObjectionDetected, SaveMeetingRequest, SaveMeetingResponse } from '@/types/meeting';
@@ -49,6 +50,7 @@ export async function POST(request: NextRequest) {
     // Verify authorization
     const authHeader = request.headers.get('Authorization');
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      console.log('[meeting/save] Pas de header Authorization');
       return NextResponse.json(
         { error: 'Non authentifié' },
         { status: 401, headers: corsHeaders() }
@@ -56,40 +58,19 @@ export async function POST(request: NextRequest) {
     }
 
     const token = authHeader.replace('Bearer ', '');
+    const auth = await validateExtensionToken(token);
 
-    // Verify token and get user
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    );
-
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-
-    if (authError || !user) {
+    if (!auth) {
+      console.log('[meeting/save] ❌ Token invalide');
       return NextResponse.json(
         { error: 'Token invalide' },
         { status: 401, headers: corsHeaders() }
       );
     }
 
-    // Get user's organization
-    const adminClient = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
-
-    const { data: userData, error: userError } = await adminClient
-      .from('users')
-      .select('id, organization_id')
-      .eq('auth_id', user.id)
-      .single();
-
-    if (userError || !userData) {
-      return NextResponse.json(
-        { error: 'Utilisateur non trouvé' },
-        { status: 404, headers: corsHeaders() }
-      );
-    }
+    console.log('[meeting/save] ✅ User authentifié:', auth.dbUser.email);
+    const userData = auth.dbUser;
+    const adminClient = createAdminClient();
 
     const body: SaveMeetingRequest = await request.json();
     const { prospect_id, google_meet_link, transcript_segments, duration_seconds } = body;
