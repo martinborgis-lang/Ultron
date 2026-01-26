@@ -370,17 +370,10 @@ function displayEventsInPopup(events) {
       const prospectName = btn.dataset.prospectName;
       const eventId = btn.dataset.eventId;
 
-      // Si l'événement a un lien Google Meet, l'ouvrir directement
-      if (meetLink && meetLink !== '') {
-        console.log('Ultron [POPUP]: Ouverture du lien Meet:', meetLink);
-        chrome.tabs.create({ url: meetLink });
-        window.close();
-        return;
-      }
-
-      // Sinon, essayer d'ouvrir le side panel ou fallback
+      // Essayer de trouver un prospect correspondant en base d'abord
+      let prospectId = null;
       try {
-        // Tenter de trouver un prospect correspondant en base pour le side panel
+        console.log('Ultron [POPUP]: Recherche prospect en base pour:', prospectName);
         const searchResponse = await fetch(`${ULTRON_API_URL}/api/extension/search-prospect`, {
           method: 'POST',
           headers: {
@@ -393,42 +386,102 @@ function displayEventsInPopup(events) {
           })
         });
 
-        let prospectId = null;
         if (searchResponse.ok) {
           const searchData = await searchResponse.json();
           prospectId = searchData.prospect?.id;
-        }
-
-        if (prospectId) {
-          // Open side panel with this prospect selected
-          chrome.runtime.sendMessage({
-            type: 'OPEN_SIDE_PANEL_WITH_PROSPECT',
-            prospectId: prospectId,
-          }, (response) => {
-            if (response && response.success) {
-              window.close();
-            } else {
-              // Fallback: open in popup window if side panel fails
-              openPreparePopup(prospectId);
-            }
-          });
-        } else {
-          // Prospect non trouvé en base, ouvrir une nouvelle recherche Google
-          const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(prospectName + ' contact')}`;
-          chrome.tabs.create({ url: searchUrl });
-          window.close();
+          console.log('Ultron [POPUP]: Prospect trouvé en base:', prospectId ? 'OUI' : 'NON');
         }
       } catch (error) {
-        console.error('Ultron [POPUP]: Erreur lors de l\'ouverture:', error);
-        // Fallback final: recherche Google
-        const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(prospectName)}`;
-        chrome.tabs.create({ url: searchUrl });
-        window.close();
+        console.log('Ultron [POPUP]: Erreur recherche prospect:', error.message);
       }
+
+      // Utiliser la nouvelle fonction pour ouvrir le side panel
+      await openProspectInSidePanel(prospectId || eventId, prospectName, meetLink);
     });
 
     prospectsList.appendChild(div);
   });
 
   console.log('Ultron [POPUP]: ✅ Événements affichés dans le popup:', events.length);
+}
+
+/**
+ * Open prospect in side panel instead of new window
+ */
+async function openProspectInSidePanel(prospectId, prospectName, meetLink) {
+  console.log('[POPUP] Ouverture side panel pour:', prospectName);
+  console.log('[POPUP] Prospect ID:', prospectId);
+  console.log('[POPUP] Meet Link:', meetLink || 'AUCUN');
+
+  try {
+    // 1. Sauvegarder le prospect sélectionné pour que le side panel le charge
+    await chrome.storage.local.set({
+      selectedProspectId: prospectId,
+      selectedProspectName: prospectName,
+      selectedMeetLink: meetLink
+    });
+    console.log('[POPUP] ✅ Données prospect sauvegardées dans storage');
+
+    // 2. Chercher un onglet Google Meet déjà ouvert
+    const tabs = await chrome.tabs.query({ url: 'https://meet.google.com/*' });
+    console.log('[POPUP] Onglets Meet trouvés:', tabs.length);
+
+    if (tabs.length > 0) {
+      // 3a. Si un onglet Meet existe, l'activer et ouvrir le side panel dessus
+      const meetTab = tabs[0];
+      console.log('[POPUP] Activation de l\'onglet Meet existant:', meetTab.id);
+
+      await chrome.tabs.update(meetTab.id, { active: true });
+      await chrome.windows.update(meetTab.windowId, { focused: true });
+
+      // Ouvrir le side panel sur cet onglet
+      try {
+        await chrome.sidePanel.open({ tabId: meetTab.id });
+        console.log('[POPUP] ✅ Side panel ouvert sur onglet Meet existant');
+      } catch (e) {
+        console.log('[POPUP] Side panel déjà ouvert ou erreur:', e.message);
+      }
+    } else if (meetLink && meetLink !== '') {
+      // 3b. Si pas d'onglet Meet mais on a un lien, ouvrir le Meet
+      console.log('[POPUP] Création nouvel onglet Meet avec:', meetLink);
+      const newTab = await chrome.tabs.create({ url: meetLink });
+      console.log('[POPUP] ✅ Nouvel onglet Meet créé:', newTab.id);
+
+      // Attendre un peu que l'onglet se charge, puis ouvrir le side panel
+      setTimeout(async () => {
+        try {
+          await chrome.sidePanel.open({ tabId: newTab.id });
+          console.log('[POPUP] ✅ Side panel ouvert sur nouvel onglet Meet');
+        } catch (e) {
+          console.log('[POPUP] Side panel auto-ouvert ou erreur:', e.message);
+        }
+      }, 1500); // Attendre 1.5s que Meet se charge
+    } else {
+      // 3c. Pas de Meet disponible - essayer d'ouvrir le side panel sur l'onglet actif
+      console.log('[POPUP] ⚠️ Pas de lien Meet, ouverture side panel sur onglet actif');
+      const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      if (activeTab) {
+        try {
+          await chrome.sidePanel.open({ tabId: activeTab.id });
+          console.log('[POPUP] ✅ Side panel ouvert sur onglet actif');
+        } catch (e) {
+          console.log('[POPUP] Erreur ouverture side panel:', e.message);
+          // Fallback: notifier qu'il faut ouvrir Google Meet
+          alert('Pour utiliser toutes les fonctionnalités, veuillez ouvrir Google Meet.');
+        }
+      }
+    }
+
+    console.log('[POPUP] Fermeture du popup');
+    // 4. Fermer le popup
+    window.close();
+
+  } catch (error) {
+    console.error('[POPUP] Erreur openProspectInSidePanel:', error);
+    // En cas d'erreur, fallback vers l'ancienne méthode
+    if (meetLink) {
+      chrome.tabs.create({ url: meetLink });
+    }
+    window.close();
+  }
 }
