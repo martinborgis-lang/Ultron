@@ -172,8 +172,37 @@ async function findProspectByMeetUrl(meetUrl) {
 prospectSelect.addEventListener('change', async (e) => {
   const prospectId = e.target.value;
   if (prospectId) {
-    await chrome.storage.local.set({ selectedProspectId: prospectId });
-    await loadProspectDetails(prospectId);
+    // Gérer les nouveaux événements calendrier
+    const selectedOption = e.target.selectedOptions[0];
+    const meetLink = selectedOption?.dataset.meetLink;
+    const eventDataStr = selectedOption?.dataset.eventData;
+
+    console.log('Ultron [SELECT]: Événement sélectionné ID:', prospectId);
+    console.log('Ultron [SELECT]: Meet link:', meetLink || 'AUCUN');
+
+    if (eventDataStr) {
+      // Nouveaux événements calendrier
+      try {
+        const eventData = JSON.parse(eventDataStr);
+        console.log('Ultron [SELECT]: Données événement:', eventData);
+
+        // Afficher les informations de l'événement
+        displayEventInfo(eventData);
+
+        // Essayer de trouver le prospect correspondant en base
+        await findAndDisplayProspectByName(eventData.prospectName);
+
+      } catch (error) {
+        console.error('Ultron [SELECT]: Erreur parsing event data:', error);
+        // Fallback vers l'ancien système
+        await chrome.storage.local.set({ selectedProspectId: prospectId });
+        await loadProspectDetails(prospectId);
+      }
+    } else {
+      // Ancien système de prospects
+      await chrome.storage.local.set({ selectedProspectId: prospectId });
+      await loadProspectDetails(prospectId);
+    }
   } else {
     hideProspectInfo();
   }
@@ -299,22 +328,27 @@ function showMainContent() {
 }
 
 async function loadProspects() {
-  const apiUrl = `${ULTRON_API_URL}/api/extension/prospects`;
-  console.log('Ultron [BUG1]: === CHARGEMENT DROPDOWN ===');
-  console.log('Ultron [BUG1]: URL API:', apiUrl);
+  // Nouvelle approche: charger les événements Google Calendar au lieu des prospects statiques
+  await loadCalendarEvents();
+}
+
+async function loadCalendarEvents() {
+  const apiUrl = `${ULTRON_API_URL}/api/extension/calendar-events`;
+  console.log('Ultron [CALENDAR]: === CHARGEMENT ÉVÉNEMENTS RDV ===');
+  console.log('Ultron [CALENDAR]: URL API:', apiUrl);
 
   try {
-    console.log('Ultron [BUG1]: Token actuel:', userToken ? 'présent (' + userToken.substring(0, 20) + '...)' : 'ABSENT');
+    console.log('Ultron [CALENDAR]: Token actuel:', userToken ? 'présent (' + userToken.substring(0, 20) + '...)' : 'ABSENT');
 
     if (!userToken) {
       // Essayer de récupérer le token du storage
       const stored = await chrome.storage.local.get(['userToken']);
       userToken = stored.userToken;
-      console.log('Ultron [BUG1]: Token récupéré du storage:', userToken ? 'présent' : 'ABSENT');
+      console.log('Ultron [CALENDAR]: Token récupéré du storage:', userToken ? 'présent' : 'ABSENT');
     }
 
     if (!userToken) {
-      console.error('Ultron [BUG1]: ❌ PAS DE TOKEN - Impossible d\'appeler l\'API');
+      console.error('Ultron [CALENDAR]: ❌ PAS DE TOKEN - Impossible d\'appeler l\'API');
       throw new Error('Token non disponible - veuillez vous reconnecter');
     }
 
@@ -335,24 +369,31 @@ async function loadProspects() {
       console.log('Ultron [TOKEN]: Impossible de décoder le header JWT:', e.message);
     }
 
-    console.log('Ultron [BUG1]: Envoi requête fetch...');
+    console.log('Ultron [CALENDAR]: Envoi requête fetch...');
     const response = await fetch(apiUrl, {
       headers: {
         'Authorization': `Bearer ${userToken}`,
       },
     });
 
-    console.log('Ultron [BUG1]: Réponse reçue - Status:', response.status, response.statusText);
+    console.log('Ultron [CALENDAR]: Réponse reçue - Status:', response.status, response.statusText);
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('Ultron [BUG1]: ❌ ERREUR API - Status:', response.status);
-      console.error('Ultron [BUG1]: ❌ ERREUR API - Body:', errorText);
+      console.error('Ultron [CALENDAR]: ❌ ERREUR API - Status:', response.status);
+      console.error('Ultron [CALENDAR]: ❌ ERREUR API - Body:', errorText);
 
       // Si 401 Unauthorized, forcer la déconnexion
       if (response.status === 401) {
-        console.error('Ultron [BUG1]: ⚠️ Token rejeté par le serveur - déconnexion forcée');
+        console.error('Ultron [CALENDAR]: ⚠️ Token rejeté par le serveur - déconnexion forcée');
         await forceLogout('Session expirée ou token invalide. Veuillez vous reconnecter.');
+        return;
+      }
+
+      // Si Google Calendar non configuré, fallback vers l'ancienne API prospects
+      if (response.status === 400 && errorText.includes('Google Calendar non configuré')) {
+        console.warn('Ultron [CALENDAR]: ⚠️ Google Calendar non configuré, fallback vers prospects');
+        await loadProspectsLegacy();
         return;
       }
 
@@ -365,26 +406,47 @@ async function loadProspects() {
     }
 
     const data = await response.json();
-    prospects = data.prospects || [];
+    const events = data.events || [];
 
-    console.log('Ultron [BUG1]: ✅ Prospects reçus:', prospects.length);
-    console.log('Ultron [BUG1]: Liste des prospects:');
-    prospects.forEach((p, i) => {
-      console.log(`  ${i + 1}. ${p.prenom || p.firstName || '?'} ${p.nom || p.lastName || '?'} (ID: ${p.id}, meet_link: ${p.meet_link || 'AUCUN'})`);
+    console.log('Ultron [CALENDAR]: ✅ Événements RDV reçus:', events.length);
+    console.log('Ultron [CALENDAR]: Liste des événements:');
+    events.forEach((e, i) => {
+      const status = e.isPast ? 'PASSÉ' : 'FUTUR';
+      const meetStatus = e.meetLink ? 'MEET ✓' : 'NO MEET';
+      console.log(`  ${i + 1}. ${e.prospectName} - ${formatDisplayDate(e.startDate)} (${status}, ${meetStatus})`);
     });
 
-    // Populate select
-    prospectSelect.innerHTML = '<option value="">Selectionner un prospect...</option>';
-    prospects.forEach(p => {
+    // Populate select avec les événements
+    prospectSelect.innerHTML = '<option value="">Sélectionner un RDV...</option>';
+    events.forEach(event => {
       const option = document.createElement('option');
-      option.value = p.id;
-      const name = `${p.prenom || p.firstName || ''} ${p.nom || p.lastName || ''}`.trim();
-      const date = p.date_rdv ? ` - ${p.date_rdv}` : '';
-      option.textContent = `${name}${date}`;
+      option.value = event.id;
+
+      // Formater le texte d'affichage
+      const dateStr = formatDisplayDate(event.startDate);
+      const statusIcon = event.isPast ? '📅' : '🔜';
+      const meetIcon = event.meetLink ? ' 🎥' : '';
+
+      option.textContent = `${statusIcon} ${event.prospectName} - ${dateStr}${meetIcon}`;
+      option.dataset.meetLink = event.meetLink || '';
+      option.dataset.eventData = JSON.stringify(event);
+
       prospectSelect.appendChild(option);
     });
 
-    console.log('Ultron [BUG1]: === FIN CHARGEMENT DROPDOWN ===');
+    // Stocker les événements pour référence
+    prospects = events.map(event => ({
+      id: event.id,
+      prenom: event.prospectName.split(' ')[0] || '',
+      nom: event.prospectName.split(' ').slice(1).join(' ') || '',
+      firstName: event.prospectName.split(' ')[0] || '',
+      lastName: event.prospectName.split(' ').slice(1).join(' ') || '',
+      meet_link: event.meetLink,
+      date_rdv: formatDisplayDate(event.startDate),
+      eventData: event
+    }));
+
+    console.log('Ultron [CALENDAR]: === FIN CHARGEMENT ÉVÉNEMENTS RDV ===');
 
   } catch (error) {
     console.error('Ultron [BUG1]: ❌ EXCEPTION:', error.message);
@@ -1023,4 +1085,227 @@ async function saveTranscript() {
     saveBtn.disabled = false;
     saveBtn.textContent = 'Sauvegarder et generer PDF';
   }
+}
+
+// ========================
+// CALENDAR HELPER FUNCTIONS
+// ========================
+
+/**
+ * Format date for display in dropdown
+ */
+function formatDisplayDate(dateStr) {
+  if (!dateStr) return 'Date non définie';
+
+  const date = new Date(dateStr);
+  if (isNaN(date.getTime())) return 'Date invalide';
+
+  return date.toLocaleDateString('fr-FR', {
+    day: '2-digit',
+    month: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+}
+
+/**
+ * Legacy function to load prospects from the old API
+ * Used as fallback when Google Calendar is not configured
+ */
+async function loadProspectsLegacy() {
+  const apiUrl = `${ULTRON_API_URL}/api/extension/prospects`;
+  console.log('Ultron [LEGACY]: === FALLBACK VERS ANCIENNE API PROSPECTS ===');
+  console.log('Ultron [LEGACY]: URL API:', apiUrl);
+
+  try {
+    const response = await fetch(apiUrl, {
+      headers: {
+        'Authorization': `Bearer ${userToken}`,
+      },
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Ultron [LEGACY]: ❌ ERREUR API - Status:', response.status);
+      console.error('Ultron [LEGACY]: ❌ ERREUR API - Body:', errorText);
+      throw new Error(`Erreur ${response.status}`);
+    }
+
+    const data = await response.json();
+    prospects = data.prospects || [];
+
+    console.log('Ultron [LEGACY]: ✅ Prospects legacy reçus:', prospects.length);
+
+    // Populate select avec les prospects legacy
+    prospectSelect.innerHTML = '<option value="">Sélectionner un prospect...</option>';
+    prospects.forEach(p => {
+      const option = document.createElement('option');
+      option.value = p.id;
+      const name = `${p.prenom || p.firstName || ''} ${p.nom || p.lastName || ''}`.trim();
+      const date = p.date_rdv ? ` - ${p.date_rdv}` : ' - Date non définie';
+      option.textContent = `${name}${date}`;
+      prospectSelect.appendChild(option);
+    });
+
+    console.log('Ultron [LEGACY]: === FIN FALLBACK LEGACY ===');
+
+  } catch (error) {
+    console.error('Ultron [LEGACY]: ❌ EXCEPTION:', error.message);
+    throw error;
+  }
+}
+
+/**
+ * Display event information from Google Calendar
+ */
+function displayEventInfo(eventData) {
+  console.log('Ultron [EVENT]: Affichage infos événement:', eventData.title);
+
+  prospectInfo.classList.remove('hidden');
+  tabsSection.classList.remove('hidden');
+
+  // Afficher le nom du prospect extrait de l'événement
+  document.getElementById('prospect-name').textContent = eventData.prospectName || 'Prospect';
+
+  // Afficher le statut de l'événement
+  const badge = document.getElementById('prospect-badge');
+  if (eventData.isPast) {
+    badge.className = 'badge badge-gray';
+    badge.textContent = '📅 RDV Passé';
+  } else {
+    badge.className = 'badge badge-green';
+    badge.textContent = '🔜 RDV Futur';
+  }
+
+  // Afficher les détails de l'événement
+  const eventDetails = `
+    <div class="prospect-details">
+      <div class="detail-row">
+        <span class="label">📅 Date & Heure:</span>
+        <span class="value">${formatDisplayDate(eventData.startDate)}</span>
+      </div>
+      <div class="detail-row">
+        <span class="label">📝 Titre:</span>
+        <span class="value">${eventData.title}</span>
+      </div>
+      ${eventData.location ? `
+      <div class="detail-row">
+        <span class="label">📍 Lieu:</span>
+        <span class="value">${eventData.location}</span>
+      </div>
+      ` : ''}
+      ${eventData.description ? `
+      <div class="detail-row">
+        <span class="label">📋 Description:</span>
+        <span class="value">${eventData.description.substring(0, 200)}...</span>
+      </div>
+      ` : ''}
+      ${eventData.meetLink ? `
+      <div class="detail-row meet-link-row">
+        <span class="label">🎥 Google Meet:</span>
+        <span class="value">
+          <button id="open-meet-btn" class="meet-btn" onclick="openMeetLink('${eventData.meetLink}')">
+            Ouvrir le Meet
+          </button>
+        </span>
+      </div>
+      ` : ''}
+    </div>
+  `;
+
+  // Injecter le HTML des détails de l'événement
+  const tabContents = document.querySelectorAll('.tab-content');
+  tabContents.forEach(content => {
+    if (content.id === 'prospect-overview') {
+      content.innerHTML = eventDetails;
+    } else {
+      content.innerHTML = '<p class="loading">Recherche des détails prospect en cours...</p>';
+    }
+  });
+
+  // Stocker l'événement sélectionné
+  currentProspect = {
+    id: eventData.id,
+    prenom: eventData.prospectName.split(' ')[0] || '',
+    nom: eventData.prospectName.split(' ').slice(1).join(' ') || '',
+    eventData: eventData
+  };
+
+  console.log('Ultron [EVENT]: Informations événement affichées');
+}
+
+/**
+ * Try to find a prospect in the database by name
+ */
+async function findAndDisplayProspectByName(prospectName) {
+  console.log('Ultron [PROSPECT]: Recherche prospect par nom:', prospectName);
+
+  try {
+    const response = await fetch(`${ULTRON_API_URL}/api/extension/search-prospect`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${userToken}`,
+      },
+      body: JSON.stringify({
+        query: prospectName,
+        searchType: 'name'
+      })
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      if (data.prospect) {
+        console.log('Ultron [PROSPECT]: ✅ Prospect trouvé en base:', data.prospect.prenom, data.prospect.nom);
+
+        // Enrichir les informations avec les données de la base
+        currentProspect = { ...currentProspect, ...data.prospect };
+
+        // Afficher les détails complets du prospect
+        displayProspectInfo(data.prospect);
+
+        // Charger l'analyse détaillée
+        if (data.interactions) {
+          await loadDetailedAnalysis(data.prospect, data.interactions);
+        }
+      } else {
+        console.log('Ultron [PROSPECT]: ❌ Aucun prospect trouvé en base pour:', prospectName);
+        displayNoProspectFound(prospectName);
+      }
+    } else {
+      console.warn('Ultron [PROSPECT]: Erreur recherche:', response.status);
+      displayNoProspectFound(prospectName);
+    }
+  } catch (error) {
+    console.error('Ultron [PROSPECT]: Exception lors recherche:', error);
+    displayNoProspectFound(prospectName);
+  }
+}
+
+/**
+ * Display message when no prospect is found in database
+ */
+function displayNoProspectFound(prospectName) {
+  const noProspectMessage = `
+    <div class="prospect-details">
+      <div class="no-prospect-message">
+        <h3>🔍 Prospect non trouvé en base</h3>
+        <p>Le prospect "<strong>${prospectName}</strong>" extrait de l'événement calendrier n'a pas été trouvé dans la base de données Ultron.</p>
+        <p>Les fonctionnalités d'analyse et de qualification ne seront pas disponibles, mais vous pouvez toujours utiliser la transcription et les suggestions générales.</p>
+      </div>
+    </div>
+  `;
+
+  const overviewContent = document.getElementById('prospect-overview');
+  if (overviewContent) {
+    overviewContent.innerHTML = noProspectMessage;
+  }
+}
+
+/**
+ * Open Google Meet link in new tab
+ */
+function openMeetLink(meetLink) {
+  console.log('Ultron [MEET]: Ouverture du lien Meet:', meetLink);
+  chrome.tabs.create({ url: meetLink });
 }
