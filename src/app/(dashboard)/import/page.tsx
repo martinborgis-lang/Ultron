@@ -44,7 +44,7 @@ const ULTRON_FIELDS = [
   { value: 'age', label: 'Age', group: 'Patrimoine' },
   { value: 'profession', label: 'Profession', group: 'Patrimoine' },
   { value: 'deal_value', label: 'Valeur du deal', group: 'Pipeline' },
-  { value: 'notes', label: 'Notes', group: 'Autre' },
+  { value: 'notes', label: 'Notes / Besoins client', group: 'Autre' },
   { value: 'tags', label: 'Tags (separes par virgule)', group: 'Autre' },
   { value: 'source_detail', label: 'Source detaillee', group: 'Autre' },
 ];
@@ -67,7 +67,7 @@ const AUTO_MAPPINGS: Record<string, string[]> = {
   age: ['age', 'âge'],
   profession: ['profession', 'metier', 'job'],
   deal_value: ['valeur', 'montant', 'deal', 'value', 'amount'],
-  notes: ['notes', 'commentaires', 'comments', 'remarques'],
+  notes: ['notes', 'commentaires', 'comments', 'remarques', 'besoins', 'besoin', 'needs', 'objectif', 'objectifs', 'demande', 'attentes'],
 };
 
 function suggestMapping(columnName: string): string {
