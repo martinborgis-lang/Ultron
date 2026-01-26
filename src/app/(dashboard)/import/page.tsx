@@ -21,10 +21,34 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { Upload, ArrowRight, Check, AlertCircle, Loader2 } from 'lucide-react';
+import { Upload, ArrowRight, Check, AlertCircle, Loader2, X, Users, AlertTriangle, CheckCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-type Step = 'upload' | 'mapping' | 'importing' | 'done';
+type Step = 'upload' | 'mapping' | 'validation' | 'importing' | 'done';
+
+interface ProspectValidation {
+  index: number;
+  prospect: Record<string, any>;
+  status: 'valid' | 'missing_fields' | 'has_duplicates';
+  missingFields: string[];
+  duplicates: Array<{
+    id: string;
+    name: string;
+    email?: string;
+    phone?: string;
+    created_at: string;
+  }>;
+  action?: 'import' | 'skip' | 'merge';
+}
+
+// Champs obligatoires pour la validation
+const REQUIRED_FIELDS = ['first_name', 'last_name', 'email', 'phone'];
+const REQUIRED_FIELD_LABELS: Record<string, string> = {
+  first_name: 'Prénom',
+  last_name: 'Nom',
+  email: 'Email',
+  phone: 'Téléphone'
+};
 
 const ULTRON_FIELDS = [
   { value: '__SKIP__', label: '-- Ignorer --' },
@@ -92,6 +116,8 @@ export default function ImportPage() {
   const [rows, setRows] = useState<Record<string, string>[]>([]);
   const [mapping, setMapping] = useState<Record<string, string>>({});
   const [_importing, setImporting] = useState(false);
+  const [validationResults, setValidationResults] = useState<ProspectValidation[]>([]);
+  const [validationLoading, setValidationLoading] = useState(false);
   const [result, setResult] = useState<{
     imported: number;
     skipped: number;
@@ -174,15 +200,103 @@ export default function ImportPage() {
     [handleFileUpload, toast]
   );
 
+  const handleValidation = async () => {
+    setValidationLoading(true);
+
+    try {
+      // Étape 1: Transformer les données selon le mapping
+      const transformedProspects = rows.map((row) => {
+        const prospect: Record<string, any> = {};
+        Object.entries(mapping).forEach(([sourceCol, targetField]) => {
+          if (targetField && targetField !== '__SKIP__' && row[sourceCol] !== undefined) {
+            prospect[targetField] = row[sourceCol];
+          }
+        });
+        return prospect;
+      });
+
+      // Étape 2: Validation des champs obligatoires
+      const validationResults: ProspectValidation[] = transformedProspects.map((prospect, index) => {
+        const missingFields = REQUIRED_FIELDS.filter(field => !prospect[field] || !prospect[field].toString().trim());
+
+        return {
+          index,
+          prospect,
+          status: missingFields.length > 0 ? 'missing_fields' : 'valid',
+          missingFields,
+          duplicates: [],
+          action: missingFields.length > 0 ? 'skip' : 'import'
+        };
+      });
+
+      // Étape 3: Vérification des doublons pour les prospects valides
+      const validProspects = validationResults.filter(v => v.status === 'valid');
+
+      if (validProspects.length > 0) {
+        const duplicateResponse = await fetch('/api/crm/prospects/check-duplicates', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            prospects: validProspects.map(v => v.prospect)
+          }),
+        });
+
+        if (duplicateResponse.ok) {
+          const duplicateData = await duplicateResponse.json();
+
+          // Mettre à jour les résultats avec les doublons
+          duplicateData.duplicateChecks.forEach((check: any) => {
+            const validationIndex = validProspects[check.index].index;
+            validationResults[validationIndex].duplicates = check.duplicates;
+            if (check.hasDuplicates) {
+              validationResults[validationIndex].status = 'has_duplicates';
+              validationResults[validationIndex].action = 'skip'; // Par défaut, on skip les doublons
+            }
+          });
+        }
+      }
+
+      setValidationResults(validationResults);
+      setStep('validation');
+
+    } catch (error) {
+      console.error('Erreur validation:', error);
+      toast({
+        title: 'Erreur de validation',
+        description: 'Impossible de valider les prospects',
+        variant: 'destructive',
+      });
+    } finally {
+      setValidationLoading(false);
+    }
+  };
+
   const handleImport = async () => {
     setImporting(true);
     setStep('importing');
 
     try {
+      // Filtrer seulement les prospects à importer
+      const prospectsToImport = validationResults
+        .filter(v => v.action === 'import')
+        .map(v => v.prospect);
+
       const response = await fetch('/api/crm/import', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prospects: rows, mapping }),
+        body: JSON.stringify({
+          prospects: prospectsToImport.map(prospect => {
+            // Reformater pour l'API existante
+            const row: Record<string, string> = {};
+            Object.entries(prospect).forEach(([key, value]) => {
+              row[key] = value?.toString() || '';
+            });
+            return row;
+          }),
+          mapping: Object.fromEntries(
+            Object.entries(mapping).filter(([, value]) => value && value !== '__SKIP__')
+          )
+        }),
       });
 
       const data = await response.json();
@@ -233,8 +347,10 @@ export default function ImportPage() {
         <ArrowRight className="w-4 h-4 text-muted-foreground" />
         <Badge variant={step === 'mapping' ? 'default' : 'secondary'}>2. Mapping</Badge>
         <ArrowRight className="w-4 h-4 text-muted-foreground" />
+        <Badge variant={step === 'validation' ? 'default' : 'secondary'}>3. Validation</Badge>
+        <ArrowRight className="w-4 h-4 text-muted-foreground" />
         <Badge variant={step === 'importing' || step === 'done' ? 'default' : 'secondary'}>
-          3. Import
+          4. Import
         </Badge>
       </div>
 
@@ -374,16 +490,191 @@ export default function ImportPage() {
               <Button variant="outline" onClick={() => setStep('upload')}>
                 Changer de fichier
               </Button>
-              <Button onClick={handleImport} disabled={mappedFieldsCount === 0}>
-                Importer {rows.length} prospects
-                <ArrowRight className="w-4 h-4 ml-2" />
+              <Button onClick={handleValidation} disabled={mappedFieldsCount === 0 || validationLoading}>
+                {validationLoading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Validation...
+                  </>
+                ) : (
+                  <>
+                    Valider {rows.length} prospects
+                    <ArrowRight className="w-4 h-4 ml-2" />
+                  </>
+                )}
               </Button>
             </div>
           </CardContent>
         </Card>
       )}
 
-      {/* Step 3: Importing */}
+      {/* Step 3: Validation */}
+      {step === 'validation' && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Validation des données</CardTitle>
+            <CardDescription>
+              Vérification des champs obligatoires et détection des doublons
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* Statistiques de validation */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
+                <CheckCircle className="w-8 h-8 mx-auto text-green-500 mb-2" />
+                <div className="text-2xl font-bold text-green-700">
+                  {validationResults.filter(v => v.status === 'valid').length}
+                </div>
+                <div className="text-sm text-green-600">Valides</div>
+              </div>
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-center">
+                <X className="w-8 h-8 mx-auto text-red-500 mb-2" />
+                <div className="text-2xl font-bold text-red-700">
+                  {validationResults.filter(v => v.status === 'missing_fields').length}
+                </div>
+                <div className="text-sm text-red-600">Champs manquants</div>
+              </div>
+              <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 text-center">
+                <Users className="w-8 h-8 mx-auto text-orange-500 mb-2" />
+                <div className="text-2xl font-bold text-orange-700">
+                  {validationResults.filter(v => v.status === 'has_duplicates').length}
+                </div>
+                <div className="text-sm text-orange-600">Doublons détectés</div>
+              </div>
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
+                <CheckCircle className="w-8 h-8 mx-auto text-blue-500 mb-2" />
+                <div className="text-2xl font-bold text-blue-700">
+                  {validationResults.filter(v => v.action === 'import').length}
+                </div>
+                <div className="text-sm text-blue-600">À importer</div>
+              </div>
+            </div>
+
+            {/* Tableau de validation détaillé */}
+            <div className="border rounded-lg overflow-hidden max-h-96 overflow-y-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[40px]">#</TableHead>
+                    <TableHead>Nom complet</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Téléphone</TableHead>
+                    <TableHead>Statut</TableHead>
+                    <TableHead>Action</TableHead>
+                    <TableHead className="w-[120px]">Décision</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {validationResults.map((validation, index) => (
+                    <TableRow key={index}>
+                      <TableCell className="font-mono text-sm">{index + 1}</TableCell>
+                      <TableCell>
+                        <div className="font-medium">
+                          {validation.prospect.first_name || ''} {validation.prospect.last_name || ''}
+                        </div>
+                        {validation.prospect.company && (
+                          <div className="text-xs text-muted-foreground">{validation.prospect.company}</div>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-sm">{validation.prospect.email || '-'}</TableCell>
+                      <TableCell className="text-sm">{validation.prospect.phone || '-'}</TableCell>
+                      <TableCell>
+                        {validation.status === 'valid' && (
+                          <Badge className="bg-green-100 text-green-700 border-green-200">
+                            <CheckCircle className="w-3 h-3 mr-1" />
+                            Valide
+                          </Badge>
+                        )}
+                        {validation.status === 'missing_fields' && (
+                          <Badge variant="destructive">
+                            <X className="w-3 h-3 mr-1" />
+                            Champs manquants
+                          </Badge>
+                        )}
+                        {validation.status === 'has_duplicates' && (
+                          <Badge className="bg-orange-100 text-orange-700 border-orange-200">
+                            <Users className="w-3 h-3 mr-1" />
+                            Doublon
+                          </Badge>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {validation.status === 'missing_fields' && (
+                          <div className="text-xs text-red-600">
+                            Manque: {validation.missingFields.map(f => REQUIRED_FIELD_LABELS[f]).join(', ')}
+                          </div>
+                        )}
+                        {validation.status === 'has_duplicates' && (
+                          <div className="text-xs text-orange-600">
+                            {validation.duplicates.length} doublon(s) trouvé(s)
+                          </div>
+                        )}
+                        {validation.status === 'valid' && (
+                          <div className="text-xs text-green-600">
+                            Prêt pour l'import
+                          </div>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <Select
+                          value={validation.action}
+                          onValueChange={(value: 'import' | 'skip' | 'merge') => {
+                            const newResults = [...validationResults];
+                            newResults[index].action = value;
+                            setValidationResults(newResults);
+                          }}
+                        >
+                          <SelectTrigger className="h-8">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="import">Importer</SelectItem>
+                            <SelectItem value="skip">Ignorer</SelectItem>
+                            {validation.status === 'has_duplicates' && (
+                              <SelectItem value="merge">Fusionner</SelectItem>
+                            )}
+                          </SelectContent>
+                        </Select>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+
+            {/* Actions de validation */}
+            <div className="flex justify-between">
+              <Button variant="outline" onClick={() => setStep('mapping')}>
+                Retour au mapping
+              </Button>
+              <div className="flex gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    // Marquer tous les valides pour import
+                    const newResults = validationResults.map(v => ({
+                      ...v,
+                      action: v.status === 'valid' ? 'import' as const : 'skip' as const
+                    }));
+                    setValidationResults(newResults);
+                  }}
+                >
+                  Importer tous les valides
+                </Button>
+                <Button
+                  onClick={handleImport}
+                  disabled={validationResults.filter(v => v.action === 'import').length === 0}
+                >
+                  Continuer l'import ({validationResults.filter(v => v.action === 'import').length} prospects)
+                  <ArrowRight className="w-4 h-4 ml-2" />
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Step 4: Importing */}
       {step === 'importing' && (
         <Card>
           <CardContent className="py-12 text-center">
@@ -430,6 +721,7 @@ export default function ImportPage() {
                   setColumns([]);
                   setRows([]);
                   setMapping({});
+                  setValidationResults([]);
                   setResult(null);
                 }}
               >
