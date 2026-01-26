@@ -185,10 +185,23 @@ prospectSelect.addEventListener('change', async (e) => {
       try {
         const eventData = JSON.parse(eventDataStr);
         console.log('Ultron [SELECT]: Données événement:', eventData);
-        console.log('Ultron [BUG2]: ✅ Utilisation du mapping Calendar → Ultron pour:', eventData.prospectName);
 
-        // NOUVEAU: Utiliser loadProspectFromCalendarEvent pour obtenir l'ID Ultron
-        await loadProspectFromCalendarEvent(eventData);
+        // ⭐ NOUVEAU: L'API nous donne directement l'ID Ultron !
+        if (eventData.prospectId) {
+          console.log('Ultron [BUG2]: ✅ ID Ultron directement disponible:', eventData.prospectId);
+
+          // Stocker l'ID Ultron (pas Calendar!)
+          await chrome.storage.local.set({ selectedProspectId: eventData.prospectId });
+
+          // Charger la fiche prospect avec l'ID Ultron
+          await loadProspectDetails(eventData.prospectId);
+
+        } else {
+          console.log('Ultron [BUG2]: ⚠️ Pas d\'ID Ultron trouvé, affichage événement Calendar seulement');
+
+          // Afficher seulement les infos Calendar
+          displayCalendarEventOnly(eventData);
+        }
 
       } catch (error) {
         console.error('Ultron [SELECT]: Erreur parsing event data:', error);

@@ -95,24 +95,97 @@ export async function GET(request: NextRequest) {
              title.includes('entretien');
     });
 
-    console.log('[Extension Calendar] 📅 Événements RDV trouvés:', rdvEvents.length);
+    console.log('[Extension Calendar] 📅 Événements RDV Google Calendar trouvés:', rdvEvents.length);
 
-    // Separate future and past events
-    const futureEvents = rdvEvents.filter(event => {
-      const eventTime = new Date(event.start?.dateTime || event.start?.date || 0);
+    // ⭐ ENRICHISSEMENT : Mapper chaque événement Calendar vers un prospect Ultron
+    console.log('[Extension Calendar] 🔍 Enrichissement avec prospects Ultron...');
+    const enrichedEvents = await Promise.all(
+      rdvEvents.map(async (calEvent) => {
+        const prospectName = extractProspectName(calEvent.summary || '');
+        const startDate = calEvent.start?.dateTime || calEvent.start?.date;
+        const meetLink = calEvent.hangoutLink ||
+                        calEvent.conferenceData?.entryPoints?.find(e => e.entryPointType === 'video')?.uri;
+
+        let prospectId = null;
+
+        try {
+          // Option 1: Chercher par meet_link (le plus fiable)
+          if (meetLink) {
+            console.log('[Extension Calendar] 🔗 Recherche par Meet link:', meetLink);
+            const { data: eventByMeet } = await adminClient
+              .from('crm_events')
+              .select('prospect_id, prospect_name')
+              .eq('organization_id', user.organization_id)
+              .or(`meet_link.eq.${meetLink},metadata->>meet_link.eq.${meetLink}`)
+              .single();
+
+            if (eventByMeet?.prospect_id) {
+              prospectId = eventByMeet.prospect_id;
+              console.log('[Extension Calendar] ✅ Prospect trouvé par Meet link:', prospectId);
+            }
+          }
+
+          // Option 2: Si pas trouvé par meet_link, chercher par nom + date
+          if (!prospectId && prospectName && startDate) {
+            console.log('[Extension Calendar] 👤 Recherche par nom + date:', prospectName, startDate);
+            const dateOnly = startDate.split('T')[0];
+            const { data: eventByName } = await adminClient
+              .from('crm_events')
+              .select('prospect_id, prospect_name')
+              .eq('organization_id', user.organization_id)
+              .ilike('prospect_name', `%${prospectName}%`)
+              .gte('start_date', `${dateOnly}T00:00:00`)
+              .lte('start_date', `${dateOnly}T23:59:59`)
+              .single();
+
+            if (eventByName?.prospect_id) {
+              prospectId = eventByName.prospect_id;
+              console.log('[Extension Calendar] ✅ Prospect trouvé par nom+date:', prospectId);
+            }
+          }
+
+        } catch (error) {
+          console.log('[Extension Calendar] ⚠️ Erreur recherche prospect:', error instanceof Error ? error.message : String(error));
+        }
+
+        return {
+          calendarId: calEvent.id, // ID Google Calendar
+          prospectId: prospectId,  // ⭐ ID ULTRON !
+          id: prospectId || calEvent.id, // Fallback vers Calendar ID si pas trouvé
+          title: calEvent.summary || 'Événement sans titre',
+          prospectName: prospectName,
+          startDate: startDate,
+          endDate: calEvent.end?.dateTime || calEvent.end?.date,
+          meetLink: meetLink,
+          isPast: startDate ? new Date(startDate) < now : false,
+          location: calEvent.location,
+          description: calEvent.description
+        };
+      })
+    );
+
+    console.log('[Extension Calendar] 📊 Enrichissement terminé:');
+    enrichedEvents.forEach((event, i) => {
+      const status = event.prospectId ? '✅ ULTRON' : '❌ CALENDAR';
+      console.log(`  ${i + 1}. ${event.prospectName} → ${event.prospectId || event.calendarId} (${status})`);
+    });
+
+    // Separate future and past events (utiliser enrichedEvents maintenant)
+    const futureEvents = enrichedEvents.filter(event => {
+      const eventTime = new Date(event.startDate || 0);
       return eventTime > now;
     }).sort((a, b) => {
-      const timeA = new Date(a.start?.dateTime || a.start?.date || 0).getTime();
-      const timeB = new Date(b.start?.dateTime || b.start?.date || 0).getTime();
+      const timeA = new Date(a.startDate || 0).getTime();
+      const timeB = new Date(b.startDate || 0).getTime();
       return timeA - timeB; // Ascending - earliest first
     });
 
-    const pastEvents = rdvEvents.filter(event => {
-      const eventTime = new Date(event.start?.dateTime || event.start?.date || 0);
+    const pastEvents = enrichedEvents.filter(event => {
+      const eventTime = new Date(event.startDate || 0);
       return eventTime <= now;
     }).sort((a, b) => {
-      const timeA = new Date(a.start?.dateTime || a.start?.date || 0).getTime();
-      const timeB = new Date(b.start?.dateTime || b.start?.date || 0).getTime();
+      const timeA = new Date(a.startDate || 0).getTime();
+      const timeB = new Date(b.startDate || 0).getTime();
       return timeB - timeA; // Descending - most recent first
     });
 
@@ -125,32 +198,14 @@ export async function GET(request: NextRequest) {
     console.log('[Extension Calendar] 🎯 Événements sélectionnés:', selectedEvents.length);
     console.log('[Extension Calendar] Future events:', futureEvents.length, '- Past events:', pastEvents.length);
 
-    // Format the events for the extension
-    const formattedEvents = selectedEvents.map(event => {
-      const prospectName = extractProspectName(event.summary || '');
-      const startDate = event.start?.dateTime || event.start?.date;
-      const endDate = event.end?.dateTime || event.end?.date;
+    // Les événements sont déjà enrichis et formatés !
+    const formattedEvents = selectedEvents;
 
-      return {
-        id: event.id,
-        title: event.summary || 'Événement sans titre',
-        prospectName,
-        startDate,
-        endDate,
-        // Try to get Google Meet link from multiple sources
-        meetLink: event.hangoutLink ||
-                 event.conferenceData?.entryPoints?.find(e => e.entryPointType === 'video')?.uri ||
-                 extractMeetLinkFromDescription(event.description || ''),
-        isPast: startDate ? new Date(startDate) < now : false,
-        location: event.location,
-        description: event.description
-      };
-    });
-
-    console.log('[Extension Calendar] ✅ Événements formatés:', formattedEvents.length);
+    console.log('[Extension Calendar] ✅ Événements formatés (enrichis):', formattedEvents.length);
     formattedEvents.forEach((event, i) => {
       const dateStr = event.startDate ? formatDateFr(new Date(event.startDate)) : 'Date inconnue';
-      console.log(`  ${i + 1}. ${event.prospectName} - ${dateStr} (Meet: ${event.meetLink ? 'OUI' : 'NON'})`);
+      const prospectStatus = event.prospectId ? `✅ ${event.prospectId}` : '❌ Calendar only';
+      console.log(`  ${i + 1}. ${event.prospectName} - ${dateStr} (${prospectStatus}) (Meet: ${event.meetLink ? 'OUI' : 'NON'})`);
     });
 
     return NextResponse.json(
