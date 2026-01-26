@@ -11,6 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Input } from '@/components/ui/input';
 import {
   Table,
   TableBody,
@@ -21,14 +22,14 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { Upload, ArrowRight, Check, AlertCircle, Loader2, X, Users, AlertTriangle, CheckCircle } from 'lucide-react';
+import { Upload, ArrowRight, Check, AlertCircle, Loader2, X, Users, CheckCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 type Step = 'upload' | 'mapping' | 'validation' | 'importing' | 'done';
 
 interface ProspectValidation {
   index: number;
-  prospect: Record<string, any>;
+  prospect: Record<string, string | number>;
   status: 'valid' | 'missing_fields' | 'has_duplicates';
   missingFields: string[];
   duplicates: Array<{
@@ -38,7 +39,7 @@ interface ProspectValidation {
     phone?: string;
     created_at: string;
   }>;
-  action?: 'import' | 'skip' | 'merge';
+  action?: 'import' | 'skip';
 }
 
 // Champs obligatoires pour la validation
@@ -106,6 +107,10 @@ function suggestMapping(columnName: string): string {
   return '';
 }
 
+function getFieldLabel(field: string): string {
+  return REQUIRED_FIELD_LABELS[field] || field;
+}
+
 export default function ImportPage() {
   const router = useRouter();
   const { toast } = useToast();
@@ -115,9 +120,10 @@ export default function ImportPage() {
   const [columns, setColumns] = useState<string[]>([]);
   const [rows, setRows] = useState<Record<string, string>[]>([]);
   const [mapping, setMapping] = useState<Record<string, string>>({});
-  const [_importing, setImporting] = useState(false);
+  const [importing, setImporting] = useState(false);
   const [validationResults, setValidationResults] = useState<ProspectValidation[]>([]);
   const [validationLoading, setValidationLoading] = useState(false);
+  const [manualValues, setManualValues] = useState<Record<number, Record<string, string>>>({});
   const [result, setResult] = useState<{
     imported: number;
     skipped: number;
@@ -200,13 +206,75 @@ export default function ImportPage() {
     [handleFileUpload, toast]
   );
 
+  // Fonction pour gérer la saisie manuelle
+  const handleManualInput = (index: number, field: string, value: string) => {
+    setManualValues(prev => ({
+      ...prev,
+      [index]: {
+        ...prev[index],
+        [field]: value
+      }
+    }));
+
+    // Recalculer le statut du prospect
+    setTimeout(() => recalculateProspectStatus(index), 0);
+  };
+
+  // Gérer le changement d'action avec validation
+  const handleActionChange = (index: number, action: 'import' | 'skip') => {
+    const validation = validationResults[index];
+
+    // Empêcher "Importer" si des champs obligatoires sont manquants
+    if (action === 'import' && validation.status === 'missing_fields' && validation.missingFields.length > 0) {
+      toast({
+        title: 'Champs obligatoires manquants',
+        description: `Veuillez remplir : ${validation.missingFields.map(f => getFieldLabel(f)).join(', ')}`,
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // Mettre à jour l'action
+    setValidationResults(prev => prev.map((r, i) =>
+      i === index ? { ...r, action } : r
+    ));
+  };
+
+  // Recalculer si tous les champs obligatoires sont remplis
+  const recalculateProspectStatus = (index: number) => {
+    const result = validationResults[index];
+    const manualData = manualValues[index] || {};
+
+    if (!result) return;
+
+    // Vérifier si tous les champs obligatoires sont maintenant remplis
+    const stillMissing = REQUIRED_FIELDS.filter(field => {
+      const originalValue = result.prospect[field];
+      const manualValue = manualData[field];
+      return (!originalValue || !originalValue.toString().trim()) &&
+             (!manualValue || !manualValue.trim());
+    });
+
+    // Mettre à jour le statut
+    setValidationResults(prev => prev.map((r, i) =>
+      i === index
+        ? {
+            ...r,
+            status: stillMissing.length === 0 ? 'valid' : 'missing_fields',
+            missingFields: stillMissing,
+            action: stillMissing.length === 0 ? 'import' : 'skip'
+          }
+        : r
+    ));
+  };
+
   const handleValidation = async () => {
     setValidationLoading(true);
 
     try {
       // Étape 1: Transformer les données selon le mapping
       const transformedProspects = rows.map((row) => {
-        const prospect: Record<string, any> = {};
+        const prospect: Record<string, string | number> = {};
         Object.entries(mapping).forEach(([sourceCol, targetField]) => {
           if (targetField && targetField !== '__SKIP__' && row[sourceCol] !== undefined) {
             prospect[targetField] = row[sourceCol];
@@ -245,7 +313,7 @@ export default function ImportPage() {
           const duplicateData = await duplicateResponse.json();
 
           // Mettre à jour les résultats avec les doublons
-          duplicateData.duplicateChecks.forEach((check: any) => {
+          duplicateData.duplicateChecks.forEach((check: { index: number; hasDuplicates: boolean; duplicates: any[] }) => {
             const validationIndex = validProspects[check.index].index;
             validationResults[validationIndex].duplicates = check.duplicates;
             if (check.hasDuplicates) {
@@ -276,10 +344,16 @@ export default function ImportPage() {
     setStep('importing');
 
     try {
-      // Filtrer seulement les prospects à importer
+      // Filtrer seulement les prospects à importer et enrichir avec les valeurs manuelles
       const prospectsToImport = validationResults
         .filter(v => v.action === 'import')
-        .map(v => v.prospect);
+        .map(v => {
+          const manualData = manualValues[v.index] || {};
+          return {
+            ...v.prospect,
+            ...manualData // Les valeurs manuelles écrasent les valeurs originales
+          };
+        });
 
       const response = await fetch('/api/crm/import', {
         method: 'POST',
@@ -551,19 +625,20 @@ export default function ImportPage() {
             </div>
 
             {/* Tableau de validation détaillé */}
-            <div className="border rounded-lg overflow-hidden max-h-96 overflow-y-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-[40px]">#</TableHead>
-                    <TableHead>Nom complet</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Téléphone</TableHead>
-                    <TableHead>Statut</TableHead>
-                    <TableHead>Action</TableHead>
-                    <TableHead className="w-[120px]">Décision</TableHead>
-                  </TableRow>
-                </TableHeader>
+            <div className="border rounded-lg overflow-hidden">
+              <div className="max-h-[500px] overflow-y-auto">
+                <Table>
+                  <TableHeader className="sticky top-0 bg-background z-10 shadow-sm">
+                    <TableRow>
+                      <TableHead className="w-[40px] bg-background">#</TableHead>
+                      <TableHead className="bg-background">Nom complet</TableHead>
+                      <TableHead className="bg-background">Email</TableHead>
+                      <TableHead className="bg-background">Téléphone</TableHead>
+                      <TableHead className="bg-background">Statut</TableHead>
+                      <TableHead className="bg-background">Action</TableHead>
+                      <TableHead className="w-[150px] bg-background">Décision</TableHead>
+                    </TableRow>
+                  </TableHeader>
                 <TableBody>
                   {validationResults.map((validation, index) => (
                     <TableRow key={index}>
@@ -600,8 +675,21 @@ export default function ImportPage() {
                       </TableCell>
                       <TableCell>
                         {validation.status === 'missing_fields' && (
-                          <div className="text-xs text-red-600">
-                            Manque: {validation.missingFields.map(f => REQUIRED_FIELD_LABELS[f]).join(', ')}
+                          <div className="space-y-2">
+                            <div className="text-xs text-red-600">
+                              Manque: {validation.missingFields.map(f => REQUIRED_FIELD_LABELS[f]).join(', ')}
+                            </div>
+                            {validation.missingFields.map((field) => (
+                              <div key={field} className="flex items-center gap-2">
+                                <span className="text-red-500 text-xs w-16">⚠️ {getFieldLabel(field)}</span>
+                                <Input
+                                  placeholder={`Saisir ${getFieldLabel(field)}`}
+                                  className="w-32 h-7 text-xs"
+                                  value={manualValues[validation.index]?.[field] || ''}
+                                  onChange={(e) => handleManualInput(validation.index, field, e.target.value)}
+                                />
+                              </div>
+                            ))}
                           </div>
                         )}
                         {validation.status === 'has_duplicates' && (
@@ -618,20 +706,24 @@ export default function ImportPage() {
                       <TableCell>
                         <Select
                           value={validation.action}
-                          onValueChange={(value: 'import' | 'skip' | 'merge') => {
-                            const newResults = [...validationResults];
-                            newResults[index].action = value;
-                            setValidationResults(newResults);
+                          onValueChange={(value: 'import' | 'skip') => {
+                            handleActionChange(validation.index, value);
                           }}
                         >
                           <SelectTrigger className="h-8">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="import">Importer</SelectItem>
-                            <SelectItem value="skip">Ignorer</SelectItem>
-                            {validation.status === 'has_duplicates' && (
-                              <SelectItem value="merge">Fusionner</SelectItem>
+                            {validation.status === 'has_duplicates' ? (
+                              <>
+                                <SelectItem value="import">Importer quand même (créer doublon)</SelectItem>
+                                <SelectItem value="skip">Ignorer</SelectItem>
+                              </>
+                            ) : (
+                              <>
+                                <SelectItem value="import">Importer</SelectItem>
+                                <SelectItem value="skip">Ignorer</SelectItem>
+                              </>
                             )}
                           </SelectContent>
                         </Select>
@@ -639,7 +731,8 @@ export default function ImportPage() {
                     </TableRow>
                   ))}
                 </TableBody>
-              </Table>
+                </Table>
+              </div>
             </div>
 
             {/* Actions de validation */}
@@ -722,6 +815,7 @@ export default function ImportPage() {
                   setRows([]);
                   setMapping({});
                   setValidationResults([]);
+                  setManualValues({});
                   setResult(null);
                 }}
               >
