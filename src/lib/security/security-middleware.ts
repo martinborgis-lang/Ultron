@@ -267,6 +267,13 @@ export class SecurityMiddleware {
       return null;
     }
 
+    // Allow Chrome extension origins for extension APIs
+    const isExtensionOrigin = origin?.startsWith('chrome-extension://');
+    const isExtensionAPI = path.startsWith('/api/meeting/') || path.startsWith('/api/extension/');
+    if (isExtensionOrigin && isExtensionAPI) {
+      return null;
+    }
+
     // Vérifier Origin/Referer
     if (!origin && !referer) {
       return 'Missing Origin and Referer headers';
