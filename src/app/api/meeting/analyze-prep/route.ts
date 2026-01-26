@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 import { validateExtensionToken } from '@/lib/extension-auth';
+import { corsHeaders } from '@/lib/cors';
 
 interface Prospect {
   prenom: string;
@@ -21,13 +22,21 @@ interface Interaction {
   description: string;
 }
 
+// Handle preflight requests
+export async function OPTIONS() {
+  return new NextResponse(null, {
+    status: 200,
+    headers: corsHeaders(),
+  });
+}
+
 export async function POST(request: NextRequest) {
   try {
     // Valider le token d'extension (custom HS256 ou Supabase natif)
     const authHeader = request.headers.get('Authorization');
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       console.log('[analyze-prep] Pas de header Authorization');
-      return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
+      return NextResponse.json({ error: 'Non autorisé' }, { status: 401, headers: corsHeaders() });
     }
 
     const token = authHeader.replace('Bearer ', '');
@@ -35,7 +44,7 @@ export async function POST(request: NextRequest) {
 
     if (!auth) {
       console.log('[analyze-prep] ❌ Token invalide');
-      return NextResponse.json({ error: 'Token invalide' }, { status: 401 });
+      return NextResponse.json({ error: 'Token invalide' }, { status: 401, headers: corsHeaders() });
     }
 
     console.log('[analyze-prep] ✅ User authentifié:', auth.dbUser.email);
@@ -99,7 +108,7 @@ Génère l'analyse JSON.`;
 
     const content = response.content[0];
     if (content.type !== 'text') {
-      return NextResponse.json({ error: 'Réponse inattendue' }, { status: 500 });
+      return NextResponse.json({ error: 'Réponse inattendue' }, { status: 500, headers: corsHeaders() });
     }
 
     // Parser le JSON
@@ -117,7 +126,7 @@ Génère l'analyse JSON.`;
       }
 
       const analysis = JSON.parse(jsonText.trim());
-      return NextResponse.json({ analysis });
+      return NextResponse.json({ analysis }, { headers: corsHeaders() });
     } catch {
       console.error('Erreur parsing JSON:', content.text);
       return NextResponse.json({
@@ -135,11 +144,11 @@ Génère l'analyse JSON.`;
           objectionsProba: ['Besoin de réfléchir', 'Comparer avec d\'autres offres'],
           profilPsycho: 'Analyse non disponible - données insuffisantes.',
         },
-      });
+      }, { headers: corsHeaders() });
     }
   } catch (error: unknown) {
     console.error('Erreur analyze-prep:', error);
     const message = error instanceof Error ? error.message : 'Erreur inconnue';
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json({ error: message }, { status: 500, headers: corsHeaders() });
   }
 }

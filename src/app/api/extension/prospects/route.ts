@@ -84,10 +84,10 @@ async function getProspectsCRM(
   const now = new Date().toISOString();
   const oneWeekLater = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
 
-  // First get events with prospects (include meet_link column AND metadata)
+  // First get events with prospects (use metadata for meet_link since column may not exist yet)
   const { data: events, error: eventsError } = await adminClient
     .from('crm_events')
-    .select('prospect_id, prospect_name, start_date, meet_link, metadata')
+    .select('prospect_id, prospect_name, start_date, metadata')
     .eq('organization_id', orgId)
     .in('type', ['meeting', 'rdv', 'call'])
     .gte('start_date', now)
@@ -169,7 +169,7 @@ async function getProspectsCRM(
         phone: p.phone,
         qualification: p.qualification,
         date_rdv: e.start_date ? formatDateFr(new Date(e.start_date)) : null,
-        meet_link: (e as { meet_link?: string }).meet_link || (e.metadata as { meet_link?: string })?.meet_link || null,
+        meet_link: (e.metadata as { meet_link?: string })?.meet_link || null,
       };
     });
 
