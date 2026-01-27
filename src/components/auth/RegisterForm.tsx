@@ -37,7 +37,7 @@ export function RegisterForm() {
       email,
       password,
       options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback?next=/dashboard`
+        emailRedirectTo: `${window.location.origin}/api/auth/callback?type=signup`
       }
     });
 
@@ -313,7 +313,7 @@ Email court et professionnel pour présenter la plaquette en pièce jointe.`,
                     type: 'signup',
                     email,
                     options: {
-                      emailRedirectTo: `${window.location.origin}/auth/callback?next=/dashboard`
+                      emailRedirectTo: `${window.location.origin}/api/auth/callback?type=signup`
                     }
                   });
                   if (error) {

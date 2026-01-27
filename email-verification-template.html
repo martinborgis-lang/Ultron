@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vérifiez votre email - ULTRON</title>
+  <style>
+    /* Reset CSS pour email clients */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+      line-height: 1.6;
+      margin: 0;
+      padding: 0;
+      background: linear-gradient(135deg, #0a0a23 0%, #1a1a3e 50%, #1e3a8a 100%);
+      min-height: 100vh;
+    }
+
+    /* Container principal */
+    .email-container {
+      max-width: 600px;
+      margin: 40px auto;
+      background: rgba(15, 15, 35, 0.95);
+      border: 1px solid rgba(99, 102, 241, 0.2);
+      border-radius: 20px;
+      overflow: hidden;
+      box-shadow: 0 40px 80px -20px rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+    }
+
+    /* Header avec logo */
+    .email-header {
+      text-align: center;
+      padding: 50px 40px 30px;
+      background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(59, 130, 246, 0.1) 100%);
+      border-bottom: 1px solid rgba(99, 102, 241, 0.2);
+      position: relative;
+    }
+
+    /* Logo container */
+    .logo-container {
+      display: inline-block;
+      margin-bottom: 24px;
+    }
+
+    .logo {
+      width: 48px;
+      height: 48px;
+      background: linear-gradient(135deg, #6366f1 0%, #3b82f6 100%);
+      border-radius: 12px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 8px 32px rgba(99, 102, 241, 0.3);
+    }
+
+    .logo svg {
+      width: 24px;
+      height: 24px;
+      color: white;
+    }
+
+    .brand-name {
+      display: inline-block;
+      margin-left: 12px;
+      font-size: 28px;
+      font-weight: 700;
+      color: #ffffff;
+      letter-spacing: -0.03em;
+      vertical-align: middle;
+    }
+
+    /* Titre principal */
+    .email-title {
+      font-size: 32px;
+      font-weight: 700;
+      color: #ffffff;
+      margin: 0 0 16px 0;
+      letter-spacing: -0.03em;
+      line-height: 1.2;
+    }
+
+    .email-subtitle {
+      font-size: 18px;
+      color: rgba(255, 255, 255, 0.8);
+      margin: 0;
+      font-weight: 400;
+    }
+
+    /* Contenu principal */
+    .email-content {
+      padding: 50px 40px;
+      text-align: center;
+    }
+
+    .welcome-text {
+      font-size: 18px;
+      color: rgba(255, 255, 255, 0.9);
+      margin-bottom: 32px;
+      line-height: 1.6;
+    }
+
+    .instruction-text {
+      font-size: 16px;
+      color: rgba(255, 255, 255, 0.7);
+      margin-bottom: 40px;
+      line-height: 1.6;
+    }
+
+    /* Bouton CTA principal */
+    .cta-button {
+      display: inline-block;
+      padding: 18px 32px;
+      background: linear-gradient(135deg, #6366f1 0%, #3b82f6 100%);
+      color: #ffffff;
+      text-decoration: none;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+      box-shadow: 0 8px 32px rgba(99, 102, 241, 0.4);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      border: 1px solid rgba(99, 102, 241, 0.3);
+      margin-bottom: 32px;
+    }
+
+    .cta-button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 12px 40px rgba(99, 102, 241, 0.5);
+      background: linear-gradient(135deg, #5855eb 0%, #2563eb 100%);
+    }
+
+    /* Animation pulse pour le bouton */
+    @keyframes pulse {
+      0%, 100% {
+        box-shadow: 0 8px 32px rgba(99, 102, 241, 0.4);
+      }
+      50% {
+        box-shadow: 0 8px 32px rgba(99, 102, 241, 0.6);
+      }
+    }
+
+    .cta-button {
+      animation: pulse 2s infinite;
+    }
+
+    /* Section sécurité */
+    .security-info {
+      background: rgba(34, 197, 94, 0.1);
+      border: 1px solid rgba(34, 197, 94, 0.2);
+      border-radius: 12px;
+      padding: 20px;
+      margin: 40px 0;
+    }
+
+    .security-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #22c55e;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .security-text {
+      font-size: 13px;
+      color: rgba(255, 255, 255, 0.7);
+      line-height: 1.5;
+    }
+
+    /* Footer */
+    .email-footer {
+      padding: 30px 40px;
+      background: rgba(15, 15, 35, 0.8);
+      border-top: 1px solid rgba(99, 102, 241, 0.2);
+      text-align: center;
+    }
+
+    .footer-text {
+      font-size: 13px;
+      color: rgba(255, 255, 255, 0.5);
+      margin-bottom: 16px;
+      line-height: 1.5;
+    }
+
+    .footer-link {
+      color: #6366f1;
+      text-decoration: none;
+      font-weight: 500;
+    }
+
+    .footer-link:hover {
+      color: #3b82f6;
+      text-decoration: underline;
+    }
+
+    /* Lien de fallback */
+    .fallback-link {
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.4);
+      margin-top: 24px;
+      padding-top: 20px;
+      border-top: 1px solid rgba(99, 102, 241, 0.1);
+    }
+
+    .fallback-link a {
+      color: rgba(255, 255, 255, 0.6);
+      text-decoration: underline;
+      word-break: break-all;
+    }
+
+    /* Responsive */
+    @media (max-width: 640px) {
+      .email-container {
+        margin: 20px auto;
+        border-radius: 16px;
+      }
+
+      .email-header {
+        padding: 40px 24px 24px;
+      }
+
+      .email-content {
+        padding: 40px 24px;
+      }
+
+      .email-footer {
+        padding: 24px;
+      }
+
+      .email-title {
+        font-size: 28px;
+      }
+
+      .brand-name {
+        font-size: 24px;
+      }
+
+      .welcome-text {
+        font-size: 16px;
+      }
+    }
+
+    /* Dark mode support */
+    @media (prefers-color-scheme: dark) {
+      .email-container {
+        background: rgba(15, 15, 35, 0.98);
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="email-container">
+    <!-- Header avec logo -->
+    <div class="email-header">
+      <div class="logo-container">
+        <div class="logo">
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path d="M21 16.5c0 .38-.21.71-.53.88l-7.9 4.44c-.16.12-.36.18-.57.18-.21 0-.41-.06-.57-.18l-7.9-4.44A.991.991 0 013 16.5v-9c0-.38.21-.71.53-.88l7.9-4.44c.16-.12.36-.18.57-.18.21 0 .41.06.57.18l7.9 4.44c.32.17.53.5.53.88v9z"/>
+          </svg>
+        </div>
+        <span class="brand-name">ULTRON</span>
+      </div>
+
+      <h1 class="email-title">Vérifiez votre email</h1>
+      <p class="email-subtitle">Un seul clic pour accéder à ULTRON</p>
+    </div>
+
+    <!-- Contenu principal -->
+    <div class="email-content">
+      <p class="welcome-text">
+        <strong>Bienvenue dans l'écosystème ULTRON !</strong><br>
+        Nous sommes ravis de vous compter parmi nos utilisateurs.
+      </p>
+
+      <p class="instruction-text">
+        Pour finaliser votre inscription et accéder à votre tableau de bord,<br>
+        cliquez sur le bouton ci-dessous pour confirmer votre adresse email.
+      </p>
+
+      <!-- Bouton principal -->
+      <a href="{{ .ConfirmationURL }}" class="cta-button">
+        Vérifier mon email
+      </a>
+
+      <!-- Info sécurité -->
+      <div class="security-info">
+        <div class="security-title">
+          🔒 Sécurisé et confidentiel
+        </div>
+        <div class="security-text">
+          Ce lien est unique et personnel. Il expirera automatiquement dans 24 heures pour votre sécurité.
+        </div>
+      </div>
+
+      <p class="instruction-text">
+        Une fois votre email confirmé, vous pourrez configurer votre espace de travail<br>
+        et commencer à automatiser votre gestion de prospects.
+      </p>
+    </div>
+
+    <!-- Footer -->
+    <div class="email-footer">
+      <p class="footer-text">
+        Cet email a été envoyé automatiquement par ULTRON.<br>
+        Si vous n'avez pas créé de compte, vous pouvez ignorer cet email.
+      </p>
+
+      <p class="footer-text">
+        Besoin d'aide ? Contactez-nous à
+        <a href="mailto:support@ultron-ai.pro" class="footer-link">support@ultron-ai.pro</a>
+      </p>
+
+      <!-- Lien de fallback -->
+      <div class="fallback-link">
+        Si le bouton ne fonctionne pas, copiez et collez ce lien dans votre navigateur :<br>
+        <a href="{{ .ConfirmationURL }}">{{ .ConfirmationURL }}</a>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
