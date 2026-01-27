@@ -8,8 +8,9 @@ import { PromptsEditor } from '@/components/settings/PromptsEditor';
 import { ThemeSelector } from '@/components/settings/ThemeSelector';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
-import { FileSpreadsheet, Users, Sparkles, Palette, Database, Settings, ShoppingCart } from 'lucide-react';
+import { FileSpreadsheet, Users, Sparkles, Palette, Database, Settings, ShoppingCart, User } from 'lucide-react';
 import Link from 'next/link';
+import { PasswordChangeForm } from '@/components/settings/PasswordChangeForm';
 
 async function getOrganizationData() {
   const supabase = await createClient();
@@ -60,7 +61,11 @@ export default async function SettingsPage() {
   return (
     <div className="space-y-6">
       <Tabs defaultValue="sheets" className="w-full">
-        <TabsList className="grid w-full grid-cols-5 lg:w-[600px]">
+        <TabsList className="grid w-full grid-cols-6 lg:w-[720px]">
+          <TabsTrigger value="profile" className="gap-2">
+            <User className="h-4 w-4" />
+            <span className="hidden sm:inline">Profil</span>
+          </TabsTrigger>
           <TabsTrigger value="data" className="gap-2">
             <Database className="h-4 w-4" />
             <span className="hidden sm:inline">Donnees</span>
@@ -83,6 +88,9 @@ export default async function SettingsPage() {
           </TabsTrigger>
         </TabsList>
         <div className="mt-6">
+          <TabsContent value="profile">
+            <PasswordChangeForm />
+          </TabsContent>
           <TabsContent value="data">
             <div className="border rounded-xl p-6 space-y-4">
               <div>

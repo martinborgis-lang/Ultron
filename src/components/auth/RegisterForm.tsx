@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
+import { Mail } from 'lucide-react';
 
 export function RegisterForm() {
   const router = useRouter();
@@ -13,6 +14,7 @@ export function RegisterForm() {
   const [companyName, setCompanyName] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [emailSent, setEmailSent] = useState(false);
 
   const generateSlug = (name: string) => {
     const baseSlug = name
@@ -30,14 +32,24 @@ export function RegisterForm() {
 
     const supabase = createClient();
 
-    // 1. Create auth user
+    // 1. Create auth user with email confirmation
     const { data: authData, error: signUpError } = await supabase.auth.signUp({
       email,
       password,
+      options: {
+        emailRedirectTo: `${window.location.origin}/auth/callback?next=/dashboard`
+      }
     });
 
     if (signUpError || !authData.user) {
       setError(signUpError?.message || 'Erreur lors de la creation du compte');
+      setLoading(false);
+      return;
+    }
+
+    // Vérifier si l'email doit être confirmé
+    if (authData.user && !authData.session) {
+      setEmailSent(true);
       setLoading(false);
       return;
     }
@@ -234,6 +246,94 @@ Email court et professionnel pour présenter la plaquette en pièce jointe.`,
     router.push('/dashboard');
     router.refresh();
   };
+
+  if (emailSent) {
+    return (
+      <div className="relative">
+        <div
+          style={{
+            background: 'var(--bg-card)',
+            border: '1px solid var(--border)',
+            borderRadius: '12px',
+            overflow: 'hidden',
+            boxShadow: '0 40px 80px -20px rgba(0, 0, 0, 0.6), var(--glow)',
+            paddingTop: '70px',
+            paddingBottom: '70px'
+          }}
+        >
+          <div className="text-center pt-12 pb-8 px-10 sm:px-8">
+            <div className="flex justify-center mb-6">
+              <div
+                style={{
+                  width: '64px',
+                  height: '64px',
+                  background: 'var(--primary)',
+                  borderRadius: '50%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+              >
+                <Mail style={{ width: '32px', height: '32px', color: 'white' }} />
+              </div>
+            </div>
+            <h1 style={{
+              fontSize: '1.5rem',
+              fontWeight: 700,
+              marginBottom: '8px',
+              color: 'var(--text-white)',
+              letterSpacing: '-0.03em'
+            }}>
+              Vérifiez votre email
+            </h1>
+            <p style={{
+              color: 'var(--text-gray)',
+              fontSize: '0.9rem',
+              marginBottom: '24px',
+              lineHeight: '1.5'
+            }}>
+              Nous avons envoyé un lien de vérification à <strong style={{ color: 'var(--text-white)' }}>{email}</strong>.
+              Cliquez sur le lien dans l'email pour activer votre compte.
+            </p>
+            <p style={{
+              color: 'var(--text-muted)',
+              fontSize: '0.8rem',
+              marginBottom: '32px'
+            }}>
+              Vérifiez également votre dossier de courriers indésirables.
+            </p>
+            <Link
+              href="/login"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '10px 20px',
+                fontSize: '0.9rem',
+                fontWeight: 500,
+                color: 'var(--text-white)',
+                background: 'transparent',
+                border: '1px solid var(--border)',
+                borderRadius: '8px',
+                textDecoration: 'none',
+                transition: 'var(--transition)'
+              }}
+              onMouseOver={(e) => {
+                e.currentTarget.style.borderColor = 'var(--primary)';
+                e.currentTarget.style.background = 'rgba(59, 130, 246, 0.1)';
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.borderColor = 'var(--border)';
+                e.currentTarget.style.background = 'transparent';
+              }}
+            >
+              Retour à la connexion
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="relative">

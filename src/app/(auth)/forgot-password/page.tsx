@@ -1,42 +1,127 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
+import { Mail, ArrowLeft } from 'lucide-react';
 
-export function LoginForm() {
-  const router = useRouter();
+export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [emailSent, setEmailSent] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setError(null);
     setLoading(true);
+    setError(null);
 
     const supabase = createClient();
-
-    const { error: signInError } = await supabase.auth.signInWithPassword({
-      email,
-      password,
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`,
     });
 
-    if (signInError) {
-      setError('Email ou mot de passe incorrect');
-      setLoading(false);
+    setLoading(false);
+
+    if (error) {
+      setError(error.message);
       return;
     }
 
-    router.push('/dashboard');
-    router.refresh();
-  };
+    setEmailSent(true);
+  }
+
+  if (emailSent) {
+    return (
+      <div className="relative">
+        <div
+          style={{
+            background: 'var(--bg-card)',
+            border: '1px solid var(--border)',
+            borderRadius: '12px',
+            overflow: 'hidden',
+            boxShadow: '0 40px 80px -20px rgba(0, 0, 0, 0.6), var(--glow)',
+            paddingTop: '70px',
+            paddingBottom: '70px'
+          }}
+        >
+          <div className="text-center pt-12 pb-8 px-10 sm:px-8">
+            <div className="flex justify-center mb-6">
+              <div
+                style={{
+                  width: '64px',
+                  height: '64px',
+                  background: 'var(--primary)',
+                  borderRadius: '50%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+              >
+                <Mail style={{ width: '32px', height: '32px', color: 'white' }} />
+              </div>
+            </div>
+            <h1 style={{
+              fontSize: '1.5rem',
+              fontWeight: 700,
+              marginBottom: '8px',
+              color: 'var(--text-white)',
+              letterSpacing: '-0.03em'
+            }}>
+              Email envoyé !
+            </h1>
+            <p style={{
+              color: 'var(--text-gray)',
+              fontSize: '0.9rem',
+              marginBottom: '24px',
+              lineHeight: '1.5'
+            }}>
+              Si un compte existe avec l'adresse <strong style={{ color: 'var(--text-white)' }}>{email}</strong>,
+              vous recevrez un lien pour réinitialiser votre mot de passe dans quelques instants.
+            </p>
+            <p style={{
+              color: 'var(--text-muted)',
+              fontSize: '0.8rem',
+              marginBottom: '32px'
+            }}>
+              Vérifiez également votre dossier de courriers indésirables.
+            </p>
+            <Link
+              href="/login"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '10px 20px',
+                fontSize: '0.9rem',
+                fontWeight: 500,
+                color: 'var(--text-white)',
+                background: 'transparent',
+                border: '1px solid var(--border)',
+                borderRadius: '8px',
+                textDecoration: 'none',
+                transition: 'var(--transition)'
+              }}
+              onMouseOver={(e) => {
+                e.currentTarget.style.borderColor = 'var(--primary)';
+                e.currentTarget.style.background = 'rgba(59, 130, 246, 0.1)';
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.borderColor = 'var(--border)';
+                e.currentTarget.style.background = 'transparent';
+              }}
+            >
+              <ArrowLeft style={{ width: '16px', height: '16px' }} />
+              Retour à la connexion
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="relative">
-      {/* Card avec le même style que la landing page */}
       <div
         style={{
           background: 'var(--bg-card)',
@@ -87,10 +172,10 @@ export function LoginForm() {
             letterSpacing: '-0.03em',
             padding: '0 20px'
           }}>
-            Connexion
+            Mot de passe oublié
           </h1>
           <p style={{ color: 'var(--text-gray)', fontSize: '0.9rem', padding: '0 24px' }}>
-            Connectez-vous pour accéder à votre espace
+            Entrez votre adresse email pour recevoir un lien de réinitialisation
           </p>
         </div>
 
@@ -125,7 +210,7 @@ export function LoginForm() {
                   color: 'var(--text-gray)'
                 }}
               >
-                Email
+                Adresse email
               </label>
               <input
                 id="email"
@@ -133,49 +218,6 @@ export function LoginForm() {
                 placeholder="vous@exemple.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                required
-                style={{
-                  width: '100%',
-                  boxSizing: 'border-box' as const,
-                  padding: '10px 14px',
-                  fontSize: '0.9rem',
-                  background: 'rgba(255, 255, 255, 0.05)',
-                  border: '1px solid var(--border)',
-                  borderRadius: '8px',
-                  color: 'var(--text-white)',
-                  transition: 'var(--transition)'
-                }}
-                onFocus={(e) => {
-                  e.target.style.borderColor = 'var(--primary)';
-                  e.target.style.outline = 'none';
-                  e.target.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)';
-                }}
-                onBlur={(e) => {
-                  e.target.style.borderColor = 'var(--border)';
-                  e.target.style.boxShadow = 'none';
-                }}
-              />
-            </div>
-
-            <div style={{ width: '100%', maxWidth: '300px' }}>
-              <label
-                htmlFor="password"
-                style={{
-                  display: 'block',
-                  marginBottom: '8px',
-                  fontSize: '0.875rem',
-                  fontWeight: 500,
-                  color: 'var(--text-gray)'
-                }}
-              >
-                Mot de passe
-              </label>
-              <input
-                id="password"
-                type="password"
-                placeholder="Votre mot de passe"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
                 required
                 style={{
                   width: '100%',
@@ -224,62 +266,36 @@ export function LoginForm() {
                   >
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 2v4m6 6h4m-6 6v4m-6-6H2" />
                   </svg>
-                  Connexion...
+                  Envoi en cours...
                 </>
               ) : (
-                'Se connecter'
+                'Envoyer le lien'
               )}
             </button>
 
-            {/* Lien mot de passe oublié */}
-            <div style={{
-              textAlign: 'center',
-              marginTop: '12px'
-            }}>
+            <div className="text-center">
               <Link
-                href="/forgot-password"
+                href="/login"
                 style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
                   fontSize: '0.875rem',
                   color: 'var(--text-muted)',
                   textDecoration: 'none',
                   transition: 'var(--transition)'
                 }}
                 onMouseOver={(e) => {
-                  e.currentTarget.style.color = 'var(--primary)';
+                  e.currentTarget.style.color = 'var(--text-white)';
                 }}
                 onMouseOut={(e) => {
                   e.currentTarget.style.color = 'var(--text-muted)';
                 }}
               >
-                Mot de passe oublié ?
+                <ArrowLeft style={{ width: '14px', height: '14px' }} />
+                Retour à la connexion
               </Link>
             </div>
-
-            <p style={{
-              textAlign: 'center',
-              fontSize: '0.875rem',
-              color: 'var(--text-muted)',
-              marginTop: '20px'
-            }}>
-              Pas encore de compte ?{' '}
-              <Link
-                href="/register"
-                style={{
-                  color: 'var(--primary)',
-                  textDecoration: 'none',
-                  fontWeight: 500,
-                  transition: 'var(--transition)'
-                }}
-                onMouseOver={(e) => {
-                  e.currentTarget.style.color = 'var(--primary-dark)';
-                }}
-                onMouseOut={(e) => {
-                  e.currentTarget.style.color = 'var(--primary)';
-                }}
-              >
-                Créer un compte
-              </Link>
-            </p>
           </div>
         </form>
       </div>

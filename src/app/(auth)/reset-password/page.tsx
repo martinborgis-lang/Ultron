@@ -1,42 +1,140 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
+import { Check, Eye, EyeOff } from 'lucide-react';
 
-export function LoginForm() {
-  const router = useRouter();
-  const [email, setEmail] = useState('');
+export default function ResetPasswordPage() {
   const [password, setPassword] = useState('');
-  const [error, setError] = useState<string | null>(null);
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  useEffect(() => {
+    // Vérifier s'il y a une session active (token de reset)
+    const checkSession = async () => {
+      const supabase = createClient();
+      const { data: { session } } = await supabase.auth.getSession();
+
+      if (!session) {
+        // Pas de session active, rediriger vers forgot-password
+        router.push('/forgot-password');
+      }
+    };
+
+    checkSession();
+  }, [router]);
+
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-    setLoading(true);
 
-    const supabase = createClient();
-
-    const { error: signInError } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-
-    if (signInError) {
-      setError('Email ou mot de passe incorrect');
-      setLoading(false);
+    if (password !== confirmPassword) {
+      setError('Les mots de passe ne correspondent pas');
       return;
     }
 
-    router.push('/dashboard');
-    router.refresh();
-  };
+    if (password.length < 8) {
+      setError('Le mot de passe doit contenir au moins 8 caractères');
+      return;
+    }
+
+    setLoading(true);
+
+    const supabase = createClient();
+    const { error } = await supabase.auth.updateUser({ password });
+
+    setLoading(false);
+
+    if (error) {
+      setError(error.message);
+      return;
+    }
+
+    setSuccess(true);
+
+    // Redirection après 3 secondes
+    setTimeout(() => {
+      router.push('/dashboard');
+    }, 3000);
+  }
+
+  if (success) {
+    return (
+      <div className="relative">
+        <div
+          style={{
+            background: 'var(--bg-card)',
+            border: '1px solid var(--border)',
+            borderRadius: '12px',
+            overflow: 'hidden',
+            boxShadow: '0 40px 80px -20px rgba(0, 0, 0, 0.6), var(--glow)',
+            paddingTop: '70px',
+            paddingBottom: '70px'
+          }}
+        >
+          <div className="text-center pt-12 pb-8 px-10 sm:px-8">
+            <div className="flex justify-center mb-6">
+              <div
+                style={{
+                  width: '64px',
+                  height: '64px',
+                  background: '#22c55e',
+                  borderRadius: '50%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+              >
+                <Check style={{ width: '32px', height: '32px', color: 'white' }} />
+              </div>
+            </div>
+            <h1 style={{
+              fontSize: '1.5rem',
+              fontWeight: 700,
+              marginBottom: '8px',
+              color: 'var(--text-white)',
+              letterSpacing: '-0.03em'
+            }}>
+              Mot de passe modifié !
+            </h1>
+            <p style={{
+              color: 'var(--text-gray)',
+              fontSize: '0.9rem',
+              marginBottom: '24px'
+            }}>
+              Votre mot de passe a été mis à jour avec succès.
+            </p>
+            <p style={{
+              color: 'var(--text-muted)',
+              fontSize: '0.8rem',
+              marginBottom: '32px'
+            }}>
+              Redirection vers le tableau de bord...
+            </p>
+            <div
+              style={{
+                width: '40px',
+                height: '4px',
+                background: 'var(--primary)',
+                borderRadius: '2px',
+                margin: '0 auto',
+                animation: 'pulse 1.5s ease-in-out infinite'
+              }}
+            />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="relative">
-      {/* Card avec le même style que la landing page */}
       <div
         style={{
           background: 'var(--bg-card)',
@@ -87,10 +185,10 @@ export function LoginForm() {
             letterSpacing: '-0.03em',
             padding: '0 20px'
           }}>
-            Connexion
+            Nouveau mot de passe
           </h1>
           <p style={{ color: 'var(--text-gray)', fontSize: '0.9rem', padding: '0 24px' }}>
-            Connectez-vous pour accéder à votre espace
+            Choisissez un nouveau mot de passe sécurisé pour votre compte
           </p>
         </div>
 
@@ -116,7 +214,7 @@ export function LoginForm() {
 
             <div style={{ width: '100%', maxWidth: '300px' }}>
               <label
-                htmlFor="email"
+                htmlFor="password"
                 style={{
                   display: 'block',
                   marginBottom: '8px',
@@ -125,14 +223,83 @@ export function LoginForm() {
                   color: 'var(--text-gray)'
                 }}
               >
-                Email
+                Nouveau mot de passe
+              </label>
+              <div style={{ position: 'relative' }}>
+                <input
+                  id="password"
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="Minimum 8 caractères"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  minLength={8}
+                  style={{
+                    width: '100%',
+                    boxSizing: 'border-box' as const,
+                    padding: '10px 40px 10px 14px',
+                    fontSize: '0.9rem',
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    border: '1px solid var(--border)',
+                    borderRadius: '8px',
+                    color: 'var(--text-white)',
+                    transition: 'var(--transition)'
+                  }}
+                  onFocus={(e) => {
+                    e.target.style.borderColor = 'var(--primary)';
+                    e.target.style.outline = 'none';
+                    e.target.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)';
+                  }}
+                  onBlur={(e) => {
+                    e.target.style.borderColor = 'var(--border)';
+                    e.target.style.boxShadow = 'none';
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  style={{
+                    position: 'absolute',
+                    right: '12px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    background: 'transparent',
+                    border: 'none',
+                    color: 'var(--text-muted)',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}
+                >
+                  {showPassword ? (
+                    <EyeOff style={{ width: '16px', height: '16px' }} />
+                  ) : (
+                    <Eye style={{ width: '16px', height: '16px' }} />
+                  )}
+                </button>
+              </div>
+            </div>
+
+            <div style={{ width: '100%', maxWidth: '300px' }}>
+              <label
+                htmlFor="confirmPassword"
+                style={{
+                  display: 'block',
+                  marginBottom: '8px',
+                  fontSize: '0.875rem',
+                  fontWeight: 500,
+                  color: 'var(--text-gray)'
+                }}
+              >
+                Confirmer le mot de passe
               </label>
               <input
-                id="email"
-                type="email"
-                placeholder="vous@exemple.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                id="confirmPassword"
+                type={showPassword ? 'text' : 'password'}
+                placeholder="Confirmer le mot de passe"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
                 required
                 style={{
                   width: '100%',
@@ -157,47 +324,15 @@ export function LoginForm() {
               />
             </div>
 
-            <div style={{ width: '100%', maxWidth: '300px' }}>
-              <label
-                htmlFor="password"
-                style={{
-                  display: 'block',
-                  marginBottom: '8px',
-                  fontSize: '0.875rem',
-                  fontWeight: 500,
-                  color: 'var(--text-gray)'
-                }}
-              >
-                Mot de passe
-              </label>
-              <input
-                id="password"
-                type="password"
-                placeholder="Votre mot de passe"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                style={{
-                  width: '100%',
-                  boxSizing: 'border-box' as const,
-                  padding: '10px 14px',
-                  fontSize: '0.9rem',
-                  background: 'rgba(255, 255, 255, 0.05)',
-                  border: '1px solid var(--border)',
-                  borderRadius: '8px',
-                  color: 'var(--text-white)',
-                  transition: 'var(--transition)'
-                }}
-                onFocus={(e) => {
-                  e.target.style.borderColor = 'var(--primary)';
-                  e.target.style.outline = 'none';
-                  e.target.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)';
-                }}
-                onBlur={(e) => {
-                  e.target.style.borderColor = 'var(--border)';
-                  e.target.style.boxShadow = 'none';
-                }}
-              />
+            <div style={{
+              width: '100%',
+              maxWidth: '300px',
+              fontSize: '0.75rem',
+              color: 'var(--text-muted)',
+              textAlign: 'center'
+            }}>
+              • Minimum 8 caractères<br />
+              • Mélange de lettres, chiffres et symboles recommandé
             </div>
 
             <button
@@ -224,62 +359,12 @@ export function LoginForm() {
                   >
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 2v4m6 6h4m-6 6v4m-6-6H2" />
                   </svg>
-                  Connexion...
+                  Modification...
                 </>
               ) : (
-                'Se connecter'
+                'Modifier le mot de passe'
               )}
             </button>
-
-            {/* Lien mot de passe oublié */}
-            <div style={{
-              textAlign: 'center',
-              marginTop: '12px'
-            }}>
-              <Link
-                href="/forgot-password"
-                style={{
-                  fontSize: '0.875rem',
-                  color: 'var(--text-muted)',
-                  textDecoration: 'none',
-                  transition: 'var(--transition)'
-                }}
-                onMouseOver={(e) => {
-                  e.currentTarget.style.color = 'var(--primary)';
-                }}
-                onMouseOut={(e) => {
-                  e.currentTarget.style.color = 'var(--text-muted)';
-                }}
-              >
-                Mot de passe oublié ?
-              </Link>
-            </div>
-
-            <p style={{
-              textAlign: 'center',
-              fontSize: '0.875rem',
-              color: 'var(--text-muted)',
-              marginTop: '20px'
-            }}>
-              Pas encore de compte ?{' '}
-              <Link
-                href="/register"
-                style={{
-                  color: 'var(--primary)',
-                  textDecoration: 'none',
-                  fontWeight: 500,
-                  transition: 'var(--transition)'
-                }}
-                onMouseOver={(e) => {
-                  e.currentTarget.style.color = 'var(--primary-dark)';
-                }}
-                onMouseOut={(e) => {
-                  e.currentTarget.style.color = 'var(--primary)';
-                }}
-              >
-                Créer un compte
-              </Link>
-            </p>
           </div>
         </form>
       </div>
