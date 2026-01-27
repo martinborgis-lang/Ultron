@@ -1,18 +1,9 @@
 import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
-import type {
-  LeadSearchRequest,
-  LeadSearchResponse,
-  LeadResult,
-  OutscraperResponse,
-  GooglePlacesResponse,
-  OutscraperPlace,
-  GooglePlace
-} from '@/types/leads';
 
-// Configuration des APIs (à mettre dans .env)
+// Clés API
 const OUTSCRAPER_API_KEY = process.env.OUTSCRAPER_API_KEY;
-const GOOGLE_PLACES_API_KEY = process.env.GOOGLE_PLACES_API_KEY;
+const PAPPERS_API_KEY = process.env.PAPPERS_API_KEY;
 const HUNTER_API_KEY = process.env.HUNTER_API_KEY;
 
 export async function POST(request: Request) {
@@ -58,13 +49,20 @@ export async function POST(request: Request) {
     const available = (credits?.credits_total || 0) - (credits?.credits_used || 0);
 
     // 4. Parser la requête
-    const body: LeadSearchRequest = await request.json();
-    const { type, profession, location, postalCode, count } = body;
+    const body = await request.json();
+    const { category, searchTerm, location, postalCode, count } = body;
 
     // Validation des paramètres
-    if (!profession?.trim()) {
+    if (!category) {
       return NextResponse.json(
-        { error: 'La profession est obligatoire' },
+        { error: 'La catégorie est obligatoire' },
+        { status: 400 }
+      );
+    }
+
+    if (!searchTerm?.trim()) {
+      return NextResponse.json(
+        { error: 'Le terme de recherche est obligatoire' },
         { status: 400 }
       );
     }
@@ -95,7 +93,7 @@ export async function POST(request: Request) {
     }
 
     console.log('[Lead Search] Starting search:', {
-      type, profession, location, postalCode, count,
+      category, searchTerm, location, postalCode, count,
       organizationId, userId, creditsAvailable: available
     });
 
@@ -105,8 +103,8 @@ export async function POST(request: Request) {
       .insert({
         organization_id: organizationId,
         user_id: userId,
-        search_type: type,
-        profession: profession.trim(),
+        search_type: category,
+        profession: searchTerm.trim(),
         location: location?.trim(),
         postal_code: postalCode?.trim(),
         leads_requested: count,
@@ -123,25 +121,37 @@ export async function POST(request: Request) {
       );
     }
 
-    // 6. Construire la requête de recherche
-    const query = `${profession} ${location || ''} ${postalCode || ''}`.trim();
     let leads: any[] = [];
     let apiSource = 'demo';
 
     try {
-      // Appeler l'API de scraping
-      if (OUTSCRAPER_API_KEY) {
-        console.log('[Lead Search] Using Outscraper API');
-        leads = await searchWithOutscraper(query, count);
-        apiSource = 'outscraper';
-      } else if (GOOGLE_PLACES_API_KEY) {
-        console.log('[Lead Search] Using Google Places API');
-        leads = await searchWithGooglePlaces(query, count, location, postalCode);
-        apiSource = 'google_places';
-      } else {
-        console.log('[Lead Search] Using demo data');
-        leads = generateDemoLeads(profession, location, postalCode, count);
-        apiSource = 'demo';
+      // ══════════════════════════════════════════════════════════════
+      // ROUTER VERS LA BONNE API SELON LA CATÉGORIE
+      // ══════════════════════════════════════════════════════════════
+
+      if (category === 'commercants' || category === 'professions_liberales') {
+        // OUTSCRAPER pour Google Maps
+        if (OUTSCRAPER_API_KEY) {
+          console.log('[Lead Search] Using Outscraper API');
+          leads = await searchWithOutscraper(searchTerm, location, postalCode, count);
+          apiSource = 'outscraper';
+        } else {
+          console.log('[Lead Search] Using demo data (Outscraper not configured)');
+          leads = generateDemoLeads(searchTerm, location, postalCode, count);
+          apiSource = 'demo';
+        }
+
+      } else if (category === 'dirigeants') {
+        // PAPPERS pour les dirigeants
+        if (PAPPERS_API_KEY) {
+          console.log('[Lead Search] Using Pappers API');
+          leads = await searchWithPappers(searchTerm, location, postalCode, count);
+          apiSource = 'pappers';
+        } else {
+          console.log('[Lead Search] Using demo data (Pappers not configured)');
+          leads = generateDemoDirigeantsLeads(searchTerm, location, postalCode, count);
+          apiSource = 'demo';
+        }
       }
 
       console.log(`[Lead Search] Found ${leads.length} leads via ${apiSource}`);
@@ -157,7 +167,7 @@ export async function POST(request: Request) {
         organization_id: organizationId,
         name: lead.name,
         company_name: lead.company_name,
-        profession: profession,
+        profession: lead.profession || searchTerm,
         address: lead.address,
         postal_code: lead.postal_code || postalCode,
         city: lead.city || location,
@@ -201,12 +211,13 @@ export async function POST(request: Request) {
       // 10. Mettre à jour les crédits (fait automatiquement via trigger)
       // Le trigger update_lead_credits_after_search se charge de cela
 
-      const response: LeadSearchResponse = {
+      const response = {
         search_id: search.id,
         leads: savedLeads || [],
         creditsUsed,
         creditsRemaining: available - creditsUsed,
         searchDuration,
+        source: apiSource,
       };
 
       return NextResponse.json(response);
@@ -240,82 +251,137 @@ export async function POST(request: Request) {
   }
 }
 
-// Fonction pour Outscraper API
-async function searchWithOutscraper(query: string, count: number): Promise<any[]> {
-  const response = await fetch('https://api.outscraper.com/maps/search-v3', {
-    method: 'POST',
+// ══════════════════════════════════════════════════════════════
+// OUTSCRAPER - Google Maps (Commerçants & Professions Libérales)
+// ══════════════════════════════════════════════════════════════
+async function searchWithOutscraper(
+  searchTerm: string,
+  location: string,
+  postalCode: string,
+  count: number
+): Promise<any[]> {
+  // Construire la requête
+  const query = `${searchTerm} ${location} ${postalCode}`.trim();
+
+  console.log('[Outscraper] Query:', query);
+
+  const response = await fetch('https://api.app.outscraper.com/maps/search-v3?' + new URLSearchParams({
+    query: query,
+    limit: count.toString(),
+    language: 'fr',
+    region: 'FR',
+    async: 'false',
+  }), {
+    method: 'GET',
     headers: {
-      'Content-Type': 'application/json',
       'X-API-KEY': OUTSCRAPER_API_KEY!,
     },
-    body: JSON.stringify({
-      query: query,
-      limit: count,
-      language: 'fr',
-      region: 'FR',
-      extract_emails: true,
-      extract_phone: true,
-    }),
   });
 
   if (!response.ok) {
     const errorText = await response.text();
-    throw new Error(`Erreur Outscraper API: ${response.status} - ${errorText}`);
+    console.error('[Outscraper] Error:', errorText);
+    throw new Error('Erreur API Outscraper');
   }
 
-  const data: OutscraperResponse = await response.json();
+  const data = await response.json();
+  console.log('[Outscraper] Results:', data.data?.[0]?.length || 0);
 
-  return (data.data?.[0] || []).map((item: OutscraperPlace) => ({
+  // Outscraper retourne un tableau de tableaux
+  const results = data.data?.[0] || [];
+
+  return results.map((item: any) => ({
     name: item.name,
     company_name: item.name,
-    address: item.full_address,
+    profession: item.type || item.subtypes?.[0],
+    address: item.full_address || item.street,
     postal_code: item.postal_code,
     city: item.city,
     phone: item.phone,
     email: item.email,
-    website: item.site,
+    website: item.site ? (item.site.startsWith('http') ? item.site : `https://${item.site}`) : null,
     confidence_score: 85,
-    raw_data: item,
+    raw_data: {
+      place_id: item.place_id,
+      rating: item.rating,
+      reviews: item.reviews,
+      working_hours: item.working_hours,
+    },
   }));
 }
 
-// Fonction pour Google Places API
-async function searchWithGooglePlaces(
-  query: string,
-  count: number,
-  location?: string,
-  postalCode?: string
+// ══════════════════════════════════════════════════════════════
+// PAPPERS - Dirigeants d'entreprises
+// ══════════════════════════════════════════════════════════════
+async function searchWithPappers(
+  sector: string,
+  location: string,
+  postalCode: string,
+  count: number
 ): Promise<any[]> {
-  const url = new URL('https://maps.googleapis.com/maps/api/place/textsearch/json');
-  url.searchParams.set('query', query);
-  url.searchParams.set('key', GOOGLE_PLACES_API_KEY!);
-  url.searchParams.set('language', 'fr');
-  url.searchParams.set('region', 'fr');
+  console.log('[Pappers] Search:', sector, location, postalCode);
 
-  const response = await fetch(url.toString());
+  // Construire les paramètres
+  const params: Record<string, string> = {
+    api_token: PAPPERS_API_KEY!,
+    par_page: count.toString(),
+    precision: 'standard',
+  };
+
+  // Ajouter les filtres
+  if (postalCode) {
+    params.code_postal = postalCode;
+  } else if (location) {
+    params.ville = location;
+  }
+
+  if (sector) {
+    params.objet_social = sector;
+  }
+
+  // Filtrer pour avoir des entreprises actives avec dirigeants
+  params.statut = 'active';
+
+  const response = await fetch('https://api.pappers.fr/v2/recherche?' + new URLSearchParams(params), {
+    method: 'GET',
+  });
 
   if (!response.ok) {
-    throw new Error(`Erreur Google Places API: ${response.status}`);
+    const errorText = await response.text();
+    console.error('[Pappers] Error:', errorText);
+    throw new Error('Erreur API Pappers');
   }
 
-  const data: GooglePlacesResponse = await response.json();
+  const data = await response.json();
+  console.log('[Pappers] Results:', data.resultats?.length || 0);
 
-  if (data.status !== 'OK') {
-    throw new Error(`Google Places API error: ${data.status}`);
-  }
+  return (data.resultats || []).map((item: any) => {
+    // Trouver le dirigeant principal
+    const dirigeant = item.dirigeants?.[0];
 
-  return (data.results || []).slice(0, count).map((item: GooglePlace) => ({
-    name: item.name,
-    company_name: item.name,
-    address: item.formatted_address,
-    postal_code: postalCode,
-    city: location,
-    phone: null,
-    email: null,
-    website: null,
-    confidence_score: 70,
-    raw_data: item,
-  }));
+    return {
+      name: dirigeant ? `${dirigeant.prenom || ''} ${dirigeant.nom || ''}`.trim() : item.nom_entreprise,
+      company_name: item.nom_entreprise,
+      position: dirigeant?.qualite || 'Dirigeant',
+      profession: item.objet_social?.substring(0, 100),
+      address: item.siege?.adresse_ligne_1,
+      postal_code: item.siege?.code_postal,
+      city: item.siege?.ville,
+      phone: null, // Pappers ne donne pas le téléphone en recherche basique
+      email: null, // Idem pour l'email
+      website: null,
+      confidence_score: 80,
+      raw_data: {
+        siren: item.siren,
+        siret: item.siege?.siret,
+        date_creation: item.date_creation,
+        forme_juridique: item.forme_juridique,
+        dirigeants: item.dirigeants,
+        capital: item.capital_formate,
+        effectif: item.effectif,
+      },
+    };
+  });
 }
 
 // Fonction pour enrichir avec Hunter.io
@@ -350,7 +416,7 @@ async function enrichLeadsWithEmails(leads: any[]): Promise<any[]> {
   return enrichedLeads;
 }
 
-// Fonction pour générer des données démo
+// Fonction pour générer des données démo (commerçants/professions libérales)
 function generateDemoLeads(
   profession: string,
   location?: string,
@@ -370,6 +436,7 @@ function generateDemoLeads(
     leads.push({
       name: `${prenom} ${nom}`,
       company_name: `Cabinet ${nom} - ${profession}`,
+      profession,
       address: `${Math.floor(Math.random() * 200) + 1} ${rue}`,
       postal_code: postalCode || '75015',
       city: location || 'Paris',
@@ -379,6 +446,52 @@ function generateDemoLeads(
       website: `https://www.cabinet-${nom.toLowerCase()}.fr`,
       confidence_score: Math.floor(Math.random() * 40) + 60, // 60-100
       raw_data: { source: 'demo', generated_at: new Date().toISOString() },
+    });
+  }
+
+  return leads;
+}
+
+// Fonction pour générer des données démo dirigeants
+function generateDemoDirigeantsLeads(
+  sector: string,
+  location?: string,
+  postalCode?: string,
+  count: number = 20
+): any[] {
+  const leads = [];
+  const prenoms = ['Jean', 'Marie', 'Pierre', 'Sophie', 'Michel', 'Catherine', 'Philippe', 'Isabelle', 'François', 'Nathalie'];
+  const noms = ['Martin', 'Bernard', 'Dubois', 'Thomas', 'Robert', 'Richard', 'Petit', 'Durand', 'Leroy', 'Moreau'];
+  const positions = ['PDG', 'Directeur Général', 'Gérant', 'Directeur', 'Président'];
+  const rues = ['rue de la République', 'avenue des Champs', 'boulevard Saint-Michel', 'place de la Mairie', 'rue du Commerce'];
+
+  for (let i = 0; i < count; i++) {
+    const prenom = prenoms[Math.floor(Math.random() * prenoms.length)];
+    const nom = noms[Math.floor(Math.random() * noms.length)];
+    const position = positions[Math.floor(Math.random() * positions.length)];
+    const rue = rues[Math.floor(Math.random() * rues.length)];
+    const siren = Math.random().toString().slice(2, 11);
+
+    leads.push({
+      name: `${prenom} ${nom}`,
+      company_name: `${nom} ${sector} SAS`,
+      position,
+      profession: sector,
+      address: `${Math.floor(Math.random() * 200) + 1} ${rue}`,
+      postal_code: postalCode || '75015',
+      city: location || 'Paris',
+      country: 'France',
+      phone: null,
+      email: null,
+      website: null,
+      confidence_score: Math.floor(Math.random() * 30) + 70, // 70-100
+      raw_data: {
+        source: 'demo',
+        siren: siren,
+        capital: `${Math.floor(Math.random() * 500) + 50}000 EUR`,
+        effectif: `${Math.floor(Math.random() * 50) + 5} salariés`,
+        generated_at: new Date().toISOString()
+      },
     });
   }
 

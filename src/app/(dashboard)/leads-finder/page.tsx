@@ -9,44 +9,64 @@ import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
 import {
-  Search,
-  UserPlus,
-  Building2,
-  User,
-  MapPin,
-  Briefcase,
-  Phone,
-  Mail,
-  Globe,
-  Loader2,
-  CheckCircle,
-  Filter,
-  RefreshCw
+  Search, UserPlus, Store, Stethoscope, Briefcase,
+  MapPin, Phone, Mail, Globe, Loader2, Building2,
+  ArrowLeft, Users, CheckCircle2
 } from 'lucide-react';
-import type {
-  LeadResult,
-  LeadSearchRequest,
-  LeadSearchResponse,
-  LeadCreditsResponse,
-  LeadImportResponse
-} from '@/types/leads';
+
+// Types de catégories
+type LeadCategory = 'commercants' | 'professions_liberales' | 'dirigeants' | null;
+
+interface LeadResult {
+  id: string;
+  name: string;
+  company_name?: string;
+  position?: string; // Pour dirigeants
+  profession?: string;
+  address?: string;
+  city?: string;
+  postal_code?: string;
+  phone?: string;
+  email?: string;
+  website?: string;
+  source: string;
+  siren?: string; // Pour dirigeants
+  capital?: string; // Pour dirigeants
+  effectif?: string; // Pour dirigeants
+  imported_to_crm?: boolean;
+}
+
+// Suggestions par catégorie
+const SUGGESTIONS = {
+  commercants: [
+    'Plombier', 'Électricien', 'Boulangerie', 'Restaurant', 'Coiffeur',
+    'Garagiste', 'Menuisier', 'Peintre', 'Maçon', 'Fleuriste',
+    'Boucher', 'Pressing', 'Pizzeria', 'Café', 'Épicerie'
+  ],
+  professions_liberales: [
+    'Médecin généraliste', 'Dentiste', 'Avocat', 'Notaire', 'Architecte',
+    'Pharmacien', 'Kinésithérapeute', 'Expert-comptable', 'Ostéopathe',
+    'Ophtalmologue', 'Dermatologue', 'Vétérinaire', 'Psychologue', 'Chirurgien'
+  ],
+  dirigeants: [
+    'BTP', 'Immobilier', 'Restauration', 'Commerce', 'Services',
+    'Industrie', 'Transport', 'Informatique', 'Santé', 'Finance'
+  ]
+};
 
 export default function LeadsFinderPage() {
-  // États du formulaire
-  const [searchType, setSearchType] = useState<'particulier' | 'entreprise'>('entreprise');
-  const [profession, setProfession] = useState('');
+  // États
+  const [category, setCategory] = useState<LeadCategory>(null);
+  const [searchTerm, setSearchTerm] = useState('');
   const [location, setLocation] = useState('');
   const [postalCode, setPostalCode] = useState('');
   const [leadsCount, setLeadsCount] = useState('20');
-
-  // États des résultats
   const [loading, setLoading] = useState(false);
+  const [importing, setImporting] = useState(false);
   const [results, setResults] = useState<LeadResult[]>([]);
   const [selectedLeads, setSelectedLeads] = useState<Set<string>>(new Set());
   const [creditsBalance, setCreditsBalance] = useState<number | null>(null);
-  const [importing, setImporting] = useState(false);
 
-  // Charger les crédits au montage
   useEffect(() => {
     loadCredits();
   }, []);
@@ -55,22 +75,24 @@ export default function LeadsFinderPage() {
     try {
       const res = await fetch('/api/leads/credits');
       if (res.ok) {
-        const data: LeadCreditsResponse = await res.json();
+        const data = await res.json();
         setCreditsBalance(data.available);
-      } else {
-        console.error('Erreur lors du chargement des crédits');
       }
     } catch (error) {
-      console.error('Erreur lors du chargement des crédits:', error);
+      console.error('Erreur chargement crédits:', error);
     }
   }
 
   async function handleSearch(e: React.FormEvent) {
     e.preventDefault();
 
-    // Validation
-    if (!profession.trim()) {
-      toast.error('Veuillez entrer une profession ou activité');
+    if (!category) {
+      toast.error('Veuillez sélectionner une catégorie');
+      return;
+    }
+
+    if (!searchTerm.trim()) {
+      toast.error('Veuillez entrer une activité ou profession');
       return;
     }
 
@@ -79,46 +101,40 @@ export default function LeadsFinderPage() {
       return;
     }
 
-    const requestedCount = parseInt(leadsCount);
-    if (creditsBalance !== null && creditsBalance < requestedCount) {
-      toast.error(`Crédits insuffisants. Disponible: ${creditsBalance}, Demandé: ${requestedCount}`);
-      return;
-    }
-
     setLoading(true);
     setResults([]);
     setSelectedLeads(new Set());
 
     try {
-      const searchRequest: LeadSearchRequest = {
-        type: searchType,
-        profession: profession.trim(),
-        location: location.trim() || undefined,
-        postalCode: postalCode.trim() || undefined,
-        count: requestedCount,
-      };
-
-      console.log('Recherche de leads:', searchRequest);
-
       const res = await fetch('/api/leads/search', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(searchRequest),
+        body: JSON.stringify({
+          category,
+          searchTerm: searchTerm.trim(),
+          location: location.trim(),
+          postalCode: postalCode.trim(),
+          count: parseInt(leadsCount),
+        }),
       });
 
+      const data = await res.json();
+
       if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.error || 'Erreur lors de la recherche');
+        throw new Error(data.error || 'Erreur lors de la recherche');
       }
 
-      const data: LeadSearchResponse = await res.json();
-      setResults(data.leads);
+      setResults(data.leads || []);
       setCreditsBalance(data.creditsRemaining);
 
-      toast.success(`${data.leads.length} leads trouvés ! (${data.creditsUsed} crédits utilisés)`);
+      if (data.leads?.length > 0) {
+        toast.success(`${data.leads.length} leads trouvés !`);
+      } else {
+        toast.info('Aucun résultat trouvé pour cette recherche');
+      }
 
     } catch (error: unknown) {
-      console.error('Erreur de recherche:', error);
+      console.error('Erreur recherche:', error);
       toast.error(error instanceof Error ? error.message : 'Erreur inconnue');
     } finally {
       setLoading(false);
@@ -126,13 +142,15 @@ export default function LeadsFinderPage() {
   }
 
   function toggleLead(id: string) {
-    const newSelected = new Set(selectedLeads);
-    if (newSelected.has(id)) {
-      newSelected.delete(id);
-    } else {
-      newSelected.add(id);
-    }
-    setSelectedLeads(newSelected);
+    setSelectedLeads(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(id)) {
+        newSet.delete(id);
+      } else {
+        newSet.add(id);
+      }
+      return newSet;
+    });
   }
 
   function selectAll() {
@@ -145,7 +163,7 @@ export default function LeadsFinderPage() {
 
   async function importToCRM() {
     if (selectedLeads.size === 0) {
-      toast.error('Sélectionnez au moins un lead à importer');
+      toast.error('Sélectionnez au moins un lead');
       return;
     }
 
@@ -160,178 +178,248 @@ export default function LeadsFinderPage() {
         }),
       });
 
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.error || 'Erreur lors de l\'import');
-      }
+      if (!res.ok) throw new Error('Erreur import');
 
-      const data: LeadImportResponse = await res.json();
+      const data = await res.json();
       toast.success(`${data.imported} leads importés dans le CRM !`);
 
-      // Marquer comme importés dans l'UI
-      setResults(results.map(r => ({
+      // Marquer comme importés
+      setResults(prev => prev.map(r => ({
         ...r,
         imported_to_crm: selectedLeads.has(r.id) ? true : r.imported_to_crm,
       })));
       setSelectedLeads(new Set());
 
     } catch (error: unknown) {
-      console.error('Erreur d\'import:', error);
-      toast.error(error instanceof Error ? error.message : 'Erreur inconnue');
+      toast.error(error instanceof Error ? error.message : 'Erreur lors de l\'import');
     } finally {
       setImporting(false);
     }
   }
 
-  const availableLeads = results.filter(r => !r.imported_to_crm);
-  const selectedAvailableLeads = Array.from(selectedLeads).filter(id =>
-    availableLeads.some(r => r.id === id)
-  );
+  function resetSearch() {
+    setCategory(null);
+    setSearchTerm('');
+    setLocation('');
+    setPostalCode('');
+    setResults([]);
+    setSelectedLeads(new Set());
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  // ÉCRAN 1 : Sélection de catégorie
+  // ══════════════════════════════════════════════════════════════
+  if (!category) {
+    return (
+      <div className="container mx-auto p-6 space-y-6">
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-3xl font-bold">Lead Finder</h1>
+            <p className="text-muted-foreground">Trouvez de nouveaux prospects qualifiés</p>
+          </div>
+          {creditsBalance !== null && (
+            <Badge variant="outline" className="text-lg px-4 py-2">
+              {creditsBalance} crédits disponibles
+            </Badge>
+          )}
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
+          {/* Commerçants & Artisans */}
+          <Card
+            className="cursor-pointer hover:border-primary transition-colors"
+            onClick={() => setCategory('commercants')}
+          >
+            <CardContent className="pt-6 text-center">
+              <div className="w-16 h-16 mx-auto bg-orange-500/10 rounded-full flex items-center justify-center mb-4">
+                <Store className="w-8 h-8 text-orange-500" />
+              </div>
+              <h3 className="text-xl font-semibold mb-2">Commerçants & Artisans</h3>
+              <p className="text-muted-foreground text-sm mb-4">
+                Plombiers, électriciens, restaurants, commerces de proximité...
+              </p>
+              <Badge variant="secondary">Google Maps</Badge>
+            </CardContent>
+          </Card>
+
+          {/* Professions Libérales */}
+          <Card
+            className="cursor-pointer hover:border-primary transition-colors"
+            onClick={() => setCategory('professions_liberales')}
+          >
+            <CardContent className="pt-6 text-center">
+              <div className="w-16 h-16 mx-auto bg-blue-500/10 rounded-full flex items-center justify-center mb-4">
+                <Stethoscope className="w-8 h-8 text-blue-500" />
+              </div>
+              <h3 className="text-xl font-semibold mb-2">Professions Libérales</h3>
+              <p className="text-muted-foreground text-sm mb-4">
+                Médecins, avocats, notaires, architectes, experts-comptables...
+              </p>
+              <Badge variant="secondary">Google Maps</Badge>
+            </CardContent>
+          </Card>
+
+          {/* Dirigeants d'entreprises */}
+          <Card
+            className="cursor-pointer hover:border-primary transition-colors"
+            onClick={() => setCategory('dirigeants')}
+          >
+            <CardContent className="pt-6 text-center">
+              <div className="w-16 h-16 mx-auto bg-green-500/10 rounded-full flex items-center justify-center mb-4">
+                <Briefcase className="w-8 h-8 text-green-500" />
+              </div>
+              <h3 className="text-xl font-semibold mb-2">Dirigeants d'Entreprises</h3>
+              <p className="text-muted-foreground text-sm mb-4">
+                Gérants, PDG, directeurs avec infos légales (SIREN, capital...)
+              </p>
+              <Badge variant="secondary">Pappers API</Badge>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  // ÉCRAN 2 : Formulaire de recherche
+  // ══════════════════════════════════════════════════════════════
+  const categoryConfig = {
+    commercants: {
+      title: 'Commerçants & Artisans',
+      icon: Store,
+      color: 'text-orange-500',
+      bgColor: 'bg-orange-500/10',
+      placeholder: 'Ex: Plombier, Restaurant, Boulangerie...',
+      label: 'Type de commerce / métier',
+    },
+    professions_liberales: {
+      title: 'Professions Libérales',
+      icon: Stethoscope,
+      color: 'text-blue-500',
+      bgColor: 'bg-blue-500/10',
+      placeholder: 'Ex: Dentiste, Avocat, Notaire...',
+      label: 'Profession',
+    },
+    dirigeants: {
+      title: 'Dirigeants d\'Entreprises',
+      icon: Briefcase,
+      color: 'text-green-500',
+      bgColor: 'bg-green-500/10',
+      placeholder: 'Ex: BTP, Immobilier, Restauration...',
+      label: 'Secteur d\'activité',
+    },
+  };
+
+  const config = categoryConfig[category];
+  const IconComponent = config.icon;
 
   return (
-    <div className="space-y-6">
+    <div className="container mx-auto p-6 space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-white flex items-center gap-2">
-            <Search className="w-8 h-8 text-blue-500" />
-            Lead Finder
-          </h1>
-          <p className="text-gray-400 mt-1">
-            Trouvez de nouveaux prospects qualifiés
-          </p>
+      <div className="flex justify-between items-center">
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="icon" onClick={resetSearch}>
+            <ArrowLeft className="w-5 h-5" />
+          </Button>
+          <div>
+            <div className="flex items-center gap-2">
+              <div className={`w-8 h-8 ${config.bgColor} rounded-full flex items-center justify-center`}>
+                <IconComponent className={`w-4 h-4 ${config.color}`} />
+              </div>
+              <h1 className="text-2xl font-bold">{config.title}</h1>
+            </div>
+            <p className="text-muted-foreground">Recherchez des leads qualifiés</p>
+          </div>
         </div>
         {creditsBalance !== null && (
           <Badge variant="outline" className="text-lg px-4 py-2">
-            <RefreshCw className="w-4 h-4 mr-2" />
-            {creditsBalance} crédits disponibles
+            {creditsBalance} crédits
           </Badge>
         )}
       </div>
 
-      {/* Formulaire de recherche */}
-      <Card className="bg-gray-900/50 border-gray-800">
-        <CardHeader>
-          <CardTitle className="text-white flex items-center gap-2">
-            <Filter className="w-5 h-5" />
-            Rechercher des leads
-          </CardTitle>
-          <CardDescription>
-            Trouvez des professionnels ou entreprises par activité et zone géographique
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSearch} className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {/* Type */}
-              <div>
-                <label className="text-sm font-medium text-gray-300 mb-2 block">
-                  Type de cible
-                </label>
-                <Select value={searchType} onValueChange={(v: 'particulier' | 'entreprise') => setSearchType(v)}>
-                  <SelectTrigger className="bg-gray-800 border-gray-700 text-white">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="bg-gray-800 border-gray-700">
-                    <SelectItem value="entreprise" className="text-white">
-                      <div className="flex items-center gap-2">
-                        <Building2 className="w-4 h-4" />
-                        Entreprise
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="particulier" className="text-white">
-                      <div className="flex items-center gap-2">
-                        <User className="w-4 h-4" />
-                        Particulier
-                      </div>
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Profession */}
-              <div>
-                <label className="text-sm font-medium text-gray-300 mb-2 block">
-                  Profession / Activité
-                </label>
-                <div className="relative">
-                  <Briefcase className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                  <Input
-                    placeholder="Ex: Dentiste, Avocat, Plombier..."
-                    value={profession}
-                    onChange={(e) => setProfession(e.target.value)}
-                    className="pl-10 bg-gray-800 border-gray-700 text-white"
-                  />
+      {/* Formulaire */}
+      <Card>
+        <CardContent className="pt-6">
+          <form onSubmit={handleSearch} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {/* Activité/Profession */}
+              <div className="lg:col-span-2">
+                <label className="text-sm font-medium mb-1 block">{config.label}</label>
+                <Input
+                  placeholder={config.placeholder}
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+                {/* Suggestions */}
+                <div className="flex flex-wrap gap-1 mt-2">
+                  {SUGGESTIONS[category].slice(0, 5).map((suggestion) => (
+                    <Badge
+                      key={suggestion}
+                      variant="outline"
+                      className="cursor-pointer hover:bg-primary hover:text-primary-foreground"
+                      onClick={() => setSearchTerm(suggestion)}
+                    >
+                      {suggestion}
+                    </Badge>
+                  ))}
                 </div>
               </div>
 
               {/* Ville */}
               <div>
-                <label className="text-sm font-medium text-gray-300 mb-2 block">
-                  Ville
-                </label>
+                <label className="text-sm font-medium mb-1 block">Ville</label>
                 <div className="relative">
-                  <MapPin className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                  <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <Input
-                    placeholder="Ex: Paris, Lyon, Marseille..."
+                    placeholder="Paris, Lyon..."
                     value={location}
                     onChange={(e) => setLocation(e.target.value)}
-                    className="pl-10 bg-gray-800 border-gray-700 text-white"
+                    className="pl-10"
                   />
                 </div>
               </div>
 
               {/* Code postal */}
               <div>
-                <label className="text-sm font-medium text-gray-300 mb-2 block">
-                  Code postal
-                </label>
+                <label className="text-sm font-medium mb-1 block">Code postal</label>
                 <Input
-                  placeholder="Ex: 75015"
+                  placeholder="75015"
                   value={postalCode}
                   onChange={(e) => setPostalCode(e.target.value)}
-                  className="bg-gray-800 border-gray-700 text-white"
                 />
               </div>
+            </div>
 
-              {/* Nombre de leads */}
-              <div>
-                <label className="text-sm font-medium text-gray-300 mb-2 block">
-                  Nombre de leads
-                </label>
+            <div className="flex items-center justify-between pt-2">
+              <div className="flex items-center gap-4">
+                <label className="text-sm font-medium">Nombre de résultats :</label>
                 <Select value={leadsCount} onValueChange={setLeadsCount}>
-                  <SelectTrigger className="bg-gray-800 border-gray-700 text-white">
+                  <SelectTrigger className="w-24">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="bg-gray-800 border-gray-700">
-                    <SelectItem value="10" className="text-white">10</SelectItem>
-                    <SelectItem value="20" className="text-white">20</SelectItem>
-                    <SelectItem value="50" className="text-white">50</SelectItem>
-                    <SelectItem value="100" className="text-white">100</SelectItem>
+                  <SelectContent>
+                    <SelectItem value="10">10</SelectItem>
+                    <SelectItem value="20">20</SelectItem>
+                    <SelectItem value="50">50</SelectItem>
+                    <SelectItem value="100">100</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
-              {/* Bouton de recherche */}
-              <div className="flex items-end">
-                <Button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full bg-blue-600 hover:bg-blue-700 text-white"
-                >
-                  {loading ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Recherche en cours...
-                    </>
-                  ) : (
-                    <>
-                      <Search className="w-4 h-4 mr-2" />
-                      Rechercher
-                    </>
-                  )}
-                </Button>
-              </div>
+              <Button type="submit" disabled={loading} size="lg">
+                {loading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Recherche...
+                  </>
+                ) : (
+                  <>
+                    <Search className="w-4 h-4 mr-2" />
+                    Rechercher
+                  </>
+                )}
+              </Button>
             </div>
           </form>
         </CardContent>
@@ -339,152 +427,133 @@ export default function LeadsFinderPage() {
 
       {/* Résultats */}
       {results.length > 0 && (
-        <Card className="bg-gray-900/50 border-gray-800">
+        <Card>
           <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-white">
+            <div className="flex justify-between items-center">
+              <CardTitle className="flex items-center gap-2">
+                <Users className="w-5 h-5" />
                 {results.length} leads trouvés
               </CardTitle>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  onClick={selectAll}
-                  disabled={availableLeads.length === 0}
-                  className="text-white border-gray-600"
-                >
-                  <CheckCircle className="w-4 h-4 mr-2" />
-                  {selectedLeads.size === availableLeads.length ? 'Désélectionner tout' : 'Sélectionner tout'}
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={selectAll}>
+                  {selectedLeads.size === results.length ? 'Tout désélectionner' : 'Tout sélectionner'}
                 </Button>
-                <Button
-                  onClick={importToCRM}
-                  disabled={selectedAvailableLeads.length === 0 || importing}
-                  className="bg-green-600 hover:bg-green-700 text-white"
-                >
+                <Button onClick={importToCRM} disabled={selectedLeads.size === 0 || importing}>
                   {importing ? (
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Import...
+                    </>
                   ) : (
-                    <UserPlus className="w-4 h-4 mr-2" />
+                    <>
+                      <UserPlus className="w-4 h-4 mr-2" />
+                      Importer {selectedLeads.size > 0 && `(${selectedLeads.size})`}
+                    </>
                   )}
-                  Importer {selectedAvailableLeads.length > 0 && `(${selectedAvailableLeads.length})`}
                 </Button>
               </div>
             </div>
           </CardHeader>
           <CardContent>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-gray-700">
-                    <th className="text-left p-3 text-gray-300 font-medium">
-                      <Checkbox
-                        checked={selectedLeads.size === availableLeads.length && availableLeads.length > 0}
-                        onCheckedChange={selectAll}
-                        disabled={availableLeads.length === 0}
-                      />
-                    </th>
-                    <th className="text-left p-3 text-gray-300 font-medium">Nom / Entreprise</th>
-                    <th className="text-left p-3 text-gray-300 font-medium">Adresse</th>
-                    <th className="text-left p-3 text-gray-300 font-medium">Téléphone</th>
-                    <th className="text-left p-3 text-gray-300 font-medium">Email</th>
-                    <th className="text-left p-3 text-gray-300 font-medium">Site web</th>
-                    <th className="text-left p-3 text-gray-300 font-medium">Statut</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {results.map((lead) => (
-                    <tr key={lead.id} className="border-b border-gray-800 hover:bg-gray-800/50">
-                      <td className="p-3">
-                        {!lead.imported_to_crm ? (
+            <div className="border rounded-lg overflow-hidden">
+              <div className="max-h-[500px] overflow-y-auto">
+                <table className="w-full">
+                  <thead className="bg-muted sticky top-0">
+                    <tr>
+                      <th className="p-3 text-left w-10">
+                        <Checkbox
+                          checked={selectedLeads.size === results.length && results.length > 0}
+                          onCheckedChange={selectAll}
+                        />
+                      </th>
+                      <th className="p-3 text-left">
+                        {category === 'dirigeants' ? 'Dirigeant / Entreprise' : 'Nom / Entreprise'}
+                      </th>
+                      <th className="p-3 text-left">Adresse</th>
+                      <th className="p-3 text-left">Téléphone</th>
+                      <th className="p-3 text-left">Email</th>
+                      <th className="p-3 text-left">
+                        {category === 'dirigeants' ? 'SIREN' : 'Site web'}
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {results.map((lead) => (
+                      <tr key={lead.id} className="border-t hover:bg-muted/50">
+                        <td className="p-3">
                           <Checkbox
                             checked={selectedLeads.has(lead.id)}
                             onCheckedChange={() => toggleLead(lead.id)}
+                            disabled={lead.imported_to_crm}
                           />
-                        ) : (
-                          <CheckCircle className="w-4 h-4 text-green-500" />
-                        )}
-                      </td>
-                      <td className="p-3">
-                        <div className="text-white font-medium">
-                          {lead.company_name || lead.name}
-                        </div>
-                        <div className="text-gray-400 text-sm">
-                          {lead.profession}
-                        </div>
-                      </td>
-                      <td className="p-3">
-                        <div className="text-gray-300 text-sm">
-                          {lead.address}
-                        </div>
-                        <div className="text-gray-400 text-xs">
-                          {lead.postal_code} {lead.city}
-                        </div>
-                      </td>
-                      <td className="p-3">
-                        {lead.phone ? (
-                          <div className="flex items-center gap-1 text-gray-300 text-sm">
-                            <Phone className="w-3 h-3" />
-                            {lead.phone}
+                        </td>
+                        <td className="p-3">
+                          <div className="font-medium">{lead.name}</div>
+                          {lead.company_name && (
+                            <div className="text-sm text-muted-foreground">{lead.company_name}</div>
+                          )}
+                          {lead.position && (
+                            <Badge variant="outline" className="mt-1 text-xs">{lead.position}</Badge>
+                          )}
+                          {lead.imported_to_crm && (
+                            <Badge variant="secondary" className="mt-1 text-xs">
+                              <CheckCircle2 className="w-3 h-3 mr-1" />
+                              Importé
+                            </Badge>
+                          )}
+                        </td>
+                        <td className="p-3">
+                          {lead.address && (
+                            <div className="text-sm">{lead.address}</div>
+                          )}
+                          <div className="text-sm text-muted-foreground">
+                            {lead.postal_code} {lead.city}
                           </div>
-                        ) : (
-                          <span className="text-gray-500">-</span>
-                        )}
-                      </td>
-                      <td className="p-3">
-                        {lead.email ? (
-                          <div className="flex items-center gap-1 text-gray-300 text-sm">
-                            <Mail className="w-3 h-3" />
-                            {lead.email}
-                          </div>
-                        ) : (
-                          <span className="text-gray-500">-</span>
-                        )}
-                      </td>
-                      <td className="p-3">
-                        {lead.website ? (
-                          <a
-                            href={lead.website}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex items-center gap-1 text-blue-400 hover:text-blue-300 text-sm"
-                          >
-                            <Globe className="w-3 h-3" />
-                            Voir
-                          </a>
-                        ) : (
-                          <span className="text-gray-500">-</span>
-                        )}
-                      </td>
-                      <td className="p-3">
-                        {lead.imported_to_crm ? (
-                          <Badge className="bg-green-900 text-green-300 border-green-700">
-                            Importé
-                          </Badge>
-                        ) : (
-                          <Badge variant="outline" className="text-gray-300 border-gray-600">
-                            Nouveau
-                          </Badge>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                        </td>
+                        <td className="p-3">
+                          {lead.phone ? (
+                            <a href={`tel:${lead.phone}`} className="flex items-center gap-1 text-primary hover:underline">
+                              <Phone className="w-3 h-3" />
+                              {lead.phone}
+                            </a>
+                          ) : (
+                            <span className="text-muted-foreground">-</span>
+                          )}
+                        </td>
+                        <td className="p-3">
+                          {lead.email ? (
+                            <a href={`mailto:${lead.email}`} className="flex items-center gap-1 text-primary hover:underline">
+                              <Mail className="w-3 h-3" />
+                              {lead.email}
+                            </a>
+                          ) : (
+                            <span className="text-muted-foreground">-</span>
+                          )}
+                        </td>
+                        <td className="p-3">
+                          {category === 'dirigeants' ? (
+                            lead.siren ? (
+                              <span className="font-mono text-sm">{lead.siren}</span>
+                            ) : (
+                              <span className="text-muted-foreground">-</span>
+                            )
+                          ) : (
+                            lead.website ? (
+                              <a href={lead.website} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-primary hover:underline">
+                                <Globe className="w-3 h-3" />
+                                Voir
+                              </a>
+                            ) : (
+                              <span className="text-muted-foreground">-</span>
+                            )
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Message si aucun résultat */}
-      {!loading && results.length === 0 && (
-        <Card className="bg-gray-900/50 border-gray-800">
-          <CardContent className="text-center py-12">
-            <Search className="w-16 h-16 text-gray-600 mx-auto mb-4" />
-            <h3 className="text-xl font-medium text-gray-300 mb-2">
-              Aucune recherche effectuée
-            </h3>
-            <p className="text-gray-400">
-              Utilisez le formulaire ci-dessus pour rechercher des leads
-            </p>
           </CardContent>
         </Card>
       )}
