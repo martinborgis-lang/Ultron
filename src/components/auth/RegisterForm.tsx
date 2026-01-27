@@ -49,12 +49,14 @@ export function RegisterForm() {
 
     // Vérifier si l'email doit être confirmé
     if (authData.user && !authData.session) {
+      // Email confirmation requise - on s'arrête ici
+      // L'organisation et l'utilisateur seront créés après confirmation de l'email
       setEmailSent(true);
       setLoading(false);
       return;
     }
 
-    // 2. Create organization with default scoring config
+    // 2. Create organization with default scoring config (seulement si email confirmé)
     const { data: orgData, error: orgError } = await supabase
       .from('organizations')
       .insert({
@@ -302,33 +304,90 @@ Email court et professionnel pour présenter la plaquette en pièce jointe.`,
             }}>
               Vérifiez également votre dossier de courriers indésirables.
             </p>
-            <Link
-              href="/login"
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '8px',
-                padding: '10px 20px',
-                fontSize: '0.9rem',
-                fontWeight: 500,
-                color: 'var(--text-white)',
-                background: 'transparent',
-                border: '1px solid var(--border)',
-                borderRadius: '8px',
-                textDecoration: 'none',
-                transition: 'var(--transition)'
-              }}
-              onMouseOver={(e) => {
-                e.currentTarget.style.borderColor = 'var(--primary)';
-                e.currentTarget.style.background = 'rgba(59, 130, 246, 0.1)';
-              }}
-              onMouseOut={(e) => {
-                e.currentTarget.style.borderColor = 'var(--border)';
-                e.currentTarget.style.background = 'transparent';
-              }}
-            >
-              Retour à la connexion
-            </Link>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <button
+                onClick={async () => {
+                  const supabase = createClient();
+                  const { error } = await supabase.auth.resend({
+                    type: 'signup',
+                    email,
+                    options: {
+                      emailRedirectTo: `${window.location.origin}/auth/callback?next=/dashboard`
+                    }
+                  });
+                  if (error) {
+                    setError(error.message);
+                  } else {
+                    // Afficher un message de succès temporaire
+                    const originalButton = document.activeElement as HTMLButtonElement;
+                    if (originalButton) {
+                      const originalText = originalButton.textContent;
+                      originalButton.textContent = 'Email envoyé !';
+                      originalButton.style.background = 'rgba(34, 197, 94, 0.1)';
+                      originalButton.style.borderColor = '#22c55e';
+                      originalButton.style.color = '#22c55e';
+                      setTimeout(() => {
+                        originalButton.textContent = originalText;
+                        originalButton.style.background = 'transparent';
+                        originalButton.style.borderColor = 'var(--border)';
+                        originalButton.style.color = 'var(--text-white)';
+                      }, 3000);
+                    }
+                  }
+                }}
+                style={{
+                  padding: '10px 20px',
+                  fontSize: '0.9rem',
+                  fontWeight: 500,
+                  color: 'var(--text-white)',
+                  background: 'transparent',
+                  border: '1px solid var(--border)',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  transition: 'var(--transition)'
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.borderColor = 'var(--primary)';
+                  e.currentTarget.style.background = 'rgba(59, 130, 246, 0.1)';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.borderColor = 'var(--border)';
+                  e.currentTarget.style.background = 'transparent';
+                }}
+              >
+                Renvoyer l'email
+              </button>
+
+              <Link
+                href="/login"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  padding: '10px 20px',
+                  fontSize: '0.9rem',
+                  fontWeight: 500,
+                  color: 'var(--text-muted)',
+                  background: 'transparent',
+                  border: '1px solid var(--border)',
+                  borderRadius: '8px',
+                  textDecoration: 'none',
+                  transition: 'var(--transition)'
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.borderColor = 'var(--primary)';
+                  e.currentTarget.style.color = 'var(--text-white)';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.borderColor = 'var(--border)';
+                  e.currentTarget.style.color = 'var(--text-muted)';
+                }}
+              >
+                Retour à la connexion
+              </Link>
+            </div>
           </div>
         </div>
       </div>

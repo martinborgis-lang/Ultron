@@ -49,10 +49,16 @@ export default function AuthCallbackPage() {
             return;
           }
 
-          // Check if this is an invite - redirect to set password
-          if (type === 'invite' || type === 'signup' || type === 'recovery') {
-            logger.debug('[Auth Callback] Invite flow, redirecting to set-password');
+          // Check if this is an invite or signup - redirect appropriately
+          if (type === 'invite' || type === 'recovery') {
+            logger.debug('[Auth Callback] Invite/recovery flow, redirecting to set-password');
             router.push('/auth/set-password');
+            return;
+          }
+
+          if (type === 'signup') {
+            logger.debug('[Auth Callback] Signup flow, redirecting to complete-registration');
+            router.push('/complete-registration');
             return;
           }
 
@@ -75,8 +81,13 @@ export default function AuthCallbackPage() {
             return;
           }
 
-          if (type === 'invite' || type === 'signup' || type === 'recovery') {
+          if (type === 'invite' || type === 'recovery') {
             router.push('/auth/set-password');
+            return;
+          }
+
+          if (type === 'signup') {
+            router.push('/complete-registration');
             return;
           }
 
