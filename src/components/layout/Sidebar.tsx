@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { cn } from '@/lib/utils';
-import { Bot, LayoutDashboard, Users, Settings, LogOut, Calculator, Calendar, Sliders, LayoutGrid, CheckSquare, Upload, MessageSquare, Video, Shield, Search } from 'lucide-react';
+import { Bot, LayoutDashboard, Users, Settings, LogOut, Calculator, Calendar, Sliders, LayoutGrid, CheckSquare, Upload, MessageSquare, Video, Shield, Search, Linkedin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { useUser } from '@/hooks/useUser';
@@ -22,6 +22,7 @@ const navigation = [
 
 const features = [
   { name: 'Assistant IA', href: '/assistant', icon: MessageSquare },
+  { name: 'LinkedIn Agent', href: '/linkedin-agent', icon: Linkedin },
   { name: 'Calculateur', href: '/features/calculateur', icon: Calculator },
   { name: 'Scoring IA', href: '/settings/scoring', icon: Sliders },
 ];

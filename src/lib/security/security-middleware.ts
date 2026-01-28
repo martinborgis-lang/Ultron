@@ -48,7 +48,7 @@ export const DEFAULT_SECURITY_CONFIG: SecurityConfig = {
       'http://localhost:3002',
       'https://ultron-murex.vercel.app'
     ],
-    exemptPaths: ['/api/webhooks', '/api/auth', '/api/extension', '/api/gmail', '/api/team', '/api/user/me', '/api/organization', '/api/google', '/api/debug', '/api/security', '/api/settings', '/api/crm', '/api/leads']
+    exemptPaths: ['/api/webhooks', '/api/auth', '/api/extension', '/api/gmail', '/api/team', '/api/user/me', '/api/organization', '/api/google', '/api/debug', '/api/security', '/api/settings', '/api/crm', '/api/leads', '/api/linkedin']
   },
   headers: {
     enforceSecureHeaders: true,
@@ -359,7 +359,8 @@ export class SecurityMiddleware {
       '/api/webhooks/plaquette',
       '/api/webhooks/send-rappel',
       '/api/meeting/analyze',
-      '/api/extension/analyze'
+      '/api/extension/analyze',
+      '/api/linkedin/generate'
     ];
 
     return aiPaths.some(aiPath => path.startsWith(aiPath));
