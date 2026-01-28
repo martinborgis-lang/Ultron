@@ -112,23 +112,12 @@ export async function POST(request: NextRequest) {
     if (body.agent_language) updateData.agent_language = body.agent_language;
     if (body.system_prompt) updateData.system_prompt = body.system_prompt.trim();
 
-    // Configuration VAPI
-    if (body.vapi_api_key !== undefined) updateData.vapi_api_key = body.vapi_api_key ? body.vapi_api_key.trim() : null;
-    if (body.vapi_phone_number) updateData.vapi_phone_number = body.vapi_phone_number.trim();
-    if (body.vapi_assistant_id) updateData.vapi_assistant_id = body.vapi_assistant_id.trim();
-
-    // Autres champs VAPI (si ces colonnes existent réellement)
-    if (body.working_hours_start) updateData.working_hours_start = body.working_hours_start;
-    if (body.working_hours_end) updateData.working_hours_end = body.working_hours_end;
-    if (body.working_days) updateData.working_days = body.working_days;
-    if (body.timezone) updateData.timezone = body.timezone;
-    if (body.qualification_questions) updateData.qualification_questions = body.qualification_questions;
-    if (body.max_call_duration_seconds) updateData.max_call_duration_seconds = body.max_call_duration_seconds;
-    if (body.retry_on_no_answer !== undefined) updateData.retry_on_no_answer = body.retry_on_no_answer;
-    if (body.max_retry_attempts) updateData.max_retry_attempts = body.max_retry_attempts;
-    if (body.delay_between_retries_minutes) updateData.delay_between_retries_minutes = body.delay_between_retries_minutes;
+    // Configuration webhook (colonnes qui existent réellement)
     if (body.webhook_url) updateData.webhook_url = body.webhook_url.trim();
-    if (body.webhook_secret) updateData.webhook_secret = body.webhook_secret.trim();
+    if (body.webhook_events) updateData.webhook_events = body.webhook_events;
+
+    // Note: Les autres colonnes VAPI (vapi_api_key, working_hours, etc.) n'existent pas dans la table actuelle
+    // Si vous voulez les utiliser, il faudra d'abord les ajouter à la table voice_config
 
     // Note: twilio_configured n'existe pas dans voice_config (table voice seulement)
 
