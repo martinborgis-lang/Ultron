@@ -732,6 +732,50 @@ function ConfigurationModal({
           </div>
         </div>
 
+        {/* Configuration VAPI */}
+        <div className="space-y-4">
+          <h4 className="font-medium flex items-center gap-2">
+            <Mic className="h-4 w-4" />
+            Configuration VAPI
+          </h4>
+
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="vapi_api_key">Clé API VAPI *</Label>
+              <Input
+                id="vapi_api_key"
+                type="password"
+                value={config.vapi_api_key || ''}
+                onChange={(e) => setConfig({...config, vapi_api_key: e.target.value})}
+                placeholder="sk-..."
+              />
+              <p className="text-xs text-gray-600 mt-1">Votre clé API Vapi.ai (requise)</p>
+            </div>
+
+            <div>
+              <Label htmlFor="vapi_phone_number">Numéro Téléphone VAPI *</Label>
+              <Input
+                id="vapi_phone_number"
+                value={config.vapi_phone_number || ''}
+                onChange={(e) => setConfig({...config, vapi_phone_number: e.target.value})}
+                placeholder="+33123456789"
+              />
+              <p className="text-xs text-gray-600 mt-1">Numéro d'appel Vapi configuré</p>
+            </div>
+
+            <div>
+              <Label htmlFor="vapi_assistant_id">ID Assistant VAPI *</Label>
+              <Input
+                id="vapi_assistant_id"
+                value={config.vapi_assistant_id || ''}
+                onChange={(e) => setConfig({...config, vapi_assistant_id: e.target.value})}
+                placeholder="assistant_..."
+              />
+              <p className="text-xs text-gray-600 mt-1">ID de votre assistant Vapi configuré</p>
+            </div>
+          </div>
+        </div>
+
         {/* Paramètres avancés */}
         <div className="space-y-4">
           <h4 className="font-medium">Paramètres Avancés</h4>
