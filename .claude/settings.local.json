@@ -27,7 +27,8 @@
       "Bash(timeout 60s npm run build)",
       "Bash(git rev-parse:*)",
       "Bash(psql:*)",
-      "Bash(xargs cat:*)"
+      "Bash(xargs cat:*)",
+      "Bash(grep:*)"
     ],
     "deny": [],
     "ask": []

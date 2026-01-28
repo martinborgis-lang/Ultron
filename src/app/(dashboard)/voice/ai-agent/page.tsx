@@ -222,7 +222,7 @@ export default function AIAgentDashboard() {
               onCheckedChange={toggleAgent}
               disabled={!config}
             />
-            <Badge variant={config?.is_enabled ? 'success' : 'secondary'}>
+            <Badge variant={config?.is_enabled ? 'default' : 'secondary'}>
               {config?.is_enabled ? 'Actif' : 'Inactif'}
             </Badge>
           </div>
@@ -399,7 +399,7 @@ function StatsCard({ title, value, icon: Icon, trend, color }: StatsCardProps) {
 function RecentCallsTable({ calls }: { calls: RecentCall[] }) {
   const getStatusBadge = (status: string) => {
     const statusMap = {
-      completed: { variant: 'success' as const, label: 'Terminé' },
+      completed: { variant: 'default' as const, label: 'Terminé' },
       in_progress: { variant: 'default' as const, label: 'En cours' },
       failed: { variant: 'destructive' as const, label: 'Échec' },
       no_answer: { variant: 'secondary' as const, label: 'Pas de réponse' },
@@ -412,7 +412,7 @@ function RecentCallsTable({ calls }: { calls: RecentCall[] }) {
 
   const getOutcomeBadge = (outcome: string) => {
     const outcomeMap = {
-      appointment_booked: { variant: 'success' as const, label: 'RDV Pris', icon: CheckCircle },
+      appointment_booked: { variant: 'default' as const, label: 'RDV Pris', icon: CheckCircle },
       callback_requested: { variant: 'default' as const, label: 'Rappel', icon: Phone },
       not_interested: { variant: 'destructive' as const, label: 'Pas intéressé', icon: XCircle },
       wrong_number: { variant: 'secondary' as const, label: 'Mauvais n°', icon: AlertCircle },
@@ -585,7 +585,7 @@ function WebhooksPanel() {
                   Déclenche des appels automatiques depuis les formulaires web
                 </p>
               </div>
-              <Badge variant="success">Actif</Badge>
+              <Badge variant="default">Actif</Badge>
             </div>
             <div className="mt-2 text-xs text-gray-500 font-mono">
               POST /api/voice/ai-agent/webhook
@@ -600,7 +600,7 @@ function WebhooksPanel() {
                   Reçoit les événements des appels en cours
                 </p>
               </div>
-              <Badge variant="success">Actif</Badge>
+              <Badge variant="default">Actif</Badge>
             </div>
             <div className="mt-2 text-xs text-gray-500 font-mono">
               POST /api/voice/ai-agent/vapi-webhook
