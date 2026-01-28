@@ -16,6 +16,7 @@ const navigation = [
   { name: 'Lead Finder', href: '/leads-finder', icon: Search },
   { name: 'Planning', href: '/planning', icon: Calendar },
   { name: 'Appels', href: '/voice/calls', icon: Phone },
+  { name: 'Test Formulaire', href: '/voice/form-test', icon: CheckSquare },
   { name: 'Reunions', href: '/meetings', icon: Video },
   { name: 'Importer', href: '/import', icon: Upload },
   { name: 'Configuration', href: '/settings', icon: Settings },
@@ -24,7 +25,6 @@ const navigation = [
 const features = [
   { name: 'Assistant IA', href: '/assistant', icon: MessageSquare },
   { name: 'Agent Vocal IA', href: '/voice/ai-agent', icon: Mic },
-  { name: 'Formulaire Test', href: '/voice/form-test', icon: CheckSquare },
   { name: 'LinkedIn Agent', href: '/linkedin-agent', icon: Linkedin },
   { name: 'Calculateur', href: '/features/calculateur', icon: Calculator },
   { name: 'Scoring IA', href: '/settings/scoring', icon: Sliders },
