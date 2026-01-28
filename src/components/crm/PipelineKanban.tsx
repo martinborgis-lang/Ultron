@@ -17,6 +17,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { PipelineStage, CrmProspect } from '@/types/crm';
 import { PipelineColumn } from './PipelineColumn';
 import { ProspectCard } from './ProspectCard';
+import { CallWidget } from '@/components/voice/CallWidget';
 import { useToast } from '@/hooks/use-toast';
 
 interface PipelineKanbanProps {
@@ -52,6 +53,16 @@ export function PipelineKanban({
 }: PipelineKanbanProps) {
   const [activeProspect, setActiveProspect] = useState<CrmProspect | null>(null);
   const [localProspects, setLocalProspects] = useState(prospects);
+  const [callWidget, setCallWidget] = useState<{
+    isOpen: boolean;
+    prospectId?: string;
+    prospectName: string;
+    phoneNumber: string;
+  }>({
+    isOpen: false,
+    prospectName: '',
+    phoneNumber: ''
+  });
   const { toast } = useToast();
 
   // Create a Set of valid stage slugs for quick lookup
@@ -69,6 +80,43 @@ export function PipelineKanban({
       },
     })
   );
+
+  // Gestion des appels Click-to-Call
+  const handleCall = (prospectId: string, prospectName: string, phoneNumber: string) => {
+    setCallWidget({
+      isOpen: true,
+      prospectId,
+      prospectName,
+      phoneNumber
+    });
+  };
+
+  const handleCallCompleted = async (outcome: string, notes: string) => {
+    if (callWidget.prospectId) {
+      // Mettre à jour le prospect si nécessaire selon l'outcome
+      toast({
+        title: "Appel terminé",
+        description: `Appel avec ${callWidget.prospectName} terminé. Outcome: ${outcome}`,
+      });
+
+      // Optionnel: rafraîchir les données si nécessaire
+      // onProspectMove pourrait être utilisé pour mettre à jour le stage si needed
+    }
+
+    setCallWidget({
+      isOpen: false,
+      prospectName: '',
+      phoneNumber: ''
+    });
+  };
+
+  const handleCallClose = () => {
+    setCallWidget({
+      isOpen: false,
+      prospectName: '',
+      phoneNumber: ''
+    });
+  };
 
   const handleDragStart = (event: DragStartEvent) => {
     const prospect = localProspects.find((p) => p.id === event.active.id);
@@ -221,6 +269,7 @@ export function PipelineKanban({
             stage={stage}
             prospects={prospectsByStage[stage.slug] || []}
             onProspectClick={onProspectClick}
+            onCall={handleCall}
             columnIndex={index}
           />
         ))}
@@ -243,6 +292,16 @@ export function PipelineKanban({
           )}
         </AnimatePresence>
       </DragOverlay>
+
+      {/* Widget d'appel Click-to-Call */}
+      <CallWidget
+        isOpen={callWidget.isOpen}
+        onClose={handleCallClose}
+        prospectId={callWidget.prospectId}
+        prospectName={callWidget.prospectName}
+        phoneNumber={callWidget.phoneNumber}
+        onCallCompleted={handleCallCompleted}
+      />
     </DndContext>
   );
 }

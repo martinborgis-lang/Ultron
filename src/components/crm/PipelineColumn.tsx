@@ -12,6 +12,7 @@ interface PipelineColumnProps {
   stage: PipelineStage & { prospects_count?: number };
   prospects: CrmProspect[];
   onProspectClick: (prospect: CrmProspect) => void;
+  onCall?: (prospectId: string, prospectName: string, phoneNumber: string) => void;
   columnIndex?: number;
 }
 
@@ -38,7 +39,7 @@ const emptyStateVariants = {
   },
 };
 
-export function PipelineColumn({ stage, prospects, onProspectClick, columnIndex = 0 }: PipelineColumnProps) {
+export function PipelineColumn({ stage, prospects, onProspectClick, onCall, columnIndex = 0 }: PipelineColumnProps) {
   const { setNodeRef, isOver } = useDroppable({
     id: stage.slug,
   });
@@ -110,6 +111,7 @@ export function PipelineColumn({ stage, prospects, onProspectClick, columnIndex 
                   key={prospect.id}
                   prospect={prospect}
                   onClick={() => onProspectClick(prospect)}
+                  onCall={onCall}
                   index={index}
                 />
               ))}

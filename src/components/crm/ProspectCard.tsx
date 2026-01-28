@@ -6,7 +6,7 @@ import { motion } from 'framer-motion';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { CrmProspect } from '@/types/crm';
-import { User, Building2, Phone, Mail, Euro, Sparkles, Zap } from 'lucide-react';
+import { User, Building2, Phone, Mail, Euro, Sparkles, Zap, PhoneCall } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface ProspectCardProps {
@@ -14,6 +14,7 @@ interface ProspectCardProps {
   onClick?: () => void;
   isDragging?: boolean;
   index?: number;
+  onCall?: (prospectId: string, prospectName: string, phoneNumber: string) => void;
 }
 
 const qualificationColors: Record<string, string> = {
@@ -49,7 +50,7 @@ const cardVariants = {
   },
 };
 
-export function ProspectCard({ prospect, onClick, isDragging, index = 0 }: ProspectCardProps) {
+export function ProspectCard({ prospect, onClick, isDragging, index = 0, onCall }: ProspectCardProps) {
   const fullName = [prospect.first_name, prospect.last_name].filter(Boolean).join(' ') || 'Sans nom';
   const isHighScore = (prospect.score_ia ?? 0) > 80;
 
@@ -60,6 +61,13 @@ export function ProspectCard({ prospect, onClick, isDragging, index = 0 }: Prosp
       currency: 'EUR',
       maximumFractionDigits: 0,
     }).format(value);
+  };
+
+  const handleCallClick = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Empêcher l'ouverture de la modal prospect
+    if (onCall && prospect.phone) {
+      onCall(prospect.id, fullName, prospect.phone);
+    }
   };
 
   return (
@@ -141,7 +149,7 @@ export function ProspectCard({ prospect, onClick, isDragging, index = 0 }: Prosp
       )}
 
       {/* Contact Info */}
-      <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+      <div className="flex flex-wrap gap-2 text-xs text-muted-foreground mb-2">
         {prospect.phone && (
           <span className="flex items-center gap-1">
             <Phone className="w-3 h-3" />
@@ -155,6 +163,25 @@ export function ProspectCard({ prospect, onClick, isDragging, index = 0 }: Prosp
           </span>
         )}
       </div>
+
+      {/* Actions - Bouton d'appel */}
+      {prospect.phone && onCall && (
+        <div className="flex justify-end mt-2">
+          <button
+            onClick={handleCallClick}
+            className={cn(
+              'flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium transition-all',
+              'bg-green-500/10 hover:bg-green-500/20 text-green-400 hover:text-green-300',
+              'border border-green-500/20 hover:border-green-500/30',
+              'hover:scale-105 active:scale-95'
+            )}
+            title="Appeler ce prospect"
+          >
+            <PhoneCall className="w-3 h-3" />
+            Appeler
+          </button>
+        </div>
+      )}
 
         {/* Tags */}
         {prospect.tags && prospect.tags.length > 0 && (
@@ -177,7 +204,7 @@ export function ProspectCard({ prospect, onClick, isDragging, index = 0 }: Prosp
 }
 
 // Version draggable
-export function DraggableProspectCard({ prospect, onClick, index = 0 }: ProspectCardProps) {
+export function DraggableProspectCard({ prospect, onClick, index = 0, onCall }: ProspectCardProps) {
   const {
     attributes,
     listeners,
@@ -194,7 +221,7 @@ export function DraggableProspectCard({ prospect, onClick, index = 0 }: Prospect
 
   return (
     <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
-      <ProspectCard prospect={prospect} onClick={onClick} isDragging={isDragging} index={index} />
+      <ProspectCard prospect={prospect} onClick={onClick} isDragging={isDragging} index={index} onCall={onCall} />
     </div>
   );
 }
