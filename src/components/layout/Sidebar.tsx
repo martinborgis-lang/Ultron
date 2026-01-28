@@ -24,6 +24,7 @@ const navigation = [
 const features = [
   { name: 'Assistant IA', href: '/assistant', icon: MessageSquare },
   { name: 'Agent Vocal IA', href: '/voice/ai-agent', icon: Mic },
+  { name: 'Formulaire Test', href: '/voice/form-test', icon: CheckSquare },
   { name: 'LinkedIn Agent', href: '/linkedin-agent', icon: Linkedin },
   { name: 'Calculateur', href: '/features/calculateur', icon: Calculator },
   { name: 'Scoring IA', href: '/settings/scoring', icon: Sliders },
