@@ -51,9 +51,31 @@ interface LinkedInPost {
   created_at: string;
 }
 
+// Configuration par défaut pour éviter les erreurs undefined
+const defaultConfig: LinkedInConfig = {
+  cabinet_name: '',
+  cabinet_description: '',
+  cabinet_specialties: [],
+  cabinet_values: '',
+  cabinet_differentiators: '',
+  years_experience: null,
+  clients_count: null,
+  average_return: null,
+  assets_under_management: null,
+  website_url: '',
+  booking_url: '',
+  phone: '',
+  tone: 'professionnel',
+  target_audience: '',
+  topics_to_avoid: '',
+  brochure_url: '',
+  brochure_text: '',
+  preferred_hashtags: [],
+};
+
 export default function LinkedInAgentPage() {
   const [activeTab, setActiveTab] = useState('generate');
-  const [config, setConfig] = useState<LinkedInConfig | null>(null);
+  const [config, setConfig] = useState<LinkedInConfig>(defaultConfig);
   const [posts, setPosts] = useState<LinkedInPost[]>([]);
   const [loading, setLoading] = useState(false);
   const [generating, setGenerating] = useState(false);
@@ -74,29 +96,13 @@ export default function LinkedInAgentPage() {
       const res = await fetch('/api/linkedin/config');
       if (res.ok) {
         const data = await res.json();
-        setConfig(data.config || {
-          cabinet_name: '',
-          cabinet_description: '',
-          cabinet_specialties: [],
-          cabinet_values: '',
-          cabinet_differentiators: '',
-          years_experience: null,
-          clients_count: null,
-          average_return: null,
-          assets_under_management: null,
-          website_url: '',
-          booking_url: '',
-          phone: '',
-          tone: 'professionnel',
-          target_audience: '',
-          topics_to_avoid: '',
-          brochure_url: '',
-          brochure_text: '',
-          preferred_hashtags: [],
-        });
+        // Merger avec les valeurs par défaut pour éviter les undefined
+        setConfig({ ...defaultConfig, ...data.config });
       }
     } catch (error) {
       console.error('Erreur chargement config:', error);
+      // En cas d'erreur, garder la config par défaut
+      setConfig(defaultConfig);
     }
   }
 
@@ -134,7 +140,7 @@ export default function LinkedInAgentPage() {
   }
 
   async function generatePost() {
-    if (!config?.cabinet_name) {
+    if (!config.cabinet_name) {
       toast.error('Veuillez d\'abord configurer votre cabinet');
       setActiveTab('config');
       return;
@@ -294,7 +300,7 @@ export default function LinkedInAgentPage() {
                   )}
                 </Button>
 
-                {!config?.cabinet_name && (
+                {!config.cabinet_name && (
                   <p className="text-sm text-yellow-500 mt-2">
                     ⚠️ Configurez d'abord votre cabinet pour de meilleurs résultats
                   </p>
@@ -321,7 +327,7 @@ export default function LinkedInAgentPage() {
                           <Building2 className="w-6 h-6 text-primary" />
                         </div>
                         <div>
-                          <div className="font-semibold">{config?.cabinet_name || 'Votre Cabinet'}</div>
+                          <div className="font-semibold">{config.cabinet_name || 'Votre Cabinet'}</div>
                           <div className="text-xs text-muted-foreground">Conseil en Gestion de Patrimoine • À l'instant</div>
                         </div>
                       </div>
@@ -404,7 +410,7 @@ export default function LinkedInAgentPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {config && (
+              {/* Configuration form est toujours rendue car config a des valeurs par défaut */}
                 <form onSubmit={saveConfig} className="space-y-6">
                   {/* Section : Identité */}
                   <div className="space-y-4">
@@ -457,7 +463,7 @@ export default function LinkedInAgentPage() {
                     <div>
                       <label className="text-sm font-medium mb-1 block">Spécialités (séparées par des virgules)</label>
                       <Input
-                        value={config.cabinet_specialties.join(', ')}
+                        value={Array.isArray(config.cabinet_specialties) ? config.cabinet_specialties.join(', ') : ''}
                         onChange={(e) => setConfig(prev => ({
                           ...prev!,
                           cabinet_specialties: e.target.value.split(',').map(s => s.trim()).filter(Boolean)
@@ -576,7 +582,7 @@ export default function LinkedInAgentPage() {
                     <div>
                       <label className="text-sm font-medium mb-1 block">Hashtags favoris (séparés par des virgules)</label>
                       <Input
-                        value={config.preferred_hashtags.join(', ')}
+                        value={Array.isArray(config.preferred_hashtags) ? config.preferred_hashtags.join(', ') : ''}
                         onChange={(e) => setConfig(prev => ({
                           ...prev!,
                           preferred_hashtags: e.target.value.split(',').map(s => s.trim()).filter(Boolean)
@@ -621,7 +627,6 @@ export default function LinkedInAgentPage() {
                     </Button>
                   </div>
                 </form>
-              )}
             </CardContent>
           </Card>
         </TabsContent>
