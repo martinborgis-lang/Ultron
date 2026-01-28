@@ -749,29 +749,17 @@ function ConfigurationModal({
                 onChange={(e) => setConfig({...config, vapi_api_key: e.target.value})}
                 placeholder="sk-..."
               />
-              <p className="text-xs text-gray-600 mt-1">Votre clé API Vapi.ai (requise)</p>
+              <p className="text-xs text-gray-600 mt-1">Votre clé API Vapi.ai (requise pour l'IA vocale)</p>
             </div>
 
-            <div>
-              <Label htmlFor="vapi_phone_number">Numéro Téléphone VAPI *</Label>
-              <Input
-                id="vapi_phone_number"
-                value={config.vapi_phone_number || ''}
-                onChange={(e) => setConfig({...config, vapi_phone_number: e.target.value})}
-                placeholder="+33123456789"
-              />
-              <p className="text-xs text-gray-600 mt-1">Numéro d'appel Vapi configuré</p>
-            </div>
-
-            <div>
-              <Label htmlFor="vapi_assistant_id">ID Assistant VAPI *</Label>
-              <Input
-                id="vapi_assistant_id"
-                value={config.vapi_assistant_id || ''}
-                onChange={(e) => setConfig({...config, vapi_assistant_id: e.target.value})}
-                placeholder="assistant_..."
-              />
-              <p className="text-xs text-gray-600 mt-1">ID de votre assistant Vapi configuré</p>
+            <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+              <div className="flex items-center gap-2 text-blue-700 font-medium">
+                <Phone className="h-4 w-4" />
+                Configuration Twilio
+              </div>
+              <p className="text-xs text-blue-600 mt-1">
+                ✅ Configuré via les variables d'environnement Vercel (TWILIO_PHONE_NUMBER, TWILIO_ACCOUNT_SID, etc.)
+              </p>
             </div>
           </div>
         </div>

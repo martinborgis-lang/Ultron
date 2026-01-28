@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
         auto_recording: true,
         auto_transcription: true,
         vapi_api_key: null,
-        vapi_phone_number: null,
+        vapi_phone_number: process.env.TWILIO_PHONE_NUMBER || null,
         vapi_assistant_id: null,
         working_hours_start: '09:00',
         working_hours_end: '18:00',
