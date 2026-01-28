@@ -732,30 +732,28 @@ function ConfigurationModal({
           </div>
         </div>
 
-        {/* Configuration VAPI */}
+        {/* Configuration Services */}
         <div className="space-y-4">
           <h4 className="font-medium flex items-center gap-2">
-            <Mic className="h-4 w-4" />
-            Configuration VAPI
+            <Settings className="h-4 w-4" />
+            Services Externes
           </h4>
 
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="vapi_api_key">Clé API VAPI *</Label>
-              <Input
-                id="vapi_api_key"
-                type="password"
-                value={config.vapi_api_key || ''}
-                onChange={(e) => setConfig({...config, vapi_api_key: e.target.value})}
-                placeholder="sk-..."
-              />
-              <p className="text-xs text-gray-600 mt-1">Votre clé API Vapi.ai (requise pour l'IA vocale)</p>
+          <div className="space-y-3">
+            <div className="p-3 bg-green-50 rounded-lg border border-green-200">
+              <div className="flex items-center gap-2 text-green-700 font-medium">
+                <Mic className="h-4 w-4" />
+                VAPI.ai (IA Vocale)
+              </div>
+              <p className="text-xs text-green-600 mt-1">
+                ✅ Configuré via les variables d'environnement Vercel (VAPI_API_KEY)
+              </p>
             </div>
 
             <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
               <div className="flex items-center gap-2 text-blue-700 font-medium">
                 <Phone className="h-4 w-4" />
-                Configuration Twilio
+                Twilio (Infrastructure téléphonique)
               </div>
               <p className="text-xs text-blue-600 mt-1">
                 ✅ Configuré via les variables d'environnement Vercel (TWILIO_PHONE_NUMBER, TWILIO_ACCOUNT_SID, etc.)

@@ -455,8 +455,11 @@ Commencez toujours par vous présenter et demander si la personne a quelques min
    * Créer une instance VapiService avec API key chiffrée
    */
   static createFromConfig(config: VoiceConfig): VapiService {
-    // En production, déchiffrer l'API key
-    const apiKey = config.vapi_api_key; // decrypt_vapi_key(config.vapi_api_key)
+    // Utiliser la clé API depuis les variables d'environnement
+    const apiKey = process.env.VAPI_API_KEY;
+    if (!apiKey) {
+      throw new Error('VAPI_API_KEY non configurée dans les variables d\'environnement');
+    }
     return new VapiService(apiKey);
   }
 

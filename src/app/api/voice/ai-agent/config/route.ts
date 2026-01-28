@@ -35,9 +35,6 @@ export async function GET(request: NextRequest) {
         click_to_call_enabled: true,
         auto_recording: true,
         auto_transcription: true,
-        vapi_api_key: null,
-        vapi_phone_number: process.env.TWILIO_PHONE_NUMBER || null,
-        vapi_assistant_id: null,
         working_hours_start: '09:00',
         working_hours_end: '18:00',
         working_days: [1,2,3,4,5],
@@ -76,7 +73,7 @@ export async function GET(request: NextRequest) {
       },
       twilio_available: !!process.env.TWILIO_ACCOUNT_SID,
       deepgram_available: !!process.env.DEEPGRAM_API_KEY,
-      vapi_configured: !!config?.vapi_api_key
+      vapi_configured: !!process.env.VAPI_API_KEY
     });
 
   } catch (error) {
@@ -126,10 +123,7 @@ export async function POST(request: NextRequest) {
     if (body.agent_language) updateData.agent_language = body.agent_language;
     if (body.system_prompt) updateData.system_prompt = body.system_prompt.trim();
 
-    // Configuration VAPI (après ajout des colonnes)
-    if (body.vapi_api_key !== undefined) updateData.vapi_api_key = body.vapi_api_key ? body.vapi_api_key.trim() : null;
-    if (body.vapi_phone_number) updateData.vapi_phone_number = body.vapi_phone_number.trim();
-    if (body.vapi_assistant_id) updateData.vapi_assistant_id = body.vapi_assistant_id.trim();
+    // Note: VAPI_API_KEY vient des variables d'environnement, pas de la base
 
     // Configuration webhook
     if (body.webhook_url) updateData.webhook_url = body.webhook_url.trim();
