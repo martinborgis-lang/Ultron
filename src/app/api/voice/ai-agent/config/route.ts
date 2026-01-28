@@ -27,10 +27,11 @@ export async function GET(request: NextRequest) {
         is_enabled: false,
         twilio_configured: !!process.env.TWILIO_ACCOUNT_SID,
         ai_agent_enabled: false,
-        ai_agent_name: 'Assistant Ultron',
-        ai_agent_voice: 'jennifer',
-        ai_agent_language: 'fr-FR',
-        ai_agent_prompt: 'Vous êtes {{agent_name}} du {{cabinet_name}}. Votre mission est de qualifier les prospects intéressés par nos services de gestion de patrimoine et de prendre des rendez-vous.',
+        agent_enabled: false,
+        agent_name: 'Assistant Ultron',
+        agent_voice: 'jennifer',
+        agent_language: 'fr-FR',
+        system_prompt: 'Vous êtes {{agent_name}} du {{cabinet_name}}. Votre mission est de qualifier les prospects intéressés par nos services de gestion de patrimoine et de prendre des rendez-vous.',
         click_to_call_enabled: true,
         auto_recording: true,
         auto_transcription: true
@@ -95,20 +96,21 @@ export async function POST(request: NextRequest) {
     if (body.auto_recording !== undefined) updateData.auto_recording = body.auto_recording;
     if (body.auto_transcription !== undefined) updateData.auto_transcription = body.auto_transcription;
 
-    // Configuration agent IA (mapper correctement selon la vraie structure DB)
+    // Configuration agent IA (mapper selon la vraie structure DB que vous avez)
     if (body.ai_agent_enabled !== undefined) updateData.ai_agent_enabled = body.ai_agent_enabled;
+    if (body.agent_enabled !== undefined) updateData.agent_enabled = body.agent_enabled;
 
-    // Mapping correct: les colonnes en DB sont préfixées "ai_"
-    if (body.ai_agent_name) updateData.ai_agent_name = body.ai_agent_name.trim();
-    if (body.ai_agent_voice) updateData.ai_agent_voice = body.ai_agent_voice;
-    if (body.ai_agent_language) updateData.ai_agent_language = body.ai_agent_language;
-    if (body.ai_agent_prompt) updateData.ai_agent_prompt = body.ai_agent_prompt.trim();
+    // Mapping correct selon la structure réelle de votre DB
+    if (body.ai_agent_name) updateData.agent_name = body.ai_agent_name.trim();
+    if (body.ai_agent_voice) updateData.agent_voice = body.ai_agent_voice;
+    if (body.ai_agent_language) updateData.agent_language = body.ai_agent_language;
+    if (body.ai_agent_prompt) updateData.system_prompt = body.ai_agent_prompt.trim();
 
-    // Mapping legacy: pour compatibilité avec les anciens champs frontend
-    if (body.agent_name) updateData.ai_agent_name = body.agent_name.trim();
-    if (body.agent_voice) updateData.ai_agent_voice = body.agent_voice;
-    if (body.agent_language) updateData.ai_agent_language = body.agent_language;
-    if (body.system_prompt) updateData.ai_agent_prompt = body.system_prompt.trim();
+    // Mapping direct: les colonnes en DB sont sans préfixe "ai_"
+    if (body.agent_name) updateData.agent_name = body.agent_name.trim();
+    if (body.agent_voice) updateData.agent_voice = body.agent_voice;
+    if (body.agent_language) updateData.agent_language = body.agent_language;
+    if (body.system_prompt) updateData.system_prompt = body.system_prompt.trim();
 
     // Configuration VAPI
     if (body.vapi_api_key !== undefined) updateData.vapi_api_key = body.vapi_api_key ? body.vapi_api_key.trim() : null;
