@@ -8,11 +8,9 @@ const TWILIO_API_SECRET = process.env.TWILIO_API_SECRET;
 const TWILIO_TWIML_APP_SID = process.env.TWILIO_TWIML_APP_SID;
 const TWILIO_PHONE_NUMBER = process.env.TWILIO_PHONE_NUMBER;
 
-if (!TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN) {
-  throw new Error('Missing Twilio credentials');
-}
-
-const client = twilio(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN);
+const client = TWILIO_ACCOUNT_SID && TWILIO_AUTH_TOKEN
+  ? twilio(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
+  : null;
 
 export interface TwilioCall {
   sid: string;
@@ -78,6 +76,10 @@ export class TwilioService {
     record?: boolean;
     webhookUrl?: string;
   }): Promise<TwilioCall> {
+    if (!client) {
+      throw new Error('Missing Twilio credentials');
+    }
+
     const { to, from = TWILIO_PHONE_NUMBER, callerId, record = true, webhookUrl } = params;
 
     if (!from) {
@@ -121,6 +123,10 @@ export class TwilioService {
    * Raccroche un appel en cours
    */
   static async hangupCall(callSid: string): Promise<void> {
+    if (!client) {
+      throw new Error('Missing Twilio credentials');
+    }
+
     try {
       await client.calls(callSid).update({ status: 'completed' });
     } catch (error) {
@@ -133,6 +139,10 @@ export class TwilioService {
    * Récupère les détails d'un appel
    */
   static async getCall(callSid: string): Promise<TwilioCall> {
+    if (!client) {
+      throw new Error('Missing Twilio credentials');
+    }
+
     try {
       const call = await client.calls(callSid).fetch();
       return {
@@ -159,6 +169,10 @@ export class TwilioService {
     dateFrom?: Date;
     dateTo?: Date;
   } = {}): Promise<TwilioCall[]> {
+    if (!client) {
+      throw new Error('Missing Twilio credentials');
+    }
+
     const { limit = 50, dateFrom, dateTo } = params;
 
     try {
@@ -187,6 +201,10 @@ export class TwilioService {
    * Récupère l'enregistrement d'un appel
    */
   static async getCallRecording(callSid: string): Promise<string | null> {
+    if (!client) {
+      throw new Error('Missing Twilio credentials');
+    }
+
     try {
       const recordings = await client.recordings.list({ callSid, limit: 1 });
 
