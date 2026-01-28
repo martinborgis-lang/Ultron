@@ -34,7 +34,21 @@ export async function GET(request: NextRequest) {
         system_prompt: 'Vous êtes {{agent_name}} du {{cabinet_name}}. Votre mission est de qualifier les prospects intéressés par nos services de gestion de patrimoine et de prendre des rendez-vous.',
         click_to_call_enabled: true,
         auto_recording: true,
-        auto_transcription: true
+        auto_transcription: true,
+        vapi_api_key: null,
+        vapi_phone_number: null,
+        vapi_assistant_id: null,
+        working_hours_start: '09:00',
+        working_hours_end: '18:00',
+        working_days: [1,2,3,4,5],
+        timezone: 'Europe/Paris',
+        max_call_duration_seconds: 300,
+        retry_on_no_answer: false,
+        max_retry_attempts: 2,
+        delay_between_retries_minutes: 30,
+        webhook_url: null,
+        webhook_secret: null,
+        webhook_events: ['call.started', 'call.ended', 'recording.completed']
       };
 
       const { data: newConfig, error: insertError } = await supabase
@@ -112,12 +126,26 @@ export async function POST(request: NextRequest) {
     if (body.agent_language) updateData.agent_language = body.agent_language;
     if (body.system_prompt) updateData.system_prompt = body.system_prompt.trim();
 
-    // Configuration webhook (colonnes qui existent réellement)
+    // Configuration VAPI (après ajout des colonnes)
+    if (body.vapi_api_key !== undefined) updateData.vapi_api_key = body.vapi_api_key ? body.vapi_api_key.trim() : null;
+    if (body.vapi_phone_number) updateData.vapi_phone_number = body.vapi_phone_number.trim();
+    if (body.vapi_assistant_id) updateData.vapi_assistant_id = body.vapi_assistant_id.trim();
+
+    // Configuration webhook
     if (body.webhook_url) updateData.webhook_url = body.webhook_url.trim();
     if (body.webhook_events) updateData.webhook_events = body.webhook_events;
+    if (body.webhook_secret) updateData.webhook_secret = body.webhook_secret.trim();
 
-    // Note: Les autres colonnes VAPI (vapi_api_key, working_hours, etc.) n'existent pas dans la table actuelle
-    // Si vous voulez les utiliser, il faudra d'abord les ajouter à la table voice_config
+    // Configuration horaires et comportement
+    if (body.working_hours_start) updateData.working_hours_start = body.working_hours_start;
+    if (body.working_hours_end) updateData.working_hours_end = body.working_hours_end;
+    if (body.working_days) updateData.working_days = body.working_days;
+    if (body.timezone) updateData.timezone = body.timezone;
+    if (body.qualification_questions) updateData.qualification_questions = body.qualification_questions;
+    if (body.max_call_duration_seconds) updateData.max_call_duration_seconds = body.max_call_duration_seconds;
+    if (body.retry_on_no_answer !== undefined) updateData.retry_on_no_answer = body.retry_on_no_answer;
+    if (body.max_retry_attempts) updateData.max_retry_attempts = body.max_retry_attempts;
+    if (body.delay_between_retries_minutes) updateData.delay_between_retries_minutes = body.delay_between_retries_minutes;
 
     // Note: twilio_configured n'existe pas dans voice_config (table voice seulement)
 
