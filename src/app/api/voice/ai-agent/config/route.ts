@@ -54,7 +54,7 @@ export async function GET(request: NextRequest) {
     }
 
     return NextResponse.json({
-      config,
+      data: config, // Frontend s'attend à recevoir "data" pas "config"
       organization: {
         id: organization.id,
         name: organization.name
@@ -152,7 +152,7 @@ export async function POST(request: NextRequest) {
     console.log('✅ Configuration AI Agent sauvegardée:', config.id);
 
     return NextResponse.json({
-      config,
+      data: config, // Frontend s'attend à recevoir "data"
       message: 'Configuration sauvegardée avec succès'
     });
 

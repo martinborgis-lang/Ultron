@@ -253,10 +253,6 @@ export async function GET(request: NextRequest) {
           first_name,
           last_name,
           email
-        ),
-        users:user_id(
-          id,
-          full_name
         )
       `)
       .eq('organization_id', organization.id)
