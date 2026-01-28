@@ -17,6 +17,8 @@ export default function VoiceConfigPage() {
   const [config, setConfig] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [twilioAvailable, setTwilioAvailable] = useState(false);
+  const [deepgramAvailable, setDeepgramAvailable] = useState(false);
 
   useEffect(() => {
     fetchConfig();
@@ -27,37 +29,24 @@ export default function VoiceConfigPage() {
       const response = await fetch('/api/voice/config');
       if (response.ok) {
         const data = await response.json();
-        setConfig(data.config || {
-          vapi_api_key: '',
-          vapi_phone_number: '',
-          vapi_assistant_id: '',
-          agent_name: 'Assistant Ultron',
-          agent_voice: 'jennifer',
-          agent_language: 'fr-FR',
-          working_hours_start: '09:00',
-          working_hours_end: '18:00',
-          working_days: [1, 2, 3, 4, 5],
-          timezone: 'Europe/Paris',
-          system_prompt: 'Vous êtes un assistant commercial pour un cabinet de gestion de patrimoine. Votre objectif est de qualifier le prospect et prendre un rendez-vous.',
-          qualification_questions: [
-            'Quel est votre situation professionnelle actuelle ?',
-            'Avez-vous déjà des placements ou investissements ?',
-            'Quel serait votre budget disponible pour de nouveaux investissements ?',
-            'Quand seriez-vous disponible pour un rendez-vous ?'
-          ],
-          max_call_duration_seconds: 300,
-          retry_on_no_answer: true,
-          max_retry_attempts: 2,
-          delay_between_retries_minutes: 60,
-          webhook_url: '',
-          webhook_secret: '',
-          is_enabled: false
-        });
+        setConfig(data.config);
+        setTwilioAvailable(data.twilio_available);
+        setDeepgramAvailable(data.deepgram_available);
       } else {
         console.error('Failed to fetch voice config');
+        toast({
+          title: "Erreur",
+          description: "Impossible de charger la configuration voice",
+          variant: "destructive"
+        });
       }
     } catch (error) {
       console.error('Error fetching voice config:', error);
+      toast({
+        title: "Erreur",
+        description: "Erreur de chargement",
+        variant: "destructive"
+      });
     } finally {
       setLoading(false);
     }
@@ -125,10 +114,63 @@ export default function VoiceConfigPage() {
         </div>
       </div>
 
-      <Tabs defaultValue="vapi" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="vapi" className="flex items-center gap-2">
+      {/* Statut des services */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Statut des Services</CardTitle>
+          <CardDescription>
+            Vérifiez l'état de vos intégrations voice
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="flex items-center justify-between p-3 border rounded-lg">
+              <div className="flex items-center gap-2">
+                <Phone className="h-4 w-4" />
+                <span className="font-medium">Twilio</span>
+              </div>
+              <div className={`px-2 py-1 rounded-full text-xs font-medium ${
+                twilioAvailable ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'
+              }`}>
+                {twilioAvailable ? '✅ Configuré' : '❌ Non configuré'}
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between p-3 border rounded-lg">
+              <div className="flex items-center gap-2">
+                <Settings className="h-4 w-4" />
+                <span className="font-medium">Deepgram</span>
+              </div>
+              <div className={`px-2 py-1 rounded-full text-xs font-medium ${
+                deepgramAvailable ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'
+              }`}>
+                {deepgramAvailable ? '✅ Configuré' : '❌ Non configuré'}
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between p-3 border rounded-lg">
+              <div className="flex items-center gap-2">
+                <MessageSquare className="h-4 w-4" />
+                <span className="font-medium">Module Voice</span>
+              </div>
+              <div className={`px-2 py-1 rounded-full text-xs font-medium ${
+                config?.is_enabled ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-600'
+              }`}>
+                {config?.is_enabled ? '✅ Activé' : '❌ Désactivé'}
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Tabs defaultValue="general" className="space-y-6">
+        <TabsList className="grid w-full grid-cols-5">
+          <TabsTrigger value="general" className="flex items-center gap-2">
             <Settings className="h-4 w-4" />
+            Général
+          </TabsTrigger>
+          <TabsTrigger value="vapi" className="flex items-center gap-2">
+            <Phone className="h-4 w-4" />
             Vapi.ai
           </TabsTrigger>
           <TabsTrigger value="schedule" className="flex items-center gap-2">
@@ -144,6 +186,127 @@ export default function VoiceConfigPage() {
             Webhooks
           </TabsTrigger>
         </TabsList>
+
+        {/* Configuration Générale */}
+        <TabsContent value="general" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Configuration Générale</CardTitle>
+              <CardDescription>
+                Paramètres globaux du module voice et click-to-call
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label htmlFor="is_enabled">Activer le module Voice</Label>
+                  <p className="text-sm text-muted-foreground">Active toutes les fonctionnalités d'appel</p>
+                </div>
+                <Switch
+                  id="is_enabled"
+                  checked={config?.is_enabled || false}
+                  onCheckedChange={(checked) => updateConfig('is_enabled', checked)}
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label htmlFor="click_to_call_enabled">Click-to-Call</Label>
+                  <p className="text-sm text-muted-foreground">Permet d'appeler directement depuis l'interface</p>
+                </div>
+                <Switch
+                  id="click_to_call_enabled"
+                  checked={config?.click_to_call_enabled !== false}
+                  onCheckedChange={(checked) => updateConfig('click_to_call_enabled', checked)}
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label htmlFor="auto_recording">Enregistrement automatique</Label>
+                  <p className="text-sm text-muted-foreground">Enregistre automatiquement tous les appels</p>
+                </div>
+                <Switch
+                  id="auto_recording"
+                  checked={config?.auto_recording !== false}
+                  onCheckedChange={(checked) => updateConfig('auto_recording', checked)}
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label htmlFor="auto_transcription">Transcription automatique</Label>
+                  <p className="text-sm text-muted-foreground">Transcrit automatiquement les appels avec Deepgram</p>
+                </div>
+                <Switch
+                  id="auto_transcription"
+                  checked={config?.auto_transcription !== false}
+                  onCheckedChange={(checked) => updateConfig('auto_transcription', checked)}
+                  disabled={!deepgramAvailable}
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label htmlFor="ai_agent_enabled">Agent IA automatique</Label>
+                  <p className="text-sm text-muted-foreground">Active l'agent IA pour les appels automatiques</p>
+                </div>
+                <Switch
+                  id="ai_agent_enabled"
+                  checked={config?.ai_agent_enabled || false}
+                  onCheckedChange={(checked) => updateConfig('ai_agent_enabled', checked)}
+                />
+              </div>
+
+              {config?.ai_agent_enabled && (
+                <>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="ai_agent_name">Nom de l'agent IA</Label>
+                      <Input
+                        id="ai_agent_name"
+                        value={config?.ai_agent_name || 'Assistant IA'}
+                        onChange={(e) => updateConfig('ai_agent_name', e.target.value)}
+                        placeholder="Assistant IA"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="ai_agent_voice">Voix de l'agent</Label>
+                      <Select
+                        value={config?.ai_agent_voice || 'alloy'}
+                        onValueChange={(value) => updateConfig('ai_agent_voice', value)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="alloy">Alloy (Neutre)</SelectItem>
+                          <SelectItem value="echo">Echo (Masculin)</SelectItem>
+                          <SelectItem value="fable">Fable (Britannique)</SelectItem>
+                          <SelectItem value="onyx">Onyx (Grave)</SelectItem>
+                          <SelectItem value="nova">Nova (Féminin)</SelectItem>
+                          <SelectItem value="shimmer">Shimmer (Doux)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="ai_agent_prompt">Prompt de l'agent IA</Label>
+                    <Textarea
+                      id="ai_agent_prompt"
+                      value={config?.ai_agent_prompt || ''}
+                      onChange={(e) => updateConfig('ai_agent_prompt', e.target.value)}
+                      placeholder="Instructions pour l'agent IA..."
+                      rows={4}
+                    />
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         {/* Configuration Vapi.ai */}
         <TabsContent value="vapi" className="space-y-6">

@@ -8,7 +8,7 @@ import { PromptsEditor } from '@/components/settings/PromptsEditor';
 import { ThemeSelector } from '@/components/settings/ThemeSelector';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
-import { FileSpreadsheet, Users, Sparkles, Palette, Database, Settings, ShoppingCart, User } from 'lucide-react';
+import { FileSpreadsheet, Users, Sparkles, Palette, Database, Settings, ShoppingCart, User, Phone } from 'lucide-react';
 import Link from 'next/link';
 import { PasswordChangeForm } from '@/components/settings/PasswordChangeForm';
 
@@ -106,6 +106,14 @@ export default async function SettingsPage() {
                 >
                   <Database className="w-4 h-4" />
                   Configurer la source de donnees
+                </Link>
+
+                <Link
+                  href="/settings/voice"
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+                >
+                  <Phone className="w-4 h-4" />
+                  Configuration Voice
                 </Link>
 
                 {userRole === 'admin' && (
