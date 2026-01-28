@@ -103,7 +103,7 @@ export default function FormTestPage() {
           revenus_annuels: formData.revenus_annuels ? parseInt(formData.revenus_annuels) : undefined,
           situation_familiale: formData.situation_familiale,
           nb_enfants: formData.nb_enfants ? parseInt(formData.nb_enfants) : undefined,
-          organization_slug: orgInfo.id // Assurer la liaison à l'organisation
+          organization_id: orgInfo.id // Assurer la liaison à l'organisation
         },
         metadata: {
           subject: formData.subject,

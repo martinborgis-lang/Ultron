@@ -16,7 +16,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       id: organization.id,
       name: organization.name,
-      slug: organization.slug,
       webhookUrl: webhookUrl,
       webhookHeaders: {
         'Content-Type': 'application/json',
@@ -32,7 +31,7 @@ export async function GET(request: NextRequest) {
           phone: '+33123456789',
           company: 'SARL Dupont',
           job_title: 'Directeur',
-          organization_slug: organization.slug // Important pour identifier l'organisation
+          organization_id: organization.id // Utiliser l'ID au lieu du slug
         },
         utm_params: {
           source: 'website',

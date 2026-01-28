@@ -36,16 +36,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Déterminer l'organisation (via header ou domaine)
+    // Déterminer l'organisation (via header ou données prospect)
     let organizationId = request.headers.get('x-organization-id');
 
-    if (!organizationId && prospect_data.organization_slug) {
-      const { data: org } = await supabase
-        .from('organizations')
-        .select('id')
-        .eq('slug', prospect_data.organization_slug)
-        .single();
-      organizationId = org?.id;
+    if (!organizationId && prospect_data.organization_id) {
+      organizationId = prospect_data.organization_id;
     }
 
     if (!organizationId) {
@@ -118,7 +113,7 @@ export async function POST(request: NextRequest) {
 
     // Traitement asynchrone du webhook
     try {
-      await processWebhookAsync(webhook, voiceConfig, organization);
+      await processWebhookAsync(webhook, voiceConfig, organization || undefined);
     } catch (processError) {
       console.error('❌ Erreur traitement webhook:', processError);
 
@@ -192,7 +187,7 @@ async function processWebhookAsync(webhook: VoiceWebhook, voiceConfig: VoiceConf
     }
 
     // 4. Programmer l'appel (immédiat ou différé)
-    const call = await programCall(webhook, prospect, voiceConfig, organization);
+    const call = await programCall(webhook, prospect, voiceConfig, organization || undefined);
 
     // 5. Marquer le webhook comme traité
     await supabase
