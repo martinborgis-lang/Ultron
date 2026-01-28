@@ -25,17 +25,8 @@ export async function GET(request: NextRequest) {
       const defaultConfig = {
         organization_id: organization.id,
         is_enabled: false,
-        twilio_configured: !!process.env.TWILIO_ACCOUNT_SID,
-        ai_agent_enabled: false,
-        ai_agent_name: 'Assistant IA',
-        ai_agent_voice: 'alloy',
-        ai_agent_language: 'fr',
-        ai_agent_prompt: 'Vous êtes un assistant pour un cabinet de gestion de patrimoine. Votre rôle est de qualifier les prospects et de prendre des rendez-vous. Soyez professionnel, courtois et à l\'écoute.',
-        click_to_call_enabled: true,
-        auto_recording: true,
-        auto_transcription: true,
-        // Garder les champs VAPI existants
-        vapi_api_key: '',
+        // Configuration selon le schéma voice_config réel
+        vapi_api_key: 'default_key', // Requis selon schéma
         agent_name: 'Assistant Ultron',
         agent_voice: 'jennifer',
         agent_language: 'fr-FR',
@@ -109,21 +100,19 @@ export async function POST(request: NextRequest) {
       updated_at: new Date().toISOString()
     };
 
-    // Configuration générale
+    // Configuration générale (seulement les champs qui existent dans voice_config)
     if (body.is_enabled !== undefined) updateData.is_enabled = body.is_enabled;
-    if (body.click_to_call_enabled !== undefined) updateData.click_to_call_enabled = body.click_to_call_enabled;
-    if (body.auto_recording !== undefined) updateData.auto_recording = body.auto_recording;
-    if (body.auto_transcription !== undefined) updateData.auto_transcription = body.auto_transcription;
+    // click_to_call_enabled, auto_recording, auto_transcription n'existent pas dans voice_config
 
-    // Configuration agent IA/Twilio
-    if (body.ai_agent_enabled !== undefined) updateData.ai_agent_enabled = body.ai_agent_enabled;
-    if (body.ai_agent_name) updateData.ai_agent_name = body.ai_agent_name.trim();
-    if (body.ai_agent_voice) updateData.ai_agent_voice = body.ai_agent_voice;
-    if (body.ai_agent_language) updateData.ai_agent_language = body.ai_agent_language;
-    if (body.ai_agent_prompt) updateData.ai_agent_prompt = body.ai_agent_prompt.trim();
+    // Configuration agent IA (mapper vers les vraies colonnes de voice_config)
+    if (body.ai_agent_enabled !== undefined) updateData.is_enabled = body.ai_agent_enabled;
+    if (body.ai_agent_name) updateData.agent_name = body.ai_agent_name.trim(); // agent_name existe dans voice_config
+    if (body.ai_agent_voice) updateData.agent_voice = body.ai_agent_voice; // agent_voice existe dans voice_config
+    if (body.ai_agent_language) updateData.agent_language = body.ai_agent_language; // agent_language existe dans voice_config
+    if (body.ai_agent_prompt) updateData.system_prompt = body.ai_agent_prompt.trim(); // system_prompt existe dans voice_config
 
     // Configuration VAPI (garder la compatibilité)
-    if (body.vapi_api_key !== undefined) updateData.vapi_api_key = body.vapi_api_key ? body.vapi_api_key.trim() : '';
+    if (body.vapi_api_key !== undefined) updateData.vapi_api_key = body.vapi_api_key ? body.vapi_api_key.trim() : 'default_key';
     if (body.vapi_phone_number) updateData.vapi_phone_number = body.vapi_phone_number.trim();
     if (body.vapi_assistant_id) updateData.vapi_assistant_id = body.vapi_assistant_id.trim();
     if (body.agent_name) updateData.agent_name = body.agent_name.trim();
@@ -142,8 +131,7 @@ export async function POST(request: NextRequest) {
     if (body.webhook_url) updateData.webhook_url = body.webhook_url.trim();
     if (body.webhook_secret) updateData.webhook_secret = body.webhook_secret.trim();
 
-    // Marquer Twilio comme configuré si les variables d'environnement existent
-    updateData.twilio_configured = !!process.env.TWILIO_ACCOUNT_SID;
+    // Note: twilio_configured n'existe pas dans voice_config (table voice seulement)
 
     console.log('📝 Données à sauvegarder:', Object.keys(updateData));
 
