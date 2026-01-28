@@ -25,26 +25,15 @@ export async function GET(request: NextRequest) {
       const defaultConfig = {
         organization_id: organization.id,
         is_enabled: false,
-        // Configuration selon le schéma voice_config réel
-        vapi_api_key: 'default_key', // Requis selon schéma
-        agent_name: 'Assistant Ultron',
-        agent_voice: 'jennifer',
-        agent_language: 'fr-FR',
-        working_hours_start: '09:00',
-        working_hours_end: '18:00',
-        working_days: [1, 2, 3, 4, 5],
-        timezone: 'Europe/Paris',
-        max_call_duration_seconds: 300,
-        retry_on_no_answer: true,
-        max_retry_attempts: 2,
-        delay_between_retries_minutes: 60,
-        system_prompt: 'Vous êtes {{agent_name}} du {{cabinet_name}}. Votre mission est de qualifier les prospects intéressés par nos services de gestion de patrimoine et de prendre des rendez-vous.',
-        qualification_questions: [
-          'Quel est votre âge ?',
-          'Quel est votre statut professionnel ?',
-          'Avez-vous déjà investi ?',
-          'Quel montant souhaitez-vous investir ?'
-        ]
+        twilio_configured: !!process.env.TWILIO_ACCOUNT_SID,
+        ai_agent_enabled: false,
+        ai_agent_name: 'Assistant Ultron',
+        ai_agent_voice: 'jennifer',
+        ai_agent_language: 'fr-FR',
+        ai_agent_prompt: 'Vous êtes {{agent_name}} du {{cabinet_name}}. Votre mission est de qualifier les prospects intéressés par nos services de gestion de patrimoine et de prendre des rendez-vous.',
+        click_to_call_enabled: true,
+        auto_recording: true,
+        auto_transcription: true
       };
 
       const { data: newConfig, error: insertError } = await supabase
@@ -100,29 +89,37 @@ export async function POST(request: NextRequest) {
       updated_at: new Date().toISOString()
     };
 
-    // Configuration générale (seulement les champs qui existent dans voice_config)
+    // Configuration générale (selon la vraie structure de la table)
     if (body.is_enabled !== undefined) updateData.is_enabled = body.is_enabled;
-    // click_to_call_enabled, auto_recording, auto_transcription n'existent pas dans voice_config
+    if (body.click_to_call_enabled !== undefined) updateData.click_to_call_enabled = body.click_to_call_enabled;
+    if (body.auto_recording !== undefined) updateData.auto_recording = body.auto_recording;
+    if (body.auto_transcription !== undefined) updateData.auto_transcription = body.auto_transcription;
 
-    // Configuration agent IA (mapper vers les vraies colonnes de voice_config)
-    if (body.ai_agent_enabled !== undefined) updateData.is_enabled = body.ai_agent_enabled;
-    if (body.ai_agent_name) updateData.agent_name = body.ai_agent_name.trim(); // agent_name existe dans voice_config
-    if (body.ai_agent_voice) updateData.agent_voice = body.ai_agent_voice; // agent_voice existe dans voice_config
-    if (body.ai_agent_language) updateData.agent_language = body.ai_agent_language; // agent_language existe dans voice_config
-    if (body.ai_agent_prompt) updateData.system_prompt = body.ai_agent_prompt.trim(); // system_prompt existe dans voice_config
+    // Configuration agent IA (mapper correctement selon la vraie structure DB)
+    if (body.ai_agent_enabled !== undefined) updateData.ai_agent_enabled = body.ai_agent_enabled;
 
-    // Configuration VAPI (garder la compatibilité)
-    if (body.vapi_api_key !== undefined) updateData.vapi_api_key = body.vapi_api_key ? body.vapi_api_key.trim() : 'default_key';
+    // Mapping correct: les colonnes en DB sont préfixées "ai_"
+    if (body.ai_agent_name) updateData.ai_agent_name = body.ai_agent_name.trim();
+    if (body.ai_agent_voice) updateData.ai_agent_voice = body.ai_agent_voice;
+    if (body.ai_agent_language) updateData.ai_agent_language = body.ai_agent_language;
+    if (body.ai_agent_prompt) updateData.ai_agent_prompt = body.ai_agent_prompt.trim();
+
+    // Mapping legacy: pour compatibilité avec les anciens champs frontend
+    if (body.agent_name) updateData.ai_agent_name = body.agent_name.trim();
+    if (body.agent_voice) updateData.ai_agent_voice = body.agent_voice;
+    if (body.agent_language) updateData.ai_agent_language = body.agent_language;
+    if (body.system_prompt) updateData.ai_agent_prompt = body.system_prompt.trim();
+
+    // Configuration VAPI
+    if (body.vapi_api_key !== undefined) updateData.vapi_api_key = body.vapi_api_key ? body.vapi_api_key.trim() : null;
     if (body.vapi_phone_number) updateData.vapi_phone_number = body.vapi_phone_number.trim();
     if (body.vapi_assistant_id) updateData.vapi_assistant_id = body.vapi_assistant_id.trim();
-    if (body.agent_name) updateData.agent_name = body.agent_name.trim();
-    if (body.agent_voice) updateData.agent_voice = body.agent_voice;
-    if (body.agent_language) updateData.agent_language = body.agent_language;
+
+    // Autres champs VAPI (si ces colonnes existent réellement)
     if (body.working_hours_start) updateData.working_hours_start = body.working_hours_start;
     if (body.working_hours_end) updateData.working_hours_end = body.working_hours_end;
     if (body.working_days) updateData.working_days = body.working_days;
     if (body.timezone) updateData.timezone = body.timezone;
-    if (body.system_prompt) updateData.system_prompt = body.system_prompt.trim();
     if (body.qualification_questions) updateData.qualification_questions = body.qualification_questions;
     if (body.max_call_duration_seconds) updateData.max_call_duration_seconds = body.max_call_duration_seconds;
     if (body.retry_on_no_answer !== undefined) updateData.retry_on_no_answer = body.retry_on_no_answer;
