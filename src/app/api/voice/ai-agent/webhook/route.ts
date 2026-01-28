@@ -57,12 +57,19 @@ export async function POST(request: NextRequest) {
 
     console.log('🏢 Organisation ID:', organizationId);
 
-    // Vérifier la configuration Agent IA pour cette organisation
+    // Vérifier la configuration Agent IA pour cette organisation et récupérer les infos organisation
     const { data: voiceConfig } = await supabase
       .from('voice_config')
       .select('*')
       .eq('organization_id', organizationId)
       .eq('is_enabled', true)
+      .single();
+
+    // Récupérer les informations de l'organisation pour injection dans le prompt
+    const { data: organization } = await supabase
+      .from('organizations')
+      .select('name')
+      .eq('id', organizationId)
       .single();
 
     if (!voiceConfig) {
@@ -111,7 +118,7 @@ export async function POST(request: NextRequest) {
 
     // Traitement asynchrone du webhook
     try {
-      await processWebhookAsync(webhook, voiceConfig);
+      await processWebhookAsync(webhook, voiceConfig, organization);
     } catch (processError) {
       console.error('❌ Erreur traitement webhook:', processError);
 
@@ -157,7 +164,7 @@ export async function POST(request: NextRequest) {
 /**
  * Traiter le webhook de manière asynchrone
  */
-async function processWebhookAsync(webhook: VoiceWebhook, voiceConfig: VoiceConfig) {
+async function processWebhookAsync(webhook: VoiceWebhook, voiceConfig: VoiceConfig, organization?: { name: string }) {
   console.log('🔄 Début traitement webhook:', webhook.id);
 
   try {
@@ -185,7 +192,7 @@ async function processWebhookAsync(webhook: VoiceWebhook, voiceConfig: VoiceConf
     }
 
     // 4. Programmer l'appel (immédiat ou différé)
-    const call = await programCall(webhook, prospect, voiceConfig);
+    const call = await programCall(webhook, prospect, voiceConfig, organization);
 
     // 5. Marquer le webhook comme traité
     await supabase
@@ -376,7 +383,7 @@ async function shouldProgramCall(webhook: VoiceWebhook, voiceConfig: VoiceConfig
 /**
  * Programmer un appel via Vapi
  */
-async function programCall(webhook: VoiceWebhook, prospect: any, voiceConfig: VoiceConfig): Promise<PhoneCall> {
+async function programCall(webhook: VoiceWebhook, prospect: any, voiceConfig: VoiceConfig, organization?: { name: string }): Promise<PhoneCall> {
   console.log('📞 Programmation appel pour:', webhook.phone_number);
 
   // Créer l'enregistrement d'appel en base
@@ -424,14 +431,26 @@ async function programCall(webhook: VoiceWebhook, prospect: any, voiceConfig: Vo
         throw new Error('Numéro de téléphone manquant');
       }
 
+      // Si un assistant spécifique n'est pas configuré, créer un assistant dynamique avec le bon prompt
+      let assistantId = voiceConfig.vapi_assistant_id;
+
+      if (!assistantId || organization) {
+        console.log('🤖 Création assistant dynamique avec données organisation');
+        const dynamicAssistant = await vapiService.createAssistant(voiceConfig, organization);
+        assistantId = dynamicAssistant.id;
+        console.log('✅ Assistant dynamique créé:', assistantId);
+      }
+
       const callRequest = {
         phoneNumber: webhook.phone_number,
-        assistantId: voiceConfig.vapi_assistant_id || '',
+        assistantId: assistantId || '',
         metadata: {
           prospect_id: prospect.id,
           organization_id: webhook.organization_id,
           call_id: call.id,
-          webhook_id: webhook.id
+          webhook_id: webhook.id,
+          cabinet_name: organization?.name || 'Cabinet Ultron',
+          agent_name: voiceConfig.agent_name || 'Assistant'
         }
       };
 

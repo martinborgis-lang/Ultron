@@ -33,15 +33,18 @@ export class VapiService {
   /**
    * Créer un assistant Vapi configuré pour la qualification CGP
    */
-  async createAssistant(config: VoiceConfig): Promise<VapiAssistant> {
+  async createAssistant(config: VoiceConfig, organizationData?: { name: string }): Promise<VapiAssistant> {
+    const cabinetName = organizationData?.name || 'Cabinet de gestion de patrimoine Ultron';
+    const agentName = config.agent_name || 'Assistant';
+
     const assistantData: VapiAssistant = {
       name: config.agent_name,
       voice: config.agent_voice,
       language: config.agent_language,
-      systemPrompt: this.buildSystemPrompt(config),
+      systemPrompt: this.buildSystemPrompt(config, organizationData),
       functions: this.buildAssistantFunctions(),
-      firstMessage: "Bonjour, je suis l'assistant d'Ultron. Je vous contacte suite à votre demande d'information sur nos services de gestion de patrimoine. Avez-vous quelques minutes pour en discuter ?",
-      endCallMessage: "Merci pour votre temps. Vous recevrez un email de confirmation si nous avons programmé un rendez-vous. Bonne journée !",
+      firstMessage: `Bonjour, je suis ${agentName} du ${cabinetName}. Je vous contacte suite à votre demande d'information sur nos services de gestion de patrimoine. Avez-vous quelques minutes pour en discuter ?`,
+      endCallMessage: `Merci pour votre temps. Vous recevrez un email de confirmation si nous avons programmé un rendez-vous. Au revoir et bonne journée !`,
       maxDuration: config.max_call_duration_seconds,
       responseDelaySeconds: 1,
       llmRequestDelaySeconds: 1,
@@ -55,11 +58,11 @@ export class VapiService {
   /**
    * Mettre à jour un assistant existant
    */
-  async updateAssistant(assistantId: string, config: VoiceConfig): Promise<VapiAssistant> {
+  async updateAssistant(assistantId: string, config: VoiceConfig, organizationData?: { name: string }): Promise<VapiAssistant> {
     const assistantData: Partial<VapiAssistant> = {
       name: config.agent_name,
       voice: config.agent_voice,
-      systemPrompt: this.buildSystemPrompt(config),
+      systemPrompt: this.buildSystemPrompt(config, organizationData),
       functions: this.buildAssistantFunctions(),
       maxDuration: config.max_call_duration_seconds
     };
@@ -172,16 +175,29 @@ export class VapiService {
   /**
    * Construire le prompt système pour l'assistant
    */
-  private buildSystemPrompt(config: VoiceConfig): string {
-    return `${config.system_prompt}
+  private buildSystemPrompt(config: VoiceConfig, organizationData?: { name: string }): string {
+    // Récupérer les valeurs pour injection
+    const cabinetName = organizationData?.name || 'Cabinet de gestion de patrimoine Ultron';
+    const agentName = config.agent_name || 'Assistant';
+
+    // Injecter les variables dans le prompt système
+    let systemPrompt = config.system_prompt || '';
+
+    // Remplacer les variables template
+    systemPrompt = systemPrompt
+      .replace(/\{\{cabinet_name\}\}/g, cabinetName)
+      .replace(/\{\{agent_name\}\}/g, agentName);
+
+    return `${systemPrompt}
 
 INSTRUCTIONS SPÉCIFIQUES :
 
 1. OBJECTIF : Qualifier le prospect et prendre un rendez-vous si intéressé
 2. DURÉE MAXIMALE : ${Math.floor(config.max_call_duration_seconds / 60)} minutes
-3. QUESTIONS À POSER : ${config.qualification_questions.map((q, i) => `${i + 1}. ${q}`).join(' ')}
+3. QUESTIONS À POSER : ${config.qualification_questions?.map((q, i) => `${i + 1}. ${q}`).join(' ') || 'Aucune question spécifique définie'}
 
 RÈGLES IMPORTANTES :
+- Présentez-vous comme ${agentName} du ${cabinetName}
 - Soyez naturel et conversationnel
 - Écoutez les objections et répondez avec empathie
 - Si le prospect est intéressé, proposez un créneau de rendez-vous
@@ -191,7 +207,7 @@ RÈGLES IMPORTANTES :
 - Ne jamais insister si la personne refuse
 
 INFORMATION ENTREPRISE :
-- Nom : Cabinet de gestion de patrimoine Ultron
+- Nom : ${cabinetName}
 - Spécialités : Investissements, optimisation fiscale, retraite
 - Approche personnalisée selon le profil de chaque client
 
