@@ -554,22 +554,3 @@ export interface VoiceApiResponse<T = any> {
   };
 }
 
-// Export types principaux
-export type {
-  VoiceConfig,
-  VoiceConfigInput,
-  PhoneCall,
-  VoiceScript,
-  VoiceWebhook,
-  VoiceDailyStats,
-  VapiAssistant,
-  VapiCallRequest,
-  VapiCallResponse,
-  VapiWebhookEvent,
-  VoiceDashboardStats,
-  CreateCallRequest,
-  ProcessWebhookRequest,
-  AvailableSlot,
-  BookAppointmentRequest,
-  BookAppointmentResponse
-};

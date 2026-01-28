@@ -504,9 +504,13 @@ export class ProspectQualificationAnalyzer {
     result: 'CHAUD' | 'TIEDE' | 'FROID' | 'NON_QUALIFIE';
     notes: string;
   } {
-    const analysis = {
+    const analysis: {
+      score: number;
+      result: 'CHAUD' | 'TIEDE' | 'FROID' | 'NON_QUALIFIE';
+      notes: string;
+    } = {
       score: 0,
-      result: 'NON_QUALIFIE' as const,
+      result: 'NON_QUALIFIE',
       notes: ''
     };
 
@@ -573,4 +577,3 @@ export class ProspectQualificationAnalyzer {
 // ========================================
 
 export default VapiService;
-export { ProspectQualificationAnalyzer };

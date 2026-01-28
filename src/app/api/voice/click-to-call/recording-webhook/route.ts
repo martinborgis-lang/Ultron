@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
       recordingDuration
     });
 
-    const supabase = createClient();
+    const supabase = await createClient();
 
     // Mise à jour de l'appel avec les informations d'enregistrement
     const updateData: any = {

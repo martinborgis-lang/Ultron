@@ -4,7 +4,11 @@ import { createClient } from '@/lib/supabase/server';
 
 export async function GET(request: NextRequest) {
   try {
-    const { user, organization } = await getCurrentUserAndOrganization();
+    const result = await getCurrentUserAndOrganization();
+  if (!result) {
+    return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
+  }
+  const { user, organization } = result;
 
     if (!user) {
       return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
@@ -23,7 +27,7 @@ export async function GET(request: NextRequest) {
     // Statistiques générales
     const { data: callsData, error: callsError } = await supabase
       .from('voice_calls')
-      .select('id, duration_seconds, status, outcome, ai_outcome')
+      .select('id, duration_seconds, status, outcome, ai_outcome, created_at')
       .eq('organization_id', organization.id)
       .gte('created_at', startDate.toISOString())
       .lte('created_at', endDate.toISOString());

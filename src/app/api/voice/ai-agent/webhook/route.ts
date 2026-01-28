@@ -86,8 +86,8 @@ export async function POST(request: NextRequest) {
       name: `${prospect_data.first_name || ''} ${prospect_data.last_name || ''}`.trim() || prospect_data.name,
       processing_status: 'pending',
       ip_address: getClientIP(request),
-      user_agent: request.headers.get('user-agent'),
-      referer: request.headers.get('referer'),
+      user_agent: request.headers.get('user-agent') || undefined,
+      referer: request.headers.get('referer') || undefined,
       utm_source: utm_params?.source,
       utm_medium: utm_params?.medium,
       utm_campaign: utm_params?.campaign
@@ -170,7 +170,7 @@ async function processWebhookAsync(webhook: VoiceWebhook, voiceConfig: VoiceConf
     // 1. Vérifications préliminaires
     const validations = await performValidations(webhook, voiceConfig);
     if (!validations.isValid) {
-      await markWebhookAsSkipped(webhook.id, validations.reason);
+      await markWebhookAsSkipped(webhook.id, validations.reason || 'Validation failed');
       return;
     }
 
@@ -180,7 +180,7 @@ async function processWebhookAsync(webhook: VoiceWebhook, voiceConfig: VoiceConf
     // 3. Vérifier s'il faut programmer un appel
     const shouldCall = await shouldProgramCall(webhook, voiceConfig);
     if (!shouldCall.should) {
-      await markWebhookAsSkipped(webhook.id, shouldCall.reason);
+      await markWebhookAsSkipped(webhook.id, shouldCall.reason || 'Call not needed');
       return;
     }
 
@@ -387,14 +387,7 @@ async function programCall(webhook: VoiceWebhook, prospect: any, voiceConfig: Vo
     from_number: voiceConfig.vapi_phone_number,
     vapi_assistant_id: voiceConfig.vapi_assistant_id,
     status: 'queued',
-    source: 'webhook',
-    metadata: {
-      webhook_id: webhook.id,
-      source: webhook.source,
-      utm_source: webhook.utm_source,
-      utm_medium: webhook.utm_medium,
-      utm_campaign: webhook.utm_campaign
-    }
+    source: 'webhook'
   };
 
   const { data: call, error: callError } = await supabase
@@ -427,9 +420,13 @@ async function programCall(webhook: VoiceWebhook, prospect: any, voiceConfig: Vo
     try {
       const vapiService = VapiService.createFromConfig(voiceConfig);
 
+      if (!webhook.phone_number) {
+        throw new Error('Numéro de téléphone manquant');
+      }
+
       const callRequest = {
         phoneNumber: webhook.phone_number,
-        assistantId: voiceConfig.vapi_assistant_id,
+        assistantId: voiceConfig.vapi_assistant_id || '',
         metadata: {
           prospect_id: prospect.id,
           organization_id: webhook.organization_id,

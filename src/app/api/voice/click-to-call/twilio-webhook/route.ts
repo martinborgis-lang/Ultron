@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
 
     console.log('Twilio Webhook:', { callSid, callStatus, callDuration, from, to });
 
-    const supabase = createClient();
+    const supabase = await createClient();
 
     // Mise à jour du statut de l'appel dans la base de données
     const updateData: any = {
@@ -74,7 +74,7 @@ export async function POST(request: NextRequest) {
 
 async function processCallTranscription(callData: any, recordingUrl: string) {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
 
     // Marquer le traitement comme démarré
     await supabase
@@ -171,7 +171,7 @@ async function processCallTranscription(callData: any, recordingUrl: string) {
     console.error('Erreur traitement transcription:', error);
 
     // Marquer l'échec de la transcription
-    const supabase = createClient();
+    const supabase = await createClient();
     await supabase
       .from('voice_calls')
       .update({

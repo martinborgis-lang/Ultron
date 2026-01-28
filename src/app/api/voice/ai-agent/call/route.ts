@@ -24,14 +24,16 @@ export async function POST(request: NextRequest) {
     console.log('📞 Demande d\'appel manuel Agent IA');
 
     // Authentification et organisation
-    const { user, organization, error: authError } = await getCurrentUserAndOrganization();
+    const result = await getCurrentUserAndOrganization();
 
-    if (authError || !user || !organization) {
+    if (!result) {
       return NextResponse.json(
         { error: 'Non autorisé' },
         { status: 401 }
       );
     }
+
+    const { user, organization } = result;
 
     // Récupération des données de la requête
     const body = await request.json() as CreateCallRequest;
@@ -124,19 +126,10 @@ export async function POST(request: NextRequest) {
       from_number: voiceConfig.vapi_phone_number,
       vapi_assistant_id: voiceConfig.vapi_assistant_id,
       status: 'queued',
-      source: 'manual',
-      metadata: {
-        script_type,
-        priority,
-        created_by: user.id,
-        created_by_name: user.full_name,
-        ...metadata
-      }
+      source: 'manual'
     };
 
-    if (scheduled_at) {
-      callData.scheduled_call_at = scheduled_at;
-    }
+    // Note: scheduled_at handling would need to be implemented in the database schema
 
     const { data: call, error: callError } = await supabase
       .from('phone_calls')
@@ -227,14 +220,16 @@ export async function POST(request: NextRequest) {
  */
 export async function GET(request: NextRequest) {
   try {
-    const { user, organization, error: authError } = await getCurrentUserAndOrganization();
+    const result = await getCurrentUserAndOrganization();
 
-    if (authError || !user || !organization) {
+    if (!result) {
       return NextResponse.json(
         { error: 'Non autorisé' },
         { status: 401 }
       );
     }
+
+    const { user, organization } = result;
 
     // Paramètres de requête
     const { searchParams } = new URL(request.url);
@@ -432,7 +427,7 @@ async function initiateVapiCall(
       prospect_id: call.prospect_id,
       organization_id: call.organization_id,
       prospect_name: prospect ? `${prospect.first_name || ''} ${prospect.last_name || ''}`.trim() : 'Prospect',
-      script_type: call.metadata?.script_type || 'qualification'
+      script_type: 'qualification' // Default script type since metadata is not available
     };
 
     const vapiCallRequest: VapiCallRequest = {

@@ -279,14 +279,14 @@ export async function POST(request: NextRequest) {
 
     console.log('🎉 RDV réservé avec succès');
 
-    return NextResponse.json<VoiceApiResponse<BookAppointmentResponse>>({
+    return NextResponse.json({
       success: true,
       data: response,
       metadata: {
         prospect_id,
         advisor_id: selectedAdvisor.id,
         appointment_date: appointmentData.start_date,
-        processing_time: Date.now() - Date.now() // Placeholder
+        processing_time: 0
       }
     });
 

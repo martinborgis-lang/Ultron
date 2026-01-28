@@ -4,7 +4,11 @@ import { getCurrentUserAndOrganization } from '@/lib/services/get-organization';
 
 export async function GET(request: NextRequest) {
   try {
-    const { user, organization } = await getCurrentUserAndOrganization();
+    const result = await getCurrentUserAndOrganization();
+    if (!result) {
+      return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
+    }
+    const { user, organization } = result;
 
     if (!user) {
       return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
@@ -22,7 +26,7 @@ export async function GET(request: NextRequest) {
       token,
       identity: `${organization.id}-${user.id}`,
       organization: organization.name,
-      userName: user.full_name || user.email
+      userName: user.email
     });
 
   } catch (error) {
@@ -36,7 +40,11 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const { user, organization } = await getCurrentUserAndOrganization();
+    const result = await getCurrentUserAndOrganization();
+    if (!result) {
+      return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
+    }
+    const { user, organization } = result;
 
     if (!user) {
       return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });

@@ -66,7 +66,7 @@ export function CallWidget({
   // Refs pour Twilio Device et timer
   const deviceRef = useRef<any>(null);
   const callRef = useRef<any>(null);
-  const timerRef = useRef<NodeJS.Timeout>();
+  const timerRef = useRef<NodeJS.Timeout | undefined>(undefined);
   const callSidRef = useRef<string>('');
 
   // Formatage du temps

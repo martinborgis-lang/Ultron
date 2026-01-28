@@ -4,7 +4,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase-admin';
-import { VapiWebhookEvent, PhoneCall } from '@/types/voice';
+import { VapiWebhookEvent, PhoneCall, CallOutcome } from '@/types/voice';
 import { ProspectQualificationAnalyzer } from '@/lib/services/vapi-service';
 
 const supabase = createAdminClient();
@@ -343,7 +343,7 @@ async function handleBookAppointment(call: PhoneCall, args: any) {
       organization_id: call.organization_id,
       prospect_id: call.prospect_id,
       type: 'meeting',
-      title: `RDV CGP - ${call.prospect_name || 'Prospect'}`,
+      title: `RDV CGP - Prospect`,
       start_date: `${args.date}T${args.time}:00`,
       duration_minutes: args.duration_minutes || 60,
       assigned_to: call.user_id,
@@ -440,7 +440,7 @@ async function findCallByVapiId(vapiCallId: string): Promise<{ data: PhoneCall |
   return { data };
 }
 
-function determineCallOutcome(event: VapiWebhookEvent, qualification: any): string {
+function determineCallOutcome(event: VapiWebhookEvent, qualification: any): CallOutcome {
   // Si un RDV a été pris (détecté dans les fonctions)
   if (event.call.transcript?.some(t => t.functionCall?.name === 'book_appointment')) {
     return 'appointment_booked';

@@ -56,7 +56,7 @@ export class TranscriptionService {
     } = options;
 
     try {
-      const response = await this.deepgram.listen.prerecorded.transcribeBuffer(
+      const response = await this.deepgram.listen.prerecorded.transcribeFile(
         audioBuffer,
         {
           model,
@@ -71,9 +71,9 @@ export class TranscriptionService {
         }
       );
 
-      const result = response.result;
+      const result = response.result as any;
 
-      if (!result.channels?.[0]?.alternatives?.[0]) {
+      if (!result || !result.channels?.[0]?.alternatives?.[0]) {
         throw new Error('No transcription result received');
       }
 
@@ -84,7 +84,7 @@ export class TranscriptionService {
       const confidence = transcript.confidence || 0;
 
       // Extraction des mots avec timing si disponible
-      const words = transcript.words?.map(word => ({
+      const words = transcript.words?.map((word: any) => ({
         word: word.word || '',
         start: word.start || 0,
         end: word.end || 0,
@@ -153,9 +153,9 @@ export class TranscriptionService {
         }
       );
 
-      const result = response.result;
+      const result = response.result as any;
 
-      if (!result.channels?.[0]?.alternatives?.[0]) {
+      if (!result || !result.channels?.[0]?.alternatives?.[0]) {
         throw new Error('No transcription result received');
       }
 
@@ -164,7 +164,7 @@ export class TranscriptionService {
       const transcriptText = transcript.transcript || '';
       const confidence = transcript.confidence || 0;
 
-      const words = transcript.words?.map(word => ({
+      const words = transcript.words?.map((word: any) => ({
         word: word.word || '',
         start: word.start || 0,
         end: word.end || 0,

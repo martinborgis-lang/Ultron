@@ -28,10 +28,10 @@ export async function GET(request: NextRequest) {
 
     if (authHeader) {
       try {
-        const { user, organization } = await getCurrentUserAndOrganization();
-        if (user && organization) {
-          organization_id = organization.id;
-          user_id = user.id;
+        const result = await getCurrentUserAndOrganization();
+        if (result?.user && result?.organization) {
+          organization_id = result.organization.id;
+          user_id = result.user.id;
         }
       } catch (error) {
         // Ignorer les erreurs d'auth pour les appels depuis Vapi
@@ -149,7 +149,7 @@ export async function GET(request: NextRequest) {
 
     console.log(`✅ ${limitedSlots.length} créneaux trouvés`);
 
-    return NextResponse.json<VoiceApiResponse<AvailableSlot[]>>({
+    return NextResponse.json({
       success: true,
       data: limitedSlots,
       metadata: {
