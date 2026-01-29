@@ -105,7 +105,7 @@ export class VapiService {
    */
   async createCall(request: VapiCallRequest): Promise<VapiCallResponse> {
     // Validation du numéro de téléphone
-    const phoneNumber = this.formatPhoneNumber(request.phoneNumber.number);
+    const phoneNumber = this.formatPhoneNumber(request.phoneNumber.twilioPhoneNumber);
     if (!this.isValidPhoneNumber(phoneNumber)) {
       throw new Error('Numéro de téléphone invalide');
     }
@@ -113,7 +113,8 @@ export class VapiService {
     const callData: VapiCallRequest = {
       ...request,
       phoneNumber: {
-        number: phoneNumber
+        twilioPhoneNumber: phoneNumber,
+        twilioAccountSid: process.env.TWILIO_ACCOUNT_SID // ✅ Utiliser variable d'environnement
       },
       metadata: {
         ...request.metadata,

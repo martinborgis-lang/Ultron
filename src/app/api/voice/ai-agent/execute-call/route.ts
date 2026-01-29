@@ -224,7 +224,7 @@ async function executeCallNow(call: any, prospect: any, voiceConfig: any): Promi
 
   const vapiCall = await vapiService.createCall({
     phoneNumber: {
-      number: prospect.phone
+      twilioPhoneNumber: prospect.phone // ✅ Nouveau format VAPI
     },
     assistantId: assistant.id || voiceConfig.vapi_assistant_id,
     metadata: {
