@@ -412,24 +412,22 @@ Commencez toujours par vous présenter et demander si la personne a quelques min
    */
   private formatVoiceForVapi(voice: string): any {
     // Mapping des anciennes voix vers les nouvelles voix VAPI
-    const voiceMapping: { [key: string]: string } = {
-      'jennifer': 'jennifer-playht',
-      'alex': 'alloy-openai',
-      'sarah': 'sarah-11labs',
-      'mike': 'onyx-openai',
-      'emma': 'nova-openai',
-      'john': 'echo-openai',
-      'lisa': 'shimmer-openai',
-      'david': 'fable-openai'
+    const voiceMapping: { [key: string]: { provider: string; voiceId: string } } = {
+      'jennifer': { provider: 'openai', voiceId: 'alloy' },
+      'alex': { provider: 'openai', voiceId: 'alloy' },
+      'sarah': { provider: 'openai', voiceId: 'nova' },
+      'mike': { provider: 'openai', voiceId: 'onyx' },
+      'emma': { provider: 'openai', voiceId: 'nova' },
+      'john': { provider: 'openai', voiceId: 'echo' },
+      'lisa': { provider: 'openai', voiceId: 'shimmer' },
+      'david': { provider: 'openai', voiceId: 'fable' },
+      'lucile': { provider: 'openai', voiceId: 'nova' } // ✅ Ajout de lucile
     };
 
-    // Utiliser le mapping ou la voix par défaut
-    const mappedVoice = voiceMapping[voice] || 'jennifer-playht';
+    // Utiliser le mapping ou la voix par défaut OpenAI
+    const voiceConfig = voiceMapping[voice] || { provider: 'openai', voiceId: 'alloy' };
 
-    return {
-      provider: 'playht',
-      voiceId: mappedVoice
-    };
+    return voiceConfig;
   }
 
   /**
