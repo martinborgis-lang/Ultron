@@ -9,17 +9,46 @@ import VapiService from '@/lib/services/vapi-service';
 const supabase = createAdminClient();
 
 /**
+ * GET /api/voice/ai-agent/execute-call
+ * Endpoint de test pour vérifier que l'endpoint est accessible
+ */
+export async function GET(request: NextRequest) {
+  console.log('🏥 [EXECUTE-CALL] Health check endpoint appelé');
+
+  return NextResponse.json({
+    success: true,
+    message: 'Endpoint execute-call est accessible',
+    timestamp: new Date().toISOString(),
+    url: request.url,
+    method: 'GET'
+  });
+}
+
+/**
  * POST /api/voice/ai-agent/execute-call
  * Exécuter un appel programmé (appelé par QStash)
  */
 export async function POST(request: NextRequest) {
-  console.log('🎯 Exécution appel programmé via QStash');
+  const timestamp = new Date().toISOString();
+  console.log('🎯 [EXECUTE-CALL] Début exécution appel programmé via QStash -', timestamp);
+
+  // Log des headers pour debug QStash
+  const headers = Object.fromEntries(request.headers.entries());
+  console.log('📋 [EXECUTE-CALL] Headers reçus:', {
+    'user-agent': headers['user-agent'],
+    'content-type': headers['content-type'],
+    'upstash-signature': headers['upstash-signature'] ? '[PRESENT]' : '[MISSING]',
+    'authorization': headers['authorization'] ? '[PRESENT]' : '[MISSING]'
+  });
 
   try {
     const body = await request.json();
     const { call_id, prospect_id, organization_id } = body;
 
+    console.log('📥 [EXECUTE-CALL] Payload reçu:', { call_id, prospect_id, organization_id });
+
     if (!call_id) {
+      console.error('❌ [EXECUTE-CALL] call_id manquant');
       return NextResponse.json({ error: 'call_id requis' }, { status: 400 });
     }
 
