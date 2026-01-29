@@ -87,14 +87,16 @@ export class VapiService {
    */
   async createCall(request: VapiCallRequest): Promise<VapiCallResponse> {
     // Validation du numéro de téléphone
-    const phoneNumber = this.formatPhoneNumber(request.phoneNumber);
+    const phoneNumber = this.formatPhoneNumber(request.phoneNumber.number);
     if (!this.isValidPhoneNumber(phoneNumber)) {
       throw new Error('Numéro de téléphone invalide');
     }
 
     const callData: VapiCallRequest = {
       ...request,
-      phoneNumber,
+      phoneNumber: {
+        number: phoneNumber
+      },
       metadata: {
         ...request.metadata,
         created_by: 'ultron_ai_agent',

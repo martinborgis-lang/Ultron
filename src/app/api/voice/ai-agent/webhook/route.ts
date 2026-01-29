@@ -106,17 +106,23 @@ export async function POST(request: NextRequest) {
 
     console.log('✅ Prospect créé:', prospect.id);
 
-    // Si en horaires de travail, programmer l'appel
-    if (isWithinWorkingHours(voiceConfig)) {
+    // Calculer le délai d'attente avant l'appel
+    const delayMinutes = voiceConfig.call_delay_minutes || 5;
+    const callTime = new Date();
+    callTime.setMinutes(callTime.getMinutes() + delayMinutes);
+
+    // Vérifier si l'heure d'appel calculée est dans les horaires
+    if (isWithinWorkingHours(voiceConfig, callTime)) {
       try {
-        const call = await programCallDirectly(prospect, voiceConfig);
-        console.log('📞 Appel programmé:', call?.id);
+        const call = await scheduleCallWithDelay(prospect, voiceConfig, callTime);
+        console.log(`📞 Appel programmé pour ${callTime.toLocaleString()} (dans ${delayMinutes} min):`, call?.id);
 
         return NextResponse.json({
           success: true,
-          message: 'Prospect créé et appel programmé avec succès',
+          message: `Prospect créé et appel programmé dans ${delayMinutes} minutes`,
           prospect_id: prospect.id,
-          call_id: call?.id
+          call_id: call?.id,
+          scheduled_call_time: callTime.toISOString()
         });
       } catch (callError) {
         console.error('❌ Erreur programmation appel:', callError);
@@ -130,13 +136,37 @@ export async function POST(request: NextRequest) {
         });
       }
     } else {
-      console.log('⏰ Hors horaires de travail - Appel non programmé');
+      console.log(`⏰ Heure d'appel calculée ${callTime.toLocaleString()} hors horaires de travail`);
 
-      return NextResponse.json({
-        success: true,
-        message: 'Prospect créé avec succès (hors horaires de travail)',
-        prospect_id: prospect.id
-      });
+      // Programmer pour le prochain créneau disponible
+      const nextAvailableTime = getNextAvailableCallTime(voiceConfig);
+      if (nextAvailableTime) {
+        try {
+          const call = await scheduleCallWithDelay(prospect, voiceConfig, nextAvailableTime);
+          console.log('📞 Appel reprogrammé pour prochain créneau:', nextAvailableTime.toLocaleString());
+
+          return NextResponse.json({
+            success: true,
+            message: `Prospect créé et appel programmé pour ${nextAvailableTime.toLocaleString()}`,
+            prospect_id: prospect.id,
+            call_id: call?.id,
+            scheduled_call_time: nextAvailableTime.toISOString()
+          });
+        } catch (callError) {
+          return NextResponse.json({
+            success: true,
+            message: 'Prospect créé, mais erreur lors de la programmation d\'appel',
+            prospect_id: prospect.id,
+            call_error: callError instanceof Error ? callError.message : 'Erreur inconnue'
+          });
+        }
+      } else {
+        return NextResponse.json({
+          success: true,
+          message: 'Prospect créé avec succès (aucun créneau d\'appel disponible)',
+          prospect_id: prospect.id
+        });
+      }
     }
 
   } catch (error) {
@@ -174,20 +204,30 @@ function isValidPhoneNumber(phone: string): boolean {
   return phoneRegex.test(phone);
 }
 
-function isWithinWorkingHours(voiceConfig: any): boolean {
-  const now = new Date();
-  const currentDay = now.getDay() === 0 ? 7 : now.getDay();
+function isWithinWorkingHours(voiceConfig: any, checkTime?: Date): boolean {
+  const timeToCheck = checkTime || new Date();
+  const currentDay = timeToCheck.getDay() === 0 ? 7 : timeToCheck.getDay();
 
   // Vérifier si on est dans les jours de travail
   if (!voiceConfig.working_days || !voiceConfig.working_days.includes(currentDay)) {
     return false;
   }
 
-  const currentHour = now.getHours();
-  const startHour = voiceConfig.working_hours_start ? parseInt(voiceConfig.working_hours_start.split(':')[0]) : 9;
-  const endHour = voiceConfig.working_hours_end ? parseInt(voiceConfig.working_hours_end.split(':')[0]) : 18;
+  const currentHour = timeToCheck.getHours();
+  const currentMinute = timeToCheck.getMinutes();
 
-  return currentHour >= startHour && currentHour < endHour;
+  // Parser les heures de travail
+  const startTime = voiceConfig.working_hours_start || '09:00';
+  const endTime = voiceConfig.working_hours_end || '18:00';
+
+  const [startHour, startMinute] = startTime.split(':').map(Number);
+  const [endHour, endMinute] = endTime.split(':').map(Number);
+
+  const currentMinutes = currentHour * 60 + currentMinute;
+  const startMinutes = startHour * 60 + startMinute;
+  const endMinutes = endHour * 60 + endMinute;
+
+  return currentMinutes >= startMinutes && currentMinutes < endMinutes;
 }
 
 async function programCallDirectly(prospect: any, voiceConfig: any): Promise<any> {
@@ -214,13 +254,19 @@ async function programCallDirectly(prospect: any, voiceConfig: any): Promise<any
   try {
     const vapiService = VapiService.createFromConfig(voiceConfig);
 
+    // Créer ou récupérer l'assistant VAPI
+    const assistant = await vapiService.createAssistant(voiceConfig, { name: 'Cabinet Ultron' });
+
     const vapiCall = await vapiService.createCall({
-      phoneNumber: prospect.phone,
-      assistantId: voiceConfig.vapi_assistant_id || 'default',
+      phoneNumber: {
+        number: prospect.phone
+      },
+      assistantId: assistant.id || voiceConfig.vapi_assistant_id,
       metadata: {
         prospect_id: prospect.id,
         prospect_name: `${prospect.first_name} ${prospect.last_name}`.trim(),
-        call_id: call.id
+        call_id: call.id,
+        organization_id: prospect.organization_id
       }
     });
 
@@ -252,4 +298,204 @@ async function programCallDirectly(prospect: any, voiceConfig: any): Promise<any
 
     throw vapiError;
   }
+}
+
+async function scheduleCallWithDelay(prospect: any, voiceConfig: any, scheduledTime: Date): Promise<any> {
+  // Créer l'enregistrement d'appel avec l'heure programmée
+  const { data: call, error: callError } = await supabase
+    .from('phone_calls')
+    .insert({
+      organization_id: prospect.organization_id,
+      prospect_id: prospect.id,
+      to_number: prospect.phone,
+      from_number: process.env.TWILIO_PHONE_NUMBER,
+      vapi_assistant_id: voiceConfig.vapi_assistant_id || 'default',
+      status: 'queued',
+      source: 'webhook_scheduled',
+      scheduled_at: scheduledTime.toISOString()
+    })
+    .select('*')
+    .single();
+
+  if (callError) {
+    throw new Error(`Erreur création appel programmé: ${callError.message}`);
+  }
+
+  // Si le délai est de 0, exécuter immédiatement (comme avant)
+  const delayMinutes = voiceConfig.call_delay_minutes || 5;
+  if (delayMinutes === 0) {
+    return await executeCallNow(call, prospect, voiceConfig);
+  }
+
+  // Mode développement : simulation locale du délai
+  if (process.env.NODE_ENV === 'development') {
+    console.log(`🧪 MODE DEV: Simulation délai de ${delayMinutes} minutes`);
+    console.log('📅 En production, l\'appel serait programmé via QStash pour:', scheduledTime.toISOString());
+
+    // Simulation : attendre quelques secondes puis exécuter
+    setTimeout(async () => {
+      console.log('🚀 SIMULATION: Exécution de l\'appel après délai simulé');
+      try {
+        await executeCallNow(call, prospect, voiceConfig);
+        console.log('✅ SIMULATION: Appel exécuté avec succès');
+      } catch (error) {
+        console.error('❌ SIMULATION: Erreur lors de l\'exécution:', error);
+      }
+    }, 30000); // 30 secondes au lieu des minutes complètes
+
+    // Mettre à jour le statut en "scheduled"
+    await supabase
+      .from('phone_calls')
+      .update({
+        status: 'scheduled',
+        metadata: {
+          simulation: true,
+          original_delay_minutes: delayMinutes,
+          scheduled_for: scheduledTime.toISOString()
+        }
+      })
+      .eq('id', call.id);
+
+    return call;
+  }
+
+  // Production : utiliser QStash réel
+  try {
+    const qstashResponse = await scheduleCallWithQStash(call, scheduledTime);
+    console.log('📅 Appel programmé via QStash:', qstashResponse);
+
+    // Mettre à jour l'appel avec l'ID de la tâche QStash
+    await supabase
+      .from('phone_calls')
+      .update({
+        status: 'scheduled',
+        metadata: { qstash_message_id: qstashResponse?.messageId }
+      })
+      .eq('id', call.id);
+
+    return call;
+  } catch (qstashError) {
+    console.error('❌ Erreur QStash, exécution immédiate:', qstashError);
+    // En cas d'erreur QStash, exécuter immédiatement
+    return await executeCallNow(call, prospect, voiceConfig);
+  }
+}
+
+async function executeCallNow(call: any, prospect: any, voiceConfig: any): Promise<any> {
+  try {
+    const vapiService = VapiService.createFromConfig(voiceConfig);
+
+    // Créer l'assistant VAPI
+    const assistant = await vapiService.createAssistant(voiceConfig, { name: 'Cabinet Ultron' });
+
+    const vapiCall = await vapiService.createCall({
+      phoneNumber: {
+        number: prospect.phone
+      },
+      assistantId: assistant.id || voiceConfig.vapi_assistant_id,
+      metadata: {
+        prospect_id: prospect.id,
+        prospect_name: `${prospect.first_name} ${prospect.last_name}`.trim(),
+        call_id: call.id,
+        organization_id: prospect.organization_id
+      }
+    });
+
+    // Mettre à jour avec l'ID Vapi
+    await supabase
+      .from('phone_calls')
+      .update({
+        vapi_call_id: vapiCall.id,
+        status: 'ringing',
+        started_at: new Date().toISOString()
+      })
+      .eq('id', call.id);
+
+    console.log('✅ Appel VAPI exécuté immédiatement:', vapiCall.id);
+    return call;
+
+  } catch (vapiError) {
+    console.error('❌ Erreur VAPI lors de l\'exécution:', vapiError);
+
+    // Marquer l'appel comme échoué
+    await supabase
+      .from('phone_calls')
+      .update({
+        status: 'failed',
+        error_message: vapiError instanceof Error ? vapiError.message : 'Erreur VAPI'
+      })
+      .eq('id', call.id);
+
+    throw vapiError;
+  }
+}
+
+async function scheduleCallWithQStash(call: any, scheduledTime: Date): Promise<any> {
+  const webhookUrl = `${process.env.NEXTAUTH_URL || 'https://ultron-murex.vercel.app'}/api/voice/ai-agent/execute-call`;
+
+  const payload = {
+    call_id: call.id,
+    prospect_id: call.prospect_id,
+    organization_id: call.organization_id
+  };
+
+  // Utiliser QStash pour programmer l'appel
+  const qstashUrl = 'https://qstash.upstash.io/v2/schedules';
+
+  const schedulePayload = {
+    destination: webhookUrl,
+    body: JSON.stringify(payload),
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    cron: null,
+    delay: Math.floor((scheduledTime.getTime() - Date.now()) / 1000) // délai en secondes
+  };
+
+  const response = await fetch(qstashUrl, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${process.env.QSTASH_TOKEN}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(schedulePayload)
+  });
+
+  if (!response.ok) {
+    throw new Error(`Erreur QStash: ${response.statusText}`);
+  }
+
+  return await response.json();
+}
+
+function getNextAvailableCallTime(voiceConfig: any): Date | null {
+  const now = new Date();
+  const workingDays = voiceConfig.working_days || [1, 2, 3, 4, 5]; // Lun-Ven par défaut
+  const startTime = voiceConfig.working_hours_start || '09:00';
+  const endTime = voiceConfig.working_hours_end || '18:00';
+
+  // Parser les heures
+  const [startHour, startMinute] = startTime.split(':').map(Number);
+  const [endHour, endMinute] = endTime.split(':').map(Number);
+
+  // Chercher le prochain créneau disponible (max 7 jours)
+  for (let i = 1; i <= 7; i++) {
+    const checkDate = new Date(now);
+    checkDate.setDate(checkDate.getDate() + i);
+
+    const dayOfWeek = checkDate.getDay() === 0 ? 7 : checkDate.getDay();
+
+    if (workingDays.includes(dayOfWeek)) {
+      // Programmer au début des heures de bureau + délai configuré
+      const delayMinutes = voiceConfig.call_delay_minutes || 5;
+      checkDate.setHours(startHour, startMinute + delayMinutes, 0, 0);
+
+      // Vérifier que c'est encore dans les heures de travail
+      if (isWithinWorkingHours(voiceConfig, checkDate)) {
+        return checkDate;
+      }
+    }
+  }
+
+  return null; // Aucun créneau trouvé dans la semaine
 }

@@ -788,6 +788,22 @@ function ConfigurationModal({
                 placeholder="2"
               />
             </div>
+
+            <div>
+              <Label htmlFor="call_delay">Délai avant appel (minutes)</Label>
+              <Input
+                id="call_delay"
+                type="number"
+                value={config.call_delay_minutes || ''}
+                onChange={(e) => setConfig({...config, call_delay_minutes: parseInt(e.target.value)})}
+                placeholder="5"
+                min="0"
+                max="60"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Temps d'attente après le formulaire avant l'appel (0 = immédiat)
+              </p>
+            </div>
           </div>
 
           <div className="flex items-center space-x-2">

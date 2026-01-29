@@ -140,6 +140,7 @@ export async function POST(request: NextRequest) {
     if (body.retry_on_no_answer !== undefined) updateData.retry_on_no_answer = body.retry_on_no_answer;
     if (body.max_retry_attempts) updateData.max_retry_attempts = body.max_retry_attempts;
     if (body.delay_between_retries_minutes) updateData.delay_between_retries_minutes = body.delay_between_retries_minutes;
+    if (body.call_delay_minutes !== undefined) updateData.call_delay_minutes = body.call_delay_minutes;
 
     // Note: twilio_configured n'existe pas dans voice_config (table voice seulement)
 

@@ -32,6 +32,7 @@ export interface VoiceConfig {
   retry_on_no_answer: boolean;
   max_retry_attempts: number;
   delay_between_retries_minutes: number;
+  call_delay_minutes: number;
 
   // Webhook configuration
   webhook_url?: string;
@@ -59,6 +60,7 @@ export interface VoiceConfigInput {
   retry_on_no_answer?: boolean;
   max_retry_attempts?: number;
   delay_between_retries_minutes?: number;
+  call_delay_minutes?: number;
   webhook_url?: string;
   webhook_secret?: string;
   is_enabled?: boolean;
@@ -294,7 +296,9 @@ export interface VapiFunction {
 
 // Requête création appel Vapi
 export interface VapiCallRequest {
-  phoneNumber: string;
+  phoneNumber: {
+    number: string;
+  };
   assistantId?: string;
   assistant?: VapiAssistant;
   phoneNumberId?: string;

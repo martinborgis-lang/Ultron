@@ -427,7 +427,9 @@ async function initiateVapiCall(
     };
 
     const vapiCallRequest: VapiCallRequest = {
-      phoneNumber: call.to_number,
+      phoneNumber: {
+        number: call.to_number
+      },
       assistantId: voiceConfig.vapi_assistant_id,
       metadata: callMetadata
     };
