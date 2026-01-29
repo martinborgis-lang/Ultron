@@ -11,9 +11,10 @@ const supabase = createAdminClient();
 /**
  * GET /api/voice/ai-agent/execute-call
  * Endpoint de test pour vérifier que l'endpoint est accessible
+ * Updated: 29/01/2026 - Force cache refresh for Twilio format
  */
 export async function GET(request: NextRequest) {
-  console.log('🏥 [EXECUTE-CALL] Health check endpoint appelé');
+  console.log('🏥 [EXECUTE-CALL] Health check endpoint appelé - v2026-01-29');
 
   return NextResponse.json({
     success: true,
