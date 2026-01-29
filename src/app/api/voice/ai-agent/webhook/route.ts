@@ -399,7 +399,21 @@ async function executeCallNow(call: any, prospect: any, voiceConfig: any): Promi
 }
 
 async function scheduleCallWithQStash(call: any, scheduledTime: Date): Promise<any> {
-  const webhookUrl = `${process.env.NEXTAUTH_URL || 'https://ultron-murex.vercel.app'}/api/voice/ai-agent/execute-call`;
+  // Construire l'URL avec schéma approprié
+  const baseUrl = process.env.NEXTAUTH_URL || process.env.VERCEL_URL;
+  let webhookUrl: string;
+
+  if (baseUrl) {
+    // S'assurer que l'URL a un schéma https://
+    if (baseUrl.startsWith('http://') || baseUrl.startsWith('https://')) {
+      webhookUrl = `${baseUrl}/api/voice/ai-agent/execute-call`;
+    } else {
+      webhookUrl = `https://${baseUrl}/api/voice/ai-agent/execute-call`;
+    }
+  } else {
+    // Fallback sur l'URL de production
+    webhookUrl = 'https://ultron-murex.vercel.app/api/voice/ai-agent/execute-call';
+  }
 
   const payload = {
     call_id: call.id,
@@ -413,6 +427,9 @@ async function scheduleCallWithQStash(call: any, scheduledTime: Date): Promise<a
   if (delay <= 5) {
     throw new Error('Délai trop court pour la programmation');
   }
+
+  console.log('📅 QStash webhook URL:', webhookUrl);
+  console.log('⏰ Délai programmé:', delay, 'secondes');
 
   // Utiliser QStash v2 avec le bon format
   const qstashUrl = `https://qstash.upstash.io/v2/publish/${encodeURIComponent(webhookUrl)}`;
