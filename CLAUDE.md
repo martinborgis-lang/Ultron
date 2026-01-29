@@ -1,5 +1,27 @@
 # CLAUDE.md - Instructions pour Claude Code
 
+## 🔍 RÈGLES DE RECHERCHE ET DOCUMENTATION
+
+### ⚠️ TOUJOURS DEMANDER LA DOCUMENTATION OFFICIELLE
+
+**Quand demander au user de vérifier la documentation externe :**
+- Les APIs externes (VAPI, Twilio, Stripe, etc.) retournent des erreurs de format
+- Les services tiers changent leur API (très fréquent avec VAPI, OpenAI, etc.)
+- Les messages d'erreur indiquent un format ou paramètre non reconnu
+- Les intégrations échouent avec des erreurs vagues ou de validation
+- Doute sur les paramètres requis d'une API externe
+
+**Phrases à utiliser :**
+- "Peux-tu vérifier la doc VAPI récente sur [sujet] ?"
+- "L'API semble avoir changé, peux-tu checker leur documentation ?"
+- "Peux-tu regarder des exemples récents de [service] pour ce format ?"
+- "Cette erreur suggère un changement d'API, vérifie leur changelog"
+- "Peux-tu me donner un exemple de payload qui fonctionne depuis leur doc ?"
+
+**NE JAMAIS tâtonner** avec des formats d'API quand on peut demander la source officielle !
+
+---
+
 ## 🎯 PROJET ULTRON
 
 **Ultron** est une application SaaS multi-tenant avancée pour automatiser la gestion de prospects et les ventes pour des cabinets de gestion de patrimoine (CGP).
