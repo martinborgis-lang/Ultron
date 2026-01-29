@@ -104,8 +104,20 @@ export class VapiService {
    * Créer un appel automatique
    */
   async createCall(request: VapiCallRequest): Promise<VapiCallResponse> {
+    // Extraire le numéro de téléphone selon le format reçu
+    let rawPhoneNumber: string;
+    if (typeof request.phoneNumber === 'string') {
+      rawPhoneNumber = request.phoneNumber;
+    } else if ('twilioPhoneNumber' in request.phoneNumber) {
+      rawPhoneNumber = request.phoneNumber.twilioPhoneNumber;
+    } else if ('number' in request.phoneNumber) {
+      rawPhoneNumber = request.phoneNumber.number;
+    } else {
+      throw new Error('Format de numéro de téléphone non reconnu');
+    }
+
     // Validation du numéro de téléphone
-    const phoneNumber = this.formatPhoneNumber(request.phoneNumber);
+    const phoneNumber = this.formatPhoneNumber(rawPhoneNumber);
     if (!this.isValidPhoneNumber(phoneNumber)) {
       throw new Error('Numéro de téléphone invalide');
     }
