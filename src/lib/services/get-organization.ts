@@ -31,7 +31,7 @@ export async function getCurrentUserAndOrganization(): Promise<{
     // Recuperer l'organization avec credentials
     const { data: orgData, error: orgError } = await adminClient
       .from('organizations')
-      .select('id, name, data_mode, google_sheet_id, google_credentials')
+      .select('id, name, google_credentials')
       .eq('id', userData.organization_id)
       .single();
 
@@ -49,8 +49,6 @@ export async function getCurrentUserAndOrganization(): Promise<{
       organization: {
         id: orgData.id,
         name: orgData.name,
-        data_mode: orgData.data_mode || 'crm',
-        google_sheet_id: orgData.google_sheet_id,
         google_credentials: orgData.google_credentials as Record<string, unknown> | undefined,
       } as Organization,
     };

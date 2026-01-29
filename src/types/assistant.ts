@@ -87,4 +87,34 @@ export const DEFAULT_SUGGESTIONS: AssistantSuggestion[] = [
     text: 'Top 5 par patrimoine estime',
     color: 'text-green-500',
   },
+  {
+    icon: 'Phone',
+    text: 'Appels reussis cette semaine',
+    color: 'text-purple-500',
+  },
+  {
+    icon: 'ShoppingBag',
+    text: 'Produits vendus ce mois',
+    color: 'text-indigo-500',
+  },
+  {
+    icon: 'Search',
+    text: 'Meilleurs leads importes',
+    color: 'text-cyan-500',
+  },
+  {
+    icon: 'Linkedin',
+    text: 'Posts LinkedIn publies',
+    color: 'text-blue-600',
+  },
+  {
+    icon: 'Mail',
+    text: 'Emails envoyes cette semaine',
+    color: 'text-orange-500',
+  },
+  {
+    icon: 'DollarSign',
+    text: 'CA et commissions ce mois',
+    color: 'text-emerald-500',
+  },
 ];

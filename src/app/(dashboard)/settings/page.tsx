@@ -33,7 +33,7 @@ async function getOrganizationData() {
 
   const { data: org } = await supabase
     .from('organizations')
-    .select('google_credentials, google_sheet_id, plaquette_url')
+    .select('google_credentials, plaquette_url')
     .eq('id', user.organization_id)
     .single();
 
@@ -54,7 +54,7 @@ export default async function SettingsPage() {
   const data = await getOrganizationData();
 
   const isGoogleConnected = !!data?.org?.google_credentials;
-  const sheetId = data?.org?.google_sheet_id || null;
+  // Google Sheets no longer supported in CRM-only mode
   const plaquetteId = data?.org?.plaquette_url || null;
   const userRole = data?.userRole || 'conseiller';
 
@@ -131,12 +131,16 @@ export default async function SettingsPage() {
           </TabsContent>
           <TabsContent value="sheets">
             <div className="space-y-6">
-              <Suspense fallback={<GoogleSheetsConfigSkeleton />}>
-                <GoogleSheetsConfig
-                  isGoogleConnected={isGoogleConnected}
-                  initialSheetId={sheetId}
-                />
-              </Suspense>
+              <div className="p-6 border rounded-xl bg-gray-50">
+                <h3 className="text-lg font-semibold mb-2">Mode CRM Uniquement</h3>
+                <p className="text-gray-600 mb-4">
+                  Ultron fonctionne désormais exclusivement en mode CRM.
+                  Les Google Sheets ne sont plus supportées.
+                </p>
+                <p className="text-sm text-gray-500">
+                  Toutes les données sont maintenant gérées via le CRM intégré pour une meilleure performance et sécurité.
+                </p>
+              </div>
               <PlaquetteConfig initialPlaquetteId={plaquetteId} />
             </div>
           </TabsContent>

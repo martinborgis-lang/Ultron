@@ -9,7 +9,7 @@ export async function GET() {
 
     const { data: organizations, error } = await supabase
       .from('organizations')
-      .select('id, name, google_sheet_id, prompt_plaquette, plaquette_url');
+      .select('id, name, prompt_plaquette, plaquette_url');
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });
@@ -18,7 +18,7 @@ export async function GET() {
     const report = organizations?.map(org => ({
       id: org.id,
       name: org.name,
-      google_sheet_id: org.google_sheet_id,
+      // google_sheet_id removed in CRM-only mode
       has_prompt_plaquette: !!org.prompt_plaquette,
       has_plaquette_url: !!org.plaquette_url,
       prompt_config_type: org.prompt_plaquette ?

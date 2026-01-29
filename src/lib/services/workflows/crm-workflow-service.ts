@@ -17,7 +17,6 @@ interface WorkflowResult {
 interface WorkflowOrganization {
   id: string;
   name: string;
-  data_mode: string;
 }
 
 interface WorkflowUser {
@@ -33,7 +32,7 @@ async function getFullOrganization(orgId: string) {
 
   const { data, error } = await adminClient
     .from('organizations')
-    .select('id, name, data_mode, google_credentials, plaquette_url, prompt_qualification, prompt_synthese, prompt_plaquette, prompt_rappel, scoring_config')
+    .select('id, name, google_credentials, plaquette_url, prompt_qualification, prompt_synthese, prompt_plaquette, prompt_rappel, scoring_config')
     .eq('id', orgId)
     .single();
 
@@ -550,14 +549,10 @@ export async function triggerCrmWorkflow(
   user: WorkflowUser
 ): Promise<WorkflowResult | null> {
   logger.debug('🔄 CRM Workflow - Stage:', stageSlug, 'Subtype:', subtype, 'ProspectId:', prospectId);
-  logger.debug('🔄 CRM Workflow - Organization:', organization.id, 'Mode:', organization.data_mode);
+  logger.debug('🔄 CRM Workflow - Organization:', organization.id);
   logger.debug('🔄 CRM Workflow - User:', user.id, user.email);
 
-  // Only trigger for CRM mode
-  if (organization.data_mode !== 'crm') {
-    logger.debug('🔄 CRM Workflow - Skipping: not CRM mode');
-    return null;
-  }
+  // CRM workflows are now always enabled
 
   // Determine which workflow to trigger
 

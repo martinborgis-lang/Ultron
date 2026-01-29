@@ -1,7 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { NextRequest, NextResponse } from 'next/server';
-import { readGoogleSheet, parseProspectsFromSheet, getValidCredentials, GoogleCredentials } from '@/lib/google';
 import { corsHeaders } from '@/lib/cors';
 import { validateExtensionToken } from '@/lib/extension-auth';
 
@@ -42,11 +41,11 @@ export async function GET(request: NextRequest) {
     console.log('[Extension API] ✅ Token valide pour user:', auth.dbUser.email);
     const user = auth.dbUser;
 
-    // Get organization with data_mode
+    // Get organization
     const adminClient = createAdminClient();
     const { data: org, error: orgError } = await adminClient
       .from('organizations')
-      .select('id, data_mode, google_sheet_id, google_credentials')
+      .select('id')
       .eq('id', user.organization_id)
       .single();
 
@@ -57,14 +56,8 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // BI-MODE: Route based on data_mode
-    if (org.data_mode === 'crm') {
-      // CRM MODE - Query Supabase for prospects with upcoming meetings
-      return await getProspectsCRM(adminClient, org.id, user.id);
-    } else {
-      // SHEET MODE - Query Google Sheets
-      return await getProspectsSheet(adminClient, org, user.organization_id);
-    }
+    // CRM MODE - Query Supabase for prospects with upcoming meetings
+    return await getProspectsCRM(adminClient, org.id, user.id);
   } catch (error) {
     console.error('Extension prospects error:', error);
     return NextResponse.json(
@@ -179,75 +172,6 @@ async function getProspectsCRM(
   );
 }
 
-// Get prospects with RDV in Sheet mode
-async function getProspectsSheet(
-  adminClient: ReturnType<typeof createAdminClient>,
-  org: { id: string; google_sheet_id: string | null; google_credentials: GoogleCredentials | null },
-  organizationId: string
-) {
-  if (!org.google_credentials || !org.google_sheet_id) {
-    return NextResponse.json(
-      { prospects: [] },
-      { headers: corsHeaders() }
-    );
-  }
-
-  // Get valid credentials
-  const validCredentials = await getValidCredentials(org.google_credentials);
-
-  // Update credentials if refreshed
-  if (validCredentials.access_token !== org.google_credentials.access_token) {
-    await adminClient
-      .from('organizations')
-      .update({ google_credentials: validCredentials })
-      .eq('id', organizationId);
-  }
-
-  // Fetch prospects from Google Sheet
-  const rows = await readGoogleSheet(validCredentials, org.google_sheet_id, 'A:Y');
-  const allProspects = parseProspectsFromSheet(rows);
-
-  // Filter prospects with upcoming appointments (date_rdv not empty)
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  const prospectsWithRdv = allProspects
-    .filter(p => {
-      if (!p.dateRdv) return false;
-
-      // Parse date (format: DD/MM/YYYY or YYYY-MM-DD)
-      let rdvDate: Date | null = null;
-      if (p.dateRdv.includes('/')) {
-        const [day, month, year] = p.dateRdv.split('/');
-        rdvDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-      } else if (p.dateRdv.includes('-')) {
-        rdvDate = new Date(p.dateRdv);
-      }
-
-      if (!rdvDate || isNaN(rdvDate.getTime())) return false;
-
-      // Include today and future appointments
-      return rdvDate >= today;
-    })
-    .map(p => ({
-      id: p.id,
-      nom: p.nom,
-      prenom: p.prenom,
-      firstName: p.prenom,
-      lastName: p.nom,
-      email: p.email,
-      telephone: p.telephone,
-      phone: p.telephone,
-      date_rdv: p.dateRdv,
-      qualification: p.qualificationIA,
-    }))
-    .slice(0, 10); // Limit to 10 prospects
-
-  return NextResponse.json(
-    { prospects: prospectsWithRdv },
-    { headers: corsHeaders() }
-  );
-}
 
 // Format date to French format
 function formatDateFr(date: Date): string {

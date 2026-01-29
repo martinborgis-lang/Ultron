@@ -62,7 +62,6 @@ export function RegisterForm() {
       .insert({
         name: companyName,
         slug: generateSlug(companyName),
-        data_mode: 'crm',
         scoring_config: {
           seuil_chaud: 70,
           seuil_tiede: 40,

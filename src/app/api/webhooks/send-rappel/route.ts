@@ -1,7 +1,7 @@
 import { logger } from '@/lib/logger';
 
 import { createAdminClient } from '@/lib/supabase/admin';
-import { getValidCredentials, GoogleCredentials, updateGoogleSheetCells } from '@/lib/google';
+import { getValidCredentials, GoogleCredentials } from '@/lib/google';
 import { generateEmailWithConfig, DEFAULT_PROMPTS, PromptConfig } from '@/lib/anthropic';
 import { sendEmail, getEmailCredentialsByEmail } from '@/lib/gmail';
 import { NextRequest, NextResponse } from 'next/server';
@@ -25,7 +25,7 @@ async function handleRappel(request: NextRequest) {
     // Get organization with credentials
     const { data: org, error: orgError } = await supabase
       .from('organizations')
-      .select('id, google_credentials, google_sheet_id, prompt_rappel')
+      .select('id, google_credentials, prompt_rappel')
       .eq('id', organizationId)
       .single();
 
@@ -94,12 +94,9 @@ async function handleRappel(request: NextRequest) {
 
     logger.debug('Email sent, messageId:', result.messageId);
 
-    // Update column Y (Mail Rappel = Oui) if row_number is available
-    if (rowNumber && org.google_sheet_id) {
-      await updateGoogleSheetCells(sheetCredentials, org.google_sheet_id, [
-        { range: `Y${rowNumber}`, value: 'Oui' },
-      ]);
-      logger.debug(`Updated Sheet row ${rowNumber} column Y = Oui`);
+    // Sheet update disabled in CRM-only mode
+    if (rowNumber) {
+      logger.debug('Sheet update skipped (CRM-only mode) - would have updated row', rowNumber);
     }
 
     // Log email sent

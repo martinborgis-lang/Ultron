@@ -2,7 +2,6 @@ export interface Organization {
   id: string;
   name: string;
   slug: string;
-  google_sheet_id: string | null;
   google_credentials: Record<string, unknown> | null;
   logo_url: string | null;
   primary_color: string;

@@ -15,7 +15,6 @@ interface TestEmailResult {
 interface OrganizationDebugInfo {
   id: string;
   name: string;
-  google_sheet_id: string | null;
   has_plaquette_url: boolean;
   has_prompt_plaquette: boolean;
   prompt_config: PromptConfig | null;
@@ -29,7 +28,7 @@ export async function GET() {
     // Get all organizations and check their prompt configuration
     const { data: organizations, error } = await supabase
       .from('organizations')
-      .select('id, name, google_sheet_id, prompt_plaquette, plaquette_url');
+      .select('id, name, prompt_plaquette, plaquette_url');
 
     if (error) {
       return NextResponse.json({ error: 'Failed to fetch organizations' }, { status: 500 });
@@ -42,7 +41,7 @@ export async function GET() {
       const orgInfo: Partial<OrganizationDebugInfo> = {
         id: org.id,
         name: org.name,
-        google_sheet_id: org.google_sheet_id,
+        // google_sheet_id removed in CRM-only mode
         has_plaquette_url: !!org.plaquette_url,
         has_prompt_plaquette: !!org.prompt_plaquette,
         prompt_config: org.prompt_plaquette,

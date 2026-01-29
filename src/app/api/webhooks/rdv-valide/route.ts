@@ -59,6 +59,19 @@ function mapToProspect(data: WebhookData) {
 }
 
 export async function POST(request: NextRequest) {
+  // ❌ DEPRECATED: This webhook was for Google Sheets mode which is no longer supported
+  // The application now operates in CRM-only mode
+  return NextResponse.json(
+    {
+      error: 'Google Sheets webhooks are no longer supported',
+      message: 'Ultron now operates in CRM-only mode. Please use the CRM workflows instead.',
+      deprecated: true
+    },
+    { status: 410 } // Gone
+  );
+
+  /*
+  // LEGACY CODE - Kept for reference but no longer active
   try {
     const payload: WebhookPayload = await request.json();
 
@@ -336,4 +349,5 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
+  */
 }

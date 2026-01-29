@@ -1,14 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { google } from 'googleapis';
-import { getValidCredentials, GoogleCredentials } from '@/lib/google';
 import { validateExtensionToken } from '@/lib/extension-auth';
 
 interface Organization {
   id: string;
-  data_mode: string;
-  google_sheet_id: string | null;
-  google_credentials: GoogleCredentials | null;
 }
 
 export async function GET(
@@ -33,11 +28,11 @@ export async function GET(
 
     const userData = auth.dbUser;
 
-    // Récupérer l'organisation avec data_mode
+    // Récupérer l'organisation
     const adminClient = createAdminClient();
     const { data: org } = await adminClient
       .from('organizations')
-      .select('id, data_mode, google_sheet_id, google_credentials')
+      .select('id')
       .eq('id', userData.organization_id)
       .single();
 
@@ -50,12 +45,8 @@ export async function GET(
 
     const organization = org as Organization;
 
-    // BI-MODE: Route based on data_mode
-    if (organization.data_mode === 'crm') {
-      return await getProspectCRM(prospectId, organization.id);
-    } else {
-      return await getProspectSheet(prospectId, organization, adminClient);
-    }
+    // CRM MODE
+    return await getProspectCRM(prospectId, organization.id);
   } catch (error: unknown) {
     console.error('Erreur meeting prepare:', error);
     const message = error instanceof Error ? error.message : 'Erreur inconnue';
@@ -176,122 +167,3 @@ async function getProspectCRM(prospectId: string, organizationId: string) {
   });
 }
 
-// Get prospect from Google Sheet
-async function getProspectSheet(
-  prospectId: string,
-  organization: Organization,
-  adminClient: ReturnType<typeof createAdminClient>
-) {
-  if (!organization.google_credentials || !organization.google_sheet_id) {
-    return NextResponse.json(
-      { error: 'Google Sheets non configuré' },
-      { status: 400 }
-    );
-  }
-
-  // Get valid credentials
-  const credentials = await getValidCredentials(organization.google_credentials);
-
-  // Update credentials if refreshed
-  if (credentials !== organization.google_credentials) {
-    await adminClient
-      .from('organizations')
-      .update({ google_credentials: credentials })
-      .eq('id', organization.id);
-  }
-
-  // Configurer Google Sheets API
-  const oauth2Client = new google.auth.OAuth2(
-    process.env.GOOGLE_CLIENT_ID,
-    process.env.GOOGLE_CLIENT_SECRET
-  );
-  oauth2Client.setCredentials(credentials);
-
-  const sheets = google.sheets({ version: 'v4', auth: oauth2Client });
-
-  // Lire les données du prospect
-  const response = await sheets.spreadsheets.values.get({
-    spreadsheetId: organization.google_sheet_id,
-    range: 'prospect!A:Z',
-  });
-
-  const rows = response.data.values || [];
-
-  // Trouver le prospect par ID (colonne A)
-  const prospectRow = rows.find((row, index) => {
-    if (index === 0) return false; // Skip header
-    return String(row[0]) === prospectId;
-  });
-
-  if (!prospectRow) {
-    return NextResponse.json(
-      { error: 'Prospect non trouvé' },
-      { status: 404 }
-    );
-  }
-
-  const prospect = {
-    id: prospectRow[0] || '',
-    date_lead: prospectRow[1] || '',
-    nom: prospectRow[2] || '',
-    prenom: prospectRow[3] || '',
-    email: prospectRow[4] || '',
-    telephone: prospectRow[5] || '',
-    source: prospectRow[6] || '',
-    age: prospectRow[7] || '',
-    situation_pro: prospectRow[8] || '',
-    revenus: prospectRow[9] || '',
-    patrimoine: prospectRow[10] || '',
-    besoins: prospectRow[11] || '',
-    notes_appel: prospectRow[12] || '',
-    statut: prospectRow[13] || '',
-    date_rdv: prospectRow[14] || '',
-    qualification: prospectRow[16] || '',
-    score: parseInt(prospectRow[17]) || 0,
-    priorite: prospectRow[18] || '',
-    justification: prospectRow[19] || '',
-  };
-
-  // Récupérer l'historique des emails depuis email_logs
-  const { data: emailLogs } = await adminClient
-    .from('email_logs')
-    .select('*')
-    .eq('organization_id', organization.id)
-    .eq('prospect_email', prospect.email)
-    .order('sent_at', { ascending: false });
-
-  // Construire l'historique des interactions
-  const interactions: {
-    type: string;
-    date: string;
-    description: string;
-    status: string;
-  }[] = [];
-
-  // Ajouter l'appel de prospection si notes présentes
-  if (prospect.notes_appel) {
-    interactions.push({
-      type: 'appel',
-      date: prospect.date_lead || 'Date inconnue',
-      description: 'Appel de prospection',
-      status: 'sent',
-    });
-  }
-
-  // Ajouter les emails
-  if (emailLogs) {
-    for (const log of emailLogs) {
-      interactions.push({
-        type: `email_${log.email_type}`,
-        date: new Date(log.sent_at).toLocaleDateString('fr-FR'),
-        description: `Email ${log.email_type} : ${log.subject}`,
-        status: 'sent',
-      });
-    }
-  }
-
-  return NextResponse.json({
-    prospect,
-    interactions,
-  });
-}

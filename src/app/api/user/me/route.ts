@@ -55,7 +55,6 @@ export async function GET(request: Request) {
       organization: {
         id: context.organization.id,
         name: context.organization.name,
-        data_mode: context.organization.data_mode,
       }
     });
 

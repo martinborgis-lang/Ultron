@@ -437,9 +437,7 @@ async function programCall(webhook: VoiceWebhook, prospect: any, voiceConfig: Vo
       }
 
       const callRequest = {
-        phoneNumber: {
-          number: webhook.phone_number
-        },
+        phoneNumber: webhook.phone_number,
         assistantId: assistantId || '',
         metadata: {
           prospect_id: prospect.id,

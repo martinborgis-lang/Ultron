@@ -36,8 +36,6 @@ export interface ProspectData {
   createdAt: string;
   updatedAt?: string;
 
-  // Sheet-specific (pour le drag & drop)
-  rowNumber?: number;
 }
 
 export interface ProspectFilters {
@@ -115,12 +113,10 @@ export interface IPlanningService {
 }
 
 // ============================================
-// ORGANIZATION WITH MODE
+// ORGANIZATION (CRM-ONLY)
 // ============================================
 export interface Organization {
   id: string;
   name: string;
-  data_mode: 'sheet' | 'crm';
-  google_sheet_id?: string;
   google_credentials?: Record<string, unknown>;
 }

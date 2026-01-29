@@ -1,7 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { NextRequest, NextResponse } from 'next/server';
-import { readGoogleSheet, parseProspectsFromSheet, getValidCredentials } from '@/lib/google';
 import { corsHeaders } from '@/lib/cors';
 import { validateExtensionToken } from '@/lib/extension-auth';
 
@@ -63,10 +62,10 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Get organization with data_mode
+    // Get organization
     const { data: org, error: orgError } = await adminClient
       .from('organizations')
-      .select('id, data_mode, google_sheet_id, google_credentials')
+      .select('id')
       .eq('id', user.organization_id)
       .single();
 
@@ -77,14 +76,8 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // BI-MODE: Route based on data_mode
-    if (org.data_mode === 'crm') {
-      // CRM MODE - Query Supabase
-      return await searchProspectsCRM(adminClient, org.id, query);
-    } else {
-      // SHEET MODE - Query Google Sheets
-      return await searchProspectsSheet(adminClient, org, query);
-    }
+    // CRM MODE - Query Supabase
+    return await searchProspectsCRM(adminClient, org.id, query);
   } catch (error) {
     console.error('Extension search error:', error);
     return NextResponse.json(
@@ -142,10 +135,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get organization with data_mode
+    // Get organization
     const { data: org, error: orgError } = await adminClient
       .from('organizations')
-      .select('id, data_mode, google_sheet_id, google_credentials')
+      .select('id')
       .eq('id', user.organization_id)
       .single();
 
@@ -156,14 +149,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // BI-MODE: Route based on data_mode
-    if (org.data_mode === 'crm') {
-      // CRM MODE - Query Supabase
-      return await searchProspectsCRM(adminClient, org.id, query);
-    } else {
-      // SHEET MODE - Query Google Sheets
-      return await searchProspectsSheet(adminClient, org, query);
-    }
+    // CRM MODE - Query Supabase
+    return await searchProspectsCRM(adminClient, org.id, query);
   } catch (error) {
     console.error('Extension search POST error:', error);
     return NextResponse.json(
@@ -239,88 +226,3 @@ async function searchProspectsCRM(adminClient: ReturnType<typeof createAdminClie
   );
 }
 
-// Search in Sheet mode (Google Sheets)
-async function searchProspectsSheet(
-  adminClient: ReturnType<typeof createAdminClient>,
-  org: { id: string; google_sheet_id: string | null; google_credentials: any },
-  query: string
-) {
-  if (!org.google_credentials || !org.google_sheet_id) {
-    return NextResponse.json(
-      { error: 'Google Sheet non configure' },
-      { status: 400, headers: corsHeaders() }
-    );
-  }
-
-  // Get valid credentials
-  const validCredentials = await getValidCredentials(org.google_credentials);
-
-  // Update credentials if refreshed
-  if (validCredentials.access_token !== org.google_credentials.access_token) {
-    await adminClient
-      .from('organizations')
-      .update({ google_credentials: validCredentials })
-      .eq('id', org.id);
-  }
-
-  // Fetch prospects from Google Sheet
-  const rows = await readGoogleSheet(validCredentials, org.google_sheet_id, 'A:Y');
-  const allProspects = parseProspectsFromSheet(rows);
-
-  // Search by name
-  const matchedProspects = allProspects
-    .filter(p => {
-      const fullName = `${p.prenom} ${p.nom}`.toLowerCase();
-      const reverseName = `${p.nom} ${p.prenom}`.toLowerCase();
-      return fullName.includes(query) || reverseName.includes(query);
-    })
-    .map(p => ({
-      id: p.id,
-      nom: p.nom,
-      prenom: p.prenom,
-      firstName: p.prenom,
-      lastName: p.nom,
-      email: p.email,
-      telephone: p.telephone,
-      phone: p.telephone,
-      qualification: p.qualificationIA,
-      date_rdv: p.dateRdv,
-    }))
-    .slice(0, 5);
-
-  // If only one result, also return it as "prospect" for direct match
-  if (matchedProspects.length === 1) {
-    const fullProspect = allProspects.find(p => p.id === matchedProspects[0].id);
-    if (fullProspect) {
-      return NextResponse.json(
-        {
-          prospect: {
-            id: fullProspect.id,
-            nom: fullProspect.nom,
-            prenom: fullProspect.prenom,
-            firstName: fullProspect.prenom,
-            lastName: fullProspect.nom,
-            email: fullProspect.email,
-            telephone: fullProspect.telephone,
-            phone: fullProspect.telephone,
-            situation_pro: fullProspect.situationPro,
-            revenus: fullProspect.revenus,
-            patrimoine: fullProspect.patrimoine,
-            besoins: fullProspect.besoins,
-            notes_appel: fullProspect.notesAppel,
-            notes: fullProspect.notesAppel,
-            qualification: fullProspect.qualificationIA,
-            date_rdv: fullProspect.dateRdv,
-          },
-          prospects: matchedProspects,
-        },
-        { headers: corsHeaders() }
-      );
-    }
-  }
-
-  return NextResponse.json(
-    { prospects: matchedProspects },
-    { headers: corsHeaders() }
-  );
-}
