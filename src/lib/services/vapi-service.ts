@@ -101,7 +101,7 @@ export class VapiService {
   // ========================================
 
   /**
-   * Créer un appel automatique
+   * Créer un appel automatique - v2026-01-29-v2
    */
   async createCall(request: VapiCallRequest): Promise<VapiCallResponse> {
     // Extraire le numéro de téléphone selon le format reçu
@@ -122,6 +122,9 @@ export class VapiService {
       throw new Error('Numéro de téléphone invalide');
     }
 
+    // Log debug pour diagnostiquer le format envoyé
+    console.log('🔍 [VAPI DEBUG] phoneNumber format:', typeof phoneNumber, phoneNumber);
+
     const callData: VapiCallRequest = {
       ...request,
       // Utiliser phoneNumberId VAPI au lieu de Twilio direct pour éviter "Number Not Found"
@@ -130,9 +133,12 @@ export class VapiService {
       metadata: {
         ...request.metadata,
         created_by: 'ultron_ai_agent',
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        version: 'v2026-01-29-v2'
       }
     };
+
+    console.log('📤 [VAPI DEBUG] Payload envoyé à VAPI:', JSON.stringify(callData, null, 2));
 
     const response = await this.makeRequest<VapiCallResponse>('POST', '/call', callData);
     return response;
