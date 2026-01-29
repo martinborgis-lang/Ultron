@@ -1,0 +1,116 @@
+{
+  "_description": "Règles fiscales françaises pour revenus 2025 (déclaration 2026)",
+  "_sources": [
+    "Service-Public.fr",
+    "impots.gouv.fr",
+    "economie.gouv.fr",
+    "Bofip",
+    "MoneyVox (QF cap)"
+  ],
+  "_last_updated": "2026-01-01",
+
+  "income_brackets": [
+    {
+      "rate": 0,
+      "min": 0,
+      "max": 11497
+    },
+    {
+      "rate": 0.11,
+      "min": 11498,
+      "max": 29315
+    },
+    {
+      "rate": 0.30,
+      "min": 29316,
+      "max": 83823
+    },
+    {
+      "rate": 0.41,
+      "min": 83824,
+      "max": 180294
+    },
+    {
+      "rate": 0.45,
+      "min": 180295,
+      "max": null
+    }
+  ],
+
+  "quotient_familial": {
+    "qf_cap_half_part": 1807
+  },
+
+  "decote": {
+    "decote_rate": 0.4525,
+    "decote_base_single": 873,
+    "decote_base_couple": 1444,
+    "decote_threshold_single": 1929,
+    "decote_threshold_couple": 3191
+  },
+
+  "pfu_and_ps": {
+    "ps_rate": 0.172,
+    "pfu_ir_rate": 0.128,
+    "pfu_total": 0.30
+  },
+
+  "assurance_vie": {
+    "av_abattement_single": 4600,
+    "av_abattement_couple": 9200,
+    "av_pfu_ir_8y_lt150k": 0.075,
+    "av_pfu_ir_8y_gte150k": 0.128
+  },
+
+  "micro_foncier": {
+    "micro_foncier_max": 15000,
+    "micro_foncier_abatt": 0.30
+  },
+
+  "deficit_foncier": {
+    "deficit_foncier_cap": 10700,
+    "deficit_foncier_cap_reno": 21400
+  },
+
+  "per": {
+    "per_max": 37680,
+    "per_min": 4710,
+    "per_rate": 0.10
+  },
+
+  "malraux": {
+    "malraux_taux_22": 0.22,
+    "malraux_taux_30": 0.30,
+    "malraux_plafond_4ans": 400000,
+    "malraux_plafond_annuel": 100000
+  },
+
+  "niches_fiscales": {
+    "plafond_global_10k": 10000,
+    "exceptions_plafond": [
+      "Malraux",
+      "Monuments historiques",
+      "Girardin industriel"
+    ]
+  },
+
+  "other_thresholds": {
+    "non_recovery_threshold": 61,
+    "smic_monthly_2026": 1766.92,
+    "livret_a_rate_2026": 0.025
+  },
+
+  "default_assumptions": {
+    "hyp_rendement_default": 0.04,
+    "scpi_yield_default": 0.045,
+    "pea_duration_min": 5,
+    "av_duration_optimum": 8
+  },
+
+  "calculation_precision": {
+    "rounding_decimals": 0,
+    "validation_tolerance_euros": 1,
+    "use_dgfip_simulator": true,
+    "dgfip_simulator_url": "https://simulateur-ir-ifi.impots.gouv.fr"
+  }
+}

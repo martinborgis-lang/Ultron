@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { cn } from '@/lib/utils';
-import { Bot, LayoutDashboard, Users, Settings, LogOut, Calculator, Calendar, Sliders, LayoutGrid, CheckSquare, Upload, MessageSquare, Video, Shield, Search, Linkedin, Phone, Mic } from 'lucide-react';
+import { Bot, LayoutDashboard, Users, Settings, LogOut, Calculator, Calendar, Sliders, LayoutGrid, CheckSquare, Upload, MessageSquare, Video, Shield, Search, Linkedin, Phone, Mic, Receipt } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { useUser } from '@/hooks/useUser';
@@ -27,6 +27,7 @@ const features = [
   { name: 'Agent Vocal IA', href: '/voice/ai-agent', icon: Mic },
   { name: 'LinkedIn Agent', href: '/linkedin-agent', icon: Linkedin },
   { name: 'Calculateur', href: '/features/calculateur', icon: Calculator },
+  { name: 'Défiscalisation', href: '/features/defiscalisation', icon: Receipt },
   { name: 'Scoring IA', href: '/settings/scoring', icon: Sliders },
 ];
 

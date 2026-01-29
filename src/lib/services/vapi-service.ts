@@ -124,8 +124,7 @@ export class VapiService {
     console.log('🔍 [VAPI DEBUG] phoneNumber format:', typeof phoneNumber, phoneNumber);
 
     const callData: VapiCallRequest = {
-      ...request,
-      // ✅ Format VAPI correct selon nouvelle API
+      // ✅ Format VAPI correct - SANS phoneNumber au niveau racine
       assistantId: request.assistantId,
       phoneNumberId: process.env.VAPI_PHONE_NUMBER_ID, // ID du numéro configuré dans VAPI
       customer: {
@@ -136,7 +135,7 @@ export class VapiService {
         ...request.metadata,
         created_by: 'ultron_ai_agent',
         timestamp: new Date().toISOString(),
-        version: 'v2026-01-29-v3'
+        version: 'v2026-01-29-final'
       }
     };
 
