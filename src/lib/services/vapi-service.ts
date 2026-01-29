@@ -39,16 +39,19 @@ export class VapiService {
 
     const assistantData: VapiAssistant = {
       name: config.agent_name,
-      voice: config.agent_voice,
-      language: config.agent_language,
-      systemPrompt: this.buildSystemPrompt(config, organizationData),
-      functions: this.buildAssistantFunctions(),
+      voice: this.formatVoiceForVapi(config.agent_voice),
+      model: {
+        provider: "openai",
+        model: "gpt-3.5-turbo",
+        temperature: 0.7,
+        systemMessage: this.buildSystemPrompt(config, organizationData)
+      },
+      language: config.agent_language || 'fr',
       firstMessage: `Bonjour, je suis ${agentName} du ${cabinetName}. Je vous contacte suite à votre demande d'information sur nos services de gestion de patrimoine. Avez-vous quelques minutes pour en discuter ?`,
       endCallMessage: `Merci pour votre temps. Vous recevrez un email de confirmation si nous avons programmé un rendez-vous. Au revoir et bonne journée !`,
-      maxDuration: config.max_call_duration_seconds,
-      responseDelaySeconds: 1,
-      llmRequestDelaySeconds: 1,
-      interruptSensitive: true
+      maxDurationSeconds: config.max_call_duration_seconds,
+      silenceTimeoutSeconds: 30,
+      responseDelaySeconds: 1
     };
 
     const response = await this.makeRequest<VapiAssistant>('POST', '/assistant', assistantData);
@@ -61,10 +64,15 @@ export class VapiService {
   async updateAssistant(assistantId: string, config: VoiceConfig, organizationData?: { name: string }): Promise<VapiAssistant> {
     const assistantData: Partial<VapiAssistant> = {
       name: config.agent_name,
-      voice: config.agent_voice,
-      systemPrompt: this.buildSystemPrompt(config, organizationData),
-      functions: this.buildAssistantFunctions(),
-      maxDuration: config.max_call_duration_seconds
+      voice: this.formatVoiceForVapi(config.agent_voice),
+      language: config.agent_language || 'fr',
+      model: {
+        provider: "openai",
+        model: "gpt-3.5-turbo",
+        temperature: 0.7,
+        systemMessage: this.buildSystemPrompt(config, organizationData)
+      },
+      maxDurationSeconds: config.max_call_duration_seconds
     };
 
     const response = await this.makeRequest<VapiAssistant>('PATCH', `/assistant/${assistantId}`, assistantData);
@@ -387,6 +395,31 @@ Commencez toujours par vous présenter et demander si la personne a quelques min
     // Implémentation de la validation HMAC
     // Pour l'instant, on retourne true (à implémenter selon Vapi)
     return true;
+  }
+
+  /**
+   * Formater une voix pour l'API Vapi
+   */
+  private formatVoiceForVapi(voice: string): any {
+    // Mapping des anciennes voix vers les nouvelles voix VAPI
+    const voiceMapping: { [key: string]: string } = {
+      'jennifer': 'jennifer-playht',
+      'alex': 'alloy-openai',
+      'sarah': 'sarah-11labs',
+      'mike': 'onyx-openai',
+      'emma': 'nova-openai',
+      'john': 'echo-openai',
+      'lisa': 'shimmer-openai',
+      'david': 'fable-openai'
+    };
+
+    // Utiliser le mapping ou la voix par défaut
+    const mappedVoice = voiceMapping[voice] || 'jennifer-playht';
+
+    return {
+      provider: 'playht',
+      voiceId: mappedVoice
+    };
   }
 
   /**

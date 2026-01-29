@@ -407,30 +407,29 @@ async function scheduleCallWithQStash(call: any, scheduledTime: Date): Promise<a
     organization_id: call.organization_id
   };
 
-  // Utiliser QStash pour programmer l'appel
-  const qstashUrl = 'https://qstash.upstash.io/v2/schedules';
+  const delay = Math.floor((scheduledTime.getTime() - Date.now()) / 1000); // délai en secondes
 
-  const schedulePayload = {
-    destination: webhookUrl,
-    body: JSON.stringify(payload),
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    cron: null,
-    delay: Math.floor((scheduledTime.getTime() - Date.now()) / 1000) // délai en secondes
-  };
+  // Si le délai est négatif ou trop petit, exécuter immédiatement
+  if (delay <= 5) {
+    throw new Error('Délai trop court pour la programmation');
+  }
+
+  // Utiliser QStash v2 avec le bon format
+  const qstashUrl = `https://qstash.upstash.io/v2/publish/${encodeURIComponent(webhookUrl)}`;
 
   const response = await fetch(qstashUrl, {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${process.env.QSTASH_TOKEN}`,
-      'Content-Type': 'application/json'
+      'Content-Type': 'application/json',
+      'Upstash-Delay': `${delay}s`
     },
-    body: JSON.stringify(schedulePayload)
+    body: JSON.stringify(payload)
   });
 
   if (!response.ok) {
-    throw new Error(`Erreur QStash: ${response.statusText}`);
+    const errorText = await response.text();
+    throw new Error(`Erreur QStash: ${response.statusText} - ${errorText}`);
   }
 
   return await response.json();

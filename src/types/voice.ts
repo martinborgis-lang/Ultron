@@ -267,16 +267,20 @@ export type VapiVoice =
 export interface VapiAssistant {
   id?: string;
   name: string;
-  voice: VapiVoice;
-  language: string;
-  systemPrompt: string;
+  voice: any; // Format complexe avec provider et voiceId
+  language?: string;
+  model?: {
+    provider: string;
+    model: string;
+    temperature?: number;
+    systemMessage?: string;
+  };
   functions?: VapiFunction[];
   firstMessage?: string;
   endCallMessage?: string;
-  maxDuration?: number;
+  maxDurationSeconds?: number;
+  silenceTimeoutSeconds?: number;
   responseDelaySeconds?: number;
-  llmRequestDelaySeconds?: number;
-  interruptSensitive?: boolean;
 }
 
 // Fonctions Vapi pour l'assistant
