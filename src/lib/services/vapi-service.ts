@@ -112,7 +112,10 @@ export class VapiService {
 
     const callData: VapiCallRequest = {
       ...request,
-      phoneNumber: { number: phoneNumber }, // ✅ VAPI exige maintenant un objet
+      phoneNumber: {
+        twilioPhoneNumber: phoneNumber, // ✅ VAPI exige maintenant Twilio format
+        twilioAccountSid: process.env.TWILIO_ACCOUNT_SID || 'default_sid'
+      },
       metadata: {
         ...request.metadata,
         created_by: 'ultron_ai_agent',

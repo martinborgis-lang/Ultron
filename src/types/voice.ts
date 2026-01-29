@@ -303,7 +303,7 @@ export interface VapiFunction {
 
 // Requête création appel Vapi
 export interface VapiCallRequest {
-  phoneNumber: { number: string } | string; // ✅ VAPI exige maintenant un objet { number: "..." }
+  phoneNumber: { twilioPhoneNumber: string; twilioAccountSid: string } | { number: string } | string; // ✅ VAPI évolue: Twilio format requis
   assistantId?: string;
   assistant?: VapiAssistant;
   phoneNumberId?: string;
