@@ -116,21 +116,9 @@ export function GoogleSheetsConfig({ isGoogleConnected, initialSheetId }: Google
     setTestStatus('loading');
     setTestResult(null);
 
-    try {
-      const response = await fetch('/api/sheets/test');
-      const data = await response.json();
-
-      if (response.ok && data.success) {
-        setTestStatus('success');
-        setTestResult({ rows: data.rows });
-      } else {
-        setTestStatus('error');
-        setTestResult({ error: data.error || 'Erreur de connexion' });
-      }
-    } catch {
-      setTestStatus('error');
-      setTestResult({ error: 'Erreur de connexion au serveur' });
-    }
+    // Test de connexion désactivé - mode CRM uniquement
+    setTestStatus('error');
+    setTestResult({ error: 'Test de connexion désactivé en mode CRM' });
   };
 
   return (

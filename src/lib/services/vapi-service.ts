@@ -105,17 +105,14 @@ export class VapiService {
    */
   async createCall(request: VapiCallRequest): Promise<VapiCallResponse> {
     // Validation du numéro de téléphone
-    const phoneNumber = this.formatPhoneNumber(request.phoneNumber.twilioPhoneNumber);
+    const phoneNumber = this.formatPhoneNumber(request.phoneNumber);
     if (!this.isValidPhoneNumber(phoneNumber)) {
       throw new Error('Numéro de téléphone invalide');
     }
 
     const callData: VapiCallRequest = {
       ...request,
-      phoneNumber: {
-        twilioPhoneNumber: phoneNumber,
-        twilioAccountSid: process.env.TWILIO_ACCOUNT_SID || undefined // ✅ Optionnel si non défini
-      },
+      phoneNumber: phoneNumber, // ✅ Format simplifié : juste le numéro
       metadata: {
         ...request.metadata,
         created_by: 'ultron_ai_agent',

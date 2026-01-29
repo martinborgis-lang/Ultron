@@ -67,8 +67,8 @@ export default async function SettingsPage() {
             <span className="hidden sm:inline">Profil</span>
           </TabsTrigger>
           <TabsTrigger value="data" className="gap-2">
-            <Database className="h-4 w-4" />
-            <span className="hidden sm:inline">Donnees</span>
+            <Settings className="h-4 w-4" />
+            <span className="hidden sm:inline">Config</span>
           </TabsTrigger>
           <TabsTrigger value="sheets" className="gap-2">
             <FileSpreadsheet className="h-4 w-4" />
@@ -94,20 +94,12 @@ export default async function SettingsPage() {
           <TabsContent value="data">
             <div className="border rounded-xl p-6 space-y-4">
               <div>
-                <h2 className="text-lg font-semibold">Source de donnees</h2>
+                <h2 className="text-lg font-semibold">Configuration</h2>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Choisissez entre le mode CRM (base Supabase) ou Google Sheet pour stocker vos prospects et taches.
+                  Configurez les differents modules et fonctionnalites de votre organisation.
                 </p>
               </div>
               <div className="flex flex-col sm:flex-row gap-3">
-                <Link
-                  href="/settings/data-source"
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
-                >
-                  <Database className="w-4 h-4" />
-                  Configurer la source de donnees
-                </Link>
-
                 <Link
                   href="/settings/voice"
                   className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"

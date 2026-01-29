@@ -258,9 +258,7 @@ async function programCallDirectly(prospect: any, voiceConfig: any): Promise<any
     const assistant = await vapiService.createAssistant(voiceConfig, { name: 'Cabinet Ultron' });
 
     const vapiCall = await vapiService.createCall({
-      phoneNumber: {
-        twilioPhoneNumber: prospect.phone // ✅ Nouveau format VAPI
-      },
+      phoneNumber: prospect.phone, // ✅ Format simplifié
       assistantId: assistant.id || voiceConfig.vapi_assistant_id,
       metadata: {
         prospect_id: prospect.id,
@@ -357,9 +355,7 @@ async function executeCallNow(call: any, prospect: any, voiceConfig: any): Promi
     const assistant = await vapiService.createAssistant(voiceConfig, { name: 'Cabinet Ultron' });
 
     const vapiCall = await vapiService.createCall({
-      phoneNumber: {
-        twilioPhoneNumber: prospect.phone // ✅ Nouveau format VAPI
-      },
+      phoneNumber: prospect.phone, // ✅ Format simplifié
       assistantId: assistant.id || voiceConfig.vapi_assistant_id,
       metadata: {
         prospect_id: prospect.id,

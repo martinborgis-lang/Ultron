@@ -102,9 +102,7 @@ export async function POST(request: NextRequest) {
       // Test création appel VAPI
       console.log('📱 Tentative création appel VAPI...');
       const vapiCall = await vapiService.createCall({
-        phoneNumber: {
-          twilioPhoneNumber: prospect.phone // ✅ Nouveau format VAPI
-        },
+        phoneNumber: prospect.phone, // ✅ Format simplifié
         assistantId: assistant.id,
         metadata: {
           prospect_id: prospect.id,

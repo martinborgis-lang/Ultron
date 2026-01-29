@@ -532,13 +532,13 @@ function NewEventModal({
 
   useEffect(() => {
     // Charger les prospects pour le select
-    fetch('/api/sheets/prospects')
+    fetch('/api/prospects/unified')
       .then(res => res.json())
       .then(data => {
         if (Array.isArray(data)) {
-          setProspects(data.map((p: { id?: string; prenom?: string; nom?: string }) => ({
+          setProspects(data.map((p: { id?: string; first_name?: string; last_name?: string }) => ({
             id: p.id || '',
-            name: `${p.prenom || ''} ${p.nom || ''}`.trim()
+            name: `${p.first_name || ''} ${p.last_name || ''}`.trim()
           })).filter((p: { id: string; name: string }) => p.name));
         }
       })
