@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
     const { user, organization } = result;
 
     // Générer l'URL webhook sécurisée pour cette organisation
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+    const baseUrl = process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
     const webhookUrl = `${baseUrl}/api/voice/ai-agent/webhook`;
 
     return NextResponse.json({

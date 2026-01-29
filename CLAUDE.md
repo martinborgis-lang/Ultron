@@ -16,6 +16,10 @@
 - **Multi-tenant** : OAuth Google par entreprise + Gmail individuel par conseiller
 - **Planning Avancé** : Tâches, événements, intégration Google Calendar
 - **Landing Page Moderne** : Interface marketing avec animations et branding
+- **🆕 Lead Finder** : Moteur de recherche prospects avec Outscraper et Google Places
+- **🆕 LinkedIn Agent** : Générateur IA de posts LinkedIn professionnels
+- **🆕 Agent Vocal IA** : Appels automatiques avec Vapi.ai et qualification IA
+- **🆕 Click-to-Call** : Système d'appels WebRTC intégré avec Twilio
 
 ---
 
@@ -99,6 +103,11 @@ src/
 │   │   ├── planning/page.tsx               # Tâches & événements
 │   │   ├── meetings/page.tsx               # 🆕 Gestion transcriptions RDV
 │   │   ├── assistant/page.tsx              # 🆕 IA Assistant conversationnel
+│   │   ├── leads-finder/page.tsx           # 🆕 Moteur recherche prospects
+│   │   ├── linkedin-agent/page.tsx         # 🆕 Générateur posts LinkedIn IA
+│   │   ├── voice/
+│   │   │   ├── ai-agent/page.tsx           # 🆕 Dashboard Agent IA automatique
+│   │   │   └── form-test/page.tsx          # 🆕 Test formulaires webhooks
 │   │   ├── tasks/page.tsx                  # 🆕 Gestionnaire de tâches
 │   │   ├── import/page.tsx                 # 🆕 Import CSV prospects
 │   │   ├── agenda/page.tsx                 # 🆕 Vue calendrier avancée
@@ -113,6 +122,7 @@ src/
 │   │       ├── products/page.tsx           # 🆕 Gestion produits
 │   │       ├── scoring/page.tsx            # 🆕 Configuration scoring IA
 │   │       ├── thresholds/page.tsx         # 🆕 Seuils admin
+│   │       ├── voice/page.tsx              # 🆕 Configuration Agent IA vocal
 │   │       └── team/page.tsx
 │   ├── auth/
 │   │   ├── callback/page.tsx
@@ -140,6 +150,31 @@ src/
 │   │   │       ├── route.ts                # GET/POST transcriptions
 │   │   │       ├── [id]/route.ts           # GET/DELETE transcription
 │   │   │       └── [id]/pdf/route.ts       # GET export PDF
+│   │   ├── leads/                          # 🆕 APIs Lead Finder
+│   │   │   ├── search/route.ts             # POST recherche prospects
+│   │   │   ├── import/route.ts             # POST import vers CRM
+│   │   │   ├── credits/route.ts            # GET crédits disponibles
+│   │   │   └── stats/route.ts              # GET statistiques recherches
+│   │   ├── linkedin/                       # 🆕 APIs LinkedIn Agent
+│   │   │   ├── config/route.ts             # GET/POST configuration cabinet
+│   │   │   ├── generate/route.ts           # POST génération post IA
+│   │   │   └── posts/route.ts              # GET historique posts
+│   │   ├── voice/                          # 🆕 APIs Agent Vocal & Click-to-Call
+│   │   │   ├── ai-agent/
+│   │   │   │   ├── config/route.ts         # GET/POST configuration agent IA
+│   │   │   │   ├── webhook/route.ts        # POST webhook formulaires web
+│   │   │   │   ├── vapi-webhook/route.ts   # POST webhook Vapi.ai
+│   │   │   │   ├── execute-call/route.ts   # POST exécution appel programmé
+│   │   │   │   ├── call/route.ts           # GET/POST appels manuels
+│   │   │   │   ├── book-appointment/route.ts # POST prise RDV
+│   │   │   │   └── available-slots/route.ts # GET créneaux disponibles
+│   │   │   ├── click-to-call/
+│   │   │   │   ├── token/route.ts          # GET token Twilio WebRTC
+│   │   │   │   ├── call/route.ts           # POST initiation appel
+│   │   │   │   ├── twiml/route.ts          # GET configuration TwiML
+│   │   │   │   └── save-notes/route.ts     # POST sauvegarde notes appel
+│   │   │   ├── config/route.ts             # GET/POST configuration générale
+│   │   │   └── setup/route.ts              # POST configuration initiale
 │   │   ├── extension/                      # 🆕 APIs Extension Chrome
 │   │   │   ├── analyze/route.ts            # POST analyse prospect
 │   │   │   ├── analyze-realtime/route.ts   # POST analyse temps réel
@@ -241,6 +276,8 @@ src/
 │   │   └── WelcomeScreen.tsx
 │   ├── meeting/                            # 🆕 Composants Meetings
 │   │   └── MeetingPrepContent.tsx
+│   ├── voice/                              # 🆕 Composants Agent Vocal
+│   │   └── CallWidget.tsx                  # Widget appels WebRTC intégré
 │   ├── prospects/
 │   │   └── ProspectsContent.tsx            # Utilise /api/prospects/unified
 │   ├── crm/
@@ -295,6 +332,9 @@ src/
 │   ├── anthropic.ts
 │   ├── qstash.ts
 │   ├── cors.ts                         # 🆕 Configuration CORS extension
+│   ├── services/
+│   │   ├── vapi-service.ts             # 🆕 Service Vapi.ai pour Agent IA
+│   │   └── twilio-service.ts           # 🆕 Service Twilio pour WebRTC
 │   └── utils.ts
 ├── hooks/
 ├── types/
@@ -303,7 +343,10 @@ src/
 │   ├── products.ts                     # 🆕 Types produits et commissions
 │   ├── meeting.ts                      # 🆕 Types transcriptions et meetings
 │   ├── pipeline.ts                     # 🆕 Types pipeline bi-mode
-│   └── admin.ts                        # 🆕 Types dashboard admin
+│   ├── admin.ts                        # 🆕 Types dashboard admin
+│   ├── leads.ts                        # 🆕 Types Lead Finder et scraping
+│   ├── voice.ts                        # 🆕 Types Agent IA vocal et WebRTC
+│   └── linkedin.ts                     # 🆕 Types LinkedIn agent
 └── middleware.ts
 ```
 
@@ -766,6 +809,189 @@ CREATE TABLE agent_tasks (
 );
 ```
 
+### 🔍 Lead Finder Module
+
+**lead_credits** - Gestion crédits recherche prospects
+```sql
+CREATE TABLE lead_credits (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
+  credits_total INTEGER DEFAULT 0 CHECK (credits_total >= 0),
+  credits_used INTEGER DEFAULT 0 CHECK (credits_used >= 0),
+  last_purchase_date TIMESTAMPTZ,
+  last_usage_date TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now(),
+  CONSTRAINT valid_credits CHECK (credits_used <= credits_total),
+  UNIQUE(organization_id)
+);
+```
+
+**lead_searches** - Historique recherches prospects
+```sql
+CREATE TABLE lead_searches (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  search_type VARCHAR(20) NOT NULL CHECK (search_type IN ('particulier', 'entreprise')),
+  profession VARCHAR(255) NOT NULL,
+  location VARCHAR(255),
+  postal_code VARCHAR(10),
+  leads_requested INTEGER NOT NULL CHECK (leads_requested > 0),
+  leads_found INTEGER DEFAULT 0 CHECK (leads_found >= 0),
+  credits_consumed INTEGER DEFAULT 0 CHECK (credits_consumed >= 0),
+  status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending', 'processing', 'completed', 'failed')),
+  api_source VARCHAR(50), -- 'outscraper', 'google_places', 'demo'
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+```
+
+**lead_results** - Prospects trouvés avant import CRM
+```sql
+CREATE TABLE lead_results (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  search_id UUID NOT NULL REFERENCES lead_searches(id) ON DELETE CASCADE,
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  name VARCHAR(255),
+  company_name VARCHAR(255),
+  phone VARCHAR(50),
+  email VARCHAR(255),
+  website VARCHAR(500),
+  address TEXT,
+  city VARCHAR(255),
+  postal_code VARCHAR(10),
+  source VARCHAR(100) NOT NULL,
+  imported_to_crm BOOLEAN DEFAULT FALSE,
+  prospect_id UUID,
+  quality_score INTEGER CHECK (quality_score >= 0 AND quality_score <= 100),
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+```
+
+### 🔗 LinkedIn Agent Module
+
+**linkedin_config** - Configuration cabinet LinkedIn
+```sql
+CREATE TABLE linkedin_config (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID UNIQUE REFERENCES organizations(id) ON DELETE CASCADE,
+  cabinet_name VARCHAR(255),
+  cabinet_description TEXT,
+  cabinet_specialties TEXT[], -- ['PER', 'Immobilier', 'Succession']
+  years_experience INTEGER,
+  clients_count INTEGER,
+  average_return DECIMAL(5,2), -- Rendement moyen en %
+  website_url VARCHAR(500),
+  booking_url VARCHAR(500),
+  tone VARCHAR(50) DEFAULT 'professionnel',
+  target_audience TEXT,
+  topics_to_avoid TEXT,
+  preferred_hashtags TEXT[],
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+```
+
+**linkedin_posts** - Historique posts générés
+```sql
+CREATE TABLE linkedin_posts (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
+  user_id UUID REFERENCES users(id),
+  content TEXT NOT NULL,
+  hook TEXT, -- L'accroche du post
+  topic VARCHAR(255), -- Thème principal
+  news_source VARCHAR(500),
+  suggested_image_description TEXT,
+  status VARCHAR(50) DEFAULT 'draft' CHECK (status IN ('draft', 'approved', 'published', 'rejected')),
+  user_rating INTEGER CHECK (user_rating >= 1 AND user_rating <= 5),
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+```
+
+### 🤖 Agent Vocal IA Module
+
+**voice_config** - Configuration Agent IA par organisation
+```sql
+CREATE TABLE voice_config (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+    vapi_api_key TEXT NOT NULL, -- Chiffré
+    vapi_phone_number VARCHAR(20),
+    agent_name VARCHAR(100) DEFAULT 'Assistant Ultron',
+    agent_voice VARCHAR(50) DEFAULT 'jennifer',
+    working_hours_start TIME DEFAULT '09:00',
+    working_hours_end TIME DEFAULT '18:00',
+    working_days INTEGER[] DEFAULT ARRAY[1,2,3,4,5],
+    system_prompt TEXT DEFAULT 'Vous êtes un assistant commercial pour un cabinet de gestion de patrimoine.',
+    max_call_duration_seconds INTEGER DEFAULT 300,
+    retry_on_no_answer BOOLEAN DEFAULT true,
+    max_retry_attempts INTEGER DEFAULT 2,
+    call_delay_minutes INTEGER DEFAULT 5,
+    is_enabled BOOLEAN DEFAULT false,
+    created_at TIMESTAMPTZ DEFAULT now(),
+    updated_at TIMESTAMPTZ DEFAULT now(),
+    UNIQUE(organization_id)
+);
+```
+
+**phone_calls** - Appels téléphoniques effectués
+```sql
+CREATE TABLE phone_calls (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+    prospect_id UUID REFERENCES crm_prospects(id) ON DELETE SET NULL,
+    from_number VARCHAR(20),
+    to_number VARCHAR(20) NOT NULL,
+    vapi_call_id VARCHAR(100) UNIQUE,
+    status VARCHAR(20) DEFAULT 'queued' CHECK (status IN (
+        'queued', 'ringing', 'in_progress', 'completed', 'failed', 'no_answer', 'busy', 'cancelled'
+    )),
+    started_at TIMESTAMPTZ,
+    ended_at TIMESTAMPTZ,
+    duration_seconds INTEGER,
+    transcript_text TEXT,
+    transcript_json JSONB,
+    qualification_score INTEGER CHECK (qualification_score >= 0 AND qualification_score <= 100),
+    qualification_result VARCHAR(20) CHECK (qualification_result IN ('CHAUD', 'TIEDE', 'FROID', 'NON_QUALIFIE')),
+    outcome VARCHAR(20) DEFAULT 'unknown' CHECK (outcome IN (
+        'appointment_booked', 'callback_requested', 'not_interested', 'wrong_number', 'unknown'
+    )),
+    appointment_date TIMESTAMPTZ,
+    cost_cents INTEGER,
+    answered BOOLEAN DEFAULT false,
+    source VARCHAR(50),
+    recording_url VARCHAR(500),
+    error_message TEXT,
+    created_at TIMESTAMPTZ DEFAULT now(),
+    updated_at TIMESTAMPTZ DEFAULT now()
+);
+```
+
+**voice_webhooks** - Webhooks formulaires déclenchant appels
+```sql
+CREATE TABLE voice_webhooks (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+    source VARCHAR(50) NOT NULL, -- 'contact_form', 'landing_page', 'facebook_lead'
+    prospect_data JSONB NOT NULL,
+    phone_number VARCHAR(20),
+    email VARCHAR(255),
+    name VARCHAR(200),
+    processed BOOLEAN DEFAULT false,
+    processing_status VARCHAR(20) DEFAULT 'pending' CHECK (processing_status IN (
+        'pending', 'processing', 'completed', 'failed', 'skipped'
+    )),
+    prospect_created_id UUID REFERENCES crm_prospects(id),
+    call_created_id UUID REFERENCES phone_calls(id),
+    scheduled_call_at TIMESTAMPTZ,
+    utm_source VARCHAR(100),
+    utm_medium VARCHAR(100),
+    utm_campaign VARCHAR(100),
+    created_at TIMESTAMPTZ DEFAULT now()
+);
+```
+
 ### ⚙️ Tables Système
 
 **system_settings** - Configuration système
@@ -961,6 +1187,128 @@ Système complet de métriques et KPIs :
 - **Seuils personnalisés** : Warning/Critical par métrique
 - **Notifications proactives** : Alerts dashboard admin
 - **Suivi objectifs** : Écarts performance vs targets
+
+### 🔍 Lead Finder - Moteur de Recherche Prospects
+**Localisation :** `/leads-finder`, `/src/app/api/leads/*`
+
+Système avancé de scraping et recherche de prospects qualifiés :
+
+**Fonctionnalités principales :**
+- **3 catégories de prospects** : Commerçants/Artisans, Professions libérales, Dirigeants d'entreprises
+- **Sources multiples** : Google Places API, Outscraper API, Pappers API (dirigeants)
+- **Recherche géolocalisée** : Par ville, code postal, rayons personnalisés
+- **Système de crédits** : Gestion consommation et facturation par recherche
+- **Import CRM automatique** : Intégration directe dans le pipeline prospects
+- **Validation qualité** : Score de fiabilité et validation des données
+
+**Types de recherche :**
+- **Commerçants & Artisans** : Plombiers, électriciens, restaurants, commerces via Google Maps
+- **Professions libérales** : Médecins, avocats, notaires, architectes avec coordonnées
+- **Dirigeants d'entreprises** : Gérants, PDG avec données légales (SIREN, capital, effectif)
+
+**APIs Lead Finder :**
+- `GET /api/leads/credits` - Consulter crédits disponibles
+- `POST /api/leads/search` - Lancer recherche prospects
+- `POST /api/leads/import` - Importer leads vers CRM
+- `GET /api/leads/stats` - Statistiques recherches et qualité
+
+**Base de données :**
+- `lead_credits` : Gestion crédits par organisation
+- `lead_searches` : Historique des recherches avec paramètres
+- `lead_results` : Leads trouvés avant import CRM
+- `lead_stats` : Métriques quotidiennes lead scraping
+
+### 🔗 LinkedIn Agent - Générateur Posts IA
+**Localisation :** `/linkedin-agent`, `/src/app/api/linkedin/*`
+
+Agent IA pour création automatique de posts LinkedIn professionnels :
+
+**Fonctionnalités de génération :**
+- **8 thèmes spécialisés** : Marchés financiers, épargne, fiscalité, retraite, immobilier, conseils, sujets personnalisés
+- **Mode automatique** : IA sélectionne l'actualité la plus pertinente
+- **Configuration cabinet** : Personnalisation complète identité, ton, valeurs
+- **Historique et réutilisation** : Archive des posts générés avec filtres
+- **Preview en temps réel** : Aperçu style LinkedIn avant publication
+
+**Configuration avancée :**
+- **Identité cabinet** : Nom, description, années d'expérience, spécialités
+- **Chiffres de crédibilité** : Nombre clients, rendement moyen, encours gestion
+- **Style de communication** : 4 tons (professionnel, accessible, expert, décontracté)
+- **Hashtags favoris** : Personnalisation tags métier
+- **Plaquette PDF** : Upload pour inspiration IA (à venir)
+
+**APIs LinkedIn Agent :**
+- `GET/POST /api/linkedin/config` - Configuration cabinet
+- `POST /api/linkedin/generate` - Génération post IA
+- `GET /api/linkedin/posts` - Historique posts générés
+
+**Tables dédiées :**
+- `linkedin_config` : Configuration cabinet par organisation
+- `linkedin_posts` : Historique posts générés avec métadonnées
+
+### 🤖 Agent Vocal IA - Appels Automatiques
+**Localisation :** `/voice/ai-agent`, `/src/app/api/voice/ai-agent/*`
+
+Système complet d'appels automatiques avec IA conversationnelle :
+
+**Fonctionnalités principales :**
+- **Appels automatiques** : Déclenchement via formulaires web ou manuel
+- **IA conversationnelle** : Qualification intelligente avec Vapi.ai
+- **Horaires programmés** : Configuration plages de travail et délais
+- **Qualification temps réel** : Score IA et classification CHAUD/TIÈDE/FROID
+- **Transcription complète** : Analyse conversation et extraction insights
+- **Prise RDV automatique** : Intégration calendrier avec confirmation
+
+**Configuration Agent IA :**
+- **Voix personnalisables** : 8 voix disponibles (Jennifer, Alex, Sarah, etc.)
+- **Scripts configurables** : Prompts système et questions qualification
+- **Horaires de travail** : Jours/heures d'activité avec timezone
+- **Paramètres avancés** : Durée max, tentatives, délais entre appels
+- **Webhooks Vapi.ai** : Réception événements temps réel
+
+**Webhooks et intégrations :**
+- `POST /api/voice/ai-agent/webhook` - Réception formulaires web
+- `POST /api/voice/ai-agent/vapi-webhook` - Événements Vapi.ai
+- `POST /api/voice/ai-agent/execute-call` - Exécution appel programmé
+- `GET/POST /api/voice/ai-agent/config` - Configuration agent
+- `POST /api/voice/ai-agent/call` - Lancement appel manuel
+
+**Analytics avancés :**
+- **Dashboard temps réel** : Appels effectués, RDV pris, taux réponse
+- **ROI tracking** : Coût par appel, conversion, rentabilité
+- **Performance hebdo/mensuelle** : Tendances et évolutions
+
+### 📞 Click-to-Call - Appels WebRTC Intégrés
+**Localisation :** `/components/voice/CallWidget.tsx`, `/api/voice/click-to-call/*`
+
+Widget d'appels WebRTC intégré directement dans l'interface :
+
+**Fonctionnalités d'appel :**
+- **WebRTC natif** : Appels via navigateur sans plugin
+- **Intégration Twilio** : Infrastructure téléphonique professionnelle
+- **Interface temps réel** : Timer, contrôles mute, raccrochage
+- **Notes d'appel** : Saisie notes pendant et après conversation
+- **Classification outcome** : RDV pris, callback, pas intéressé, etc.
+- **Actions post-appel** : Programmation rappels et suivi automatique
+
+**Gestion des appels :**
+- **Historique complet** : Tous les appels avec durées et résultats
+- **Intégration CRM** : Mise à jour automatique statut prospect
+- **Activités générées** : Création activité CRM pour chaque appel
+- **Métriques téléphonie** : Durées, issues, taux de succès
+
+**APIs Click-to-Call :**
+- `GET /api/voice/click-to-call/token` - Token Twilio WebRTC
+- `POST /api/voice/click-to-call/call` - Initiation appel
+- `POST /api/voice/click-to-call/hangup` - Fin appel avec outcome
+- `POST /api/voice/click-to-call/save-notes` - Sauvegarde notes
+
+**Base de données voice :**
+- `voice_config` : Configuration agents IA par organisation
+- `phone_calls` : Historique appels avec transcriptions et résultats
+- `voice_scripts` : Scripts conversation configurables
+- `voice_webhooks` : Webhooks formulaires déclenchant appels
+- `voice_daily_stats` : Statistiques quotidiennes performance
 
 ---
 
