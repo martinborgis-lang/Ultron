@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUserAndOrganization } from '@/lib/services/get-organization';
 import { createAdminClient } from '@/lib/supabase-admin';
-import { SHEET_STAGES, UnifiedStage } from '@/types/pipeline';
+import { UnifiedStage } from '@/types/pipeline';
 
 export const dynamic = 'force-dynamic';
 
@@ -14,11 +14,6 @@ export async function GET(request: NextRequest) {
     }
 
     const { organization } = context;
-
-    // Mode Sheet : retourner les stages fixes
-    if (organization.data_mode === 'sheet') {
-      return NextResponse.json(SHEET_STAGES);
-    }
 
     // Mode CRM : récupérer depuis la base
     const supabase = createAdminClient();

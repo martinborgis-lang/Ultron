@@ -1,0 +1,566 @@
+{
+  "name": "Ultron Database Schema MCP",
+  "version": "1.0.0",
+  "description": "Model Context Protocol pour interroger la base de données Ultron en langage naturel",
+  "schema": {
+    "tables": {
+      "organizations": {
+        "description": "Entreprises clientes du système (multi-tenant)",
+        "columns": {
+          "id": "Identifiant unique de l'organisation (UUID)",
+          "name": "Nom de l'entreprise ou cabinet",
+          "slug": "Nom court unique pour l'URL (ex: cabinet-martin)",
+          "data_mode": "Mode de données: 'sheet' (Google Sheets) ou 'crm' (CRM complet)",
+          "google_sheet_id": "ID du Google Sheet si mode sheet activé",
+          "google_credentials": "Identifiants Google pour accès aux APIs",
+          "logo_url": "URL du logo de l'entreprise",
+          "primary_color": "Couleur principale du thème (hex)",
+          "plan": "Plan d'abonnement: 'free', 'starter', 'pro', 'enterprise'",
+          "prompt_qualification": "Prompt IA personnalisé pour la qualification des prospects",
+          "prompt_synthese": "Prompt IA pour la synthèse des conversations",
+          "prompt_rappel": "Prompt IA pour les emails de rappel",
+          "prompt_plaquette": "Prompt IA pour la génération de plaquettes commerciales",
+          "plaquette_id": "ID Google Drive du document plaquette",
+          "scoring_config": "Configuration du scoring IA (seuils, pondérations)",
+          "created_at": "Date de création de l'organisation",
+          "updated_at": "Date de dernière modification"
+        }
+      },
+      "users": {
+        "description": "Utilisateurs du système (admins et conseillers)",
+        "columns": {
+          "id": "Identifiant unique de l'utilisateur (UUID)",
+          "auth_id": "Lien avec l'authentification Supabase",
+          "organization_id": "Organisation à laquelle appartient l'utilisateur",
+          "email": "Adresse email de connexion",
+          "full_name": "Nom complet de l'utilisateur",
+          "role": "Rôle: 'admin' (superviseur) ou 'conseiller' (commercial)",
+          "gmail_credentials": "Identifiants Gmail individuels pour l'envoi d'emails",
+          "avatar_url": "URL de l'avatar/photo de profil",
+          "is_active": "Indique si le compte utilisateur est actif",
+          "created_at": "Date de création du compte",
+          "updated_at": "Date de dernière modification"
+        }
+      },
+      "products": {
+        "description": "Catalogue des produits vendus par l'organisation",
+        "columns": {
+          "id": "Identifiant unique du produit (UUID)",
+          "organization_id": "Organisation propriétaire du produit",
+          "name": "Nom du produit (ex: Assurance Vie, PEA, Pompe à chaleur)",
+          "description": "Description détaillée du produit",
+          "type": "Type de commission: 'fixed' (montant fixe) ou 'commission' (pourcentage)",
+          "category": "Catégorie métier (assurance_vie, immobilier, energie)",
+          "fixed_value": "Montant fixe en euros si type 'fixed'",
+          "commission_rate": "Pourcentage de commission si type 'commission'",
+          "is_active": "Indique si le produit est toujours commercialisé",
+          "created_by": "Utilisateur qui a créé le produit",
+          "created_at": "Date de création du produit",
+          "updated_at": "Date de dernière modification"
+        }
+      },
+      "advisor_commissions": {
+        "description": "Taux de commission personnalisés par conseiller et produit",
+        "columns": {
+          "id": "Identifiant unique de la commission (UUID)",
+          "organization_id": "Organisation concernée",
+          "user_id": "Conseiller concerné",
+          "product_id": "Produit concerné (NULL = commission par défaut)",
+          "commission_rate": "Pourcentage de commission du conseiller (0-100)",
+          "is_default": "Indique si c'est la commission par défaut du conseiller",
+          "created_at": "Date de configuration de la commission",
+          "updated_at": "Date de dernière modification"
+        }
+      },
+      "pipeline_stages": {
+        "description": "Étapes du pipeline de vente personnalisables par organisation",
+        "columns": {
+          "id": "Identifiant unique de l'étape (UUID)",
+          "organization_id": "Organisation propriétaire",
+          "name": "Nom de l'étape (Nouveau, RDV Pris, Négociation, Gagné)",
+          "slug": "Code court de l'étape (nouveau, rdv_pris, negocie, gagne)",
+          "color": "Couleur de l'étape dans le pipeline (hex)",
+          "position": "Position dans l'ordre du pipeline (1, 2, 3...)",
+          "is_won": "Indique si cette étape signifie 'affaire gagnée'",
+          "is_lost": "Indique si cette étape signifie 'affaire perdue'",
+          "default_probability": "Probabilité de closing par défaut (0-100%)",
+          "created_at": "Date de création de l'étape"
+        }
+      },
+      "crm_prospects": {
+        "description": "Prospects et clients dans le CRM",
+        "columns": {
+          "id": "Identifiant unique du prospect (UUID)",
+          "organization_id": "Organisation propriétaire",
+          "first_name": "Prénom du prospect",
+          "last_name": "Nom de famille du prospect",
+          "email": "Adresse email du prospect",
+          "phone": "Numéro de téléphone (format international)",
+          "company": "Entreprise du prospect",
+          "job_title": "Poste/fonction du prospect",
+          "address": "Adresse postale complète",
+          "city": "Ville de résidence",
+          "postal_code": "Code postal",
+          "country": "Pays (par défaut 'France')",
+          "patrimoine_estime": "Patrimoine estimé en euros (spécifique CGP)",
+          "revenus_annuels": "Revenus annuels en euros",
+          "situation_familiale": "Situation familiale (célibataire, marié, divorcé...)",
+          "nb_enfants": "Nombre d'enfants",
+          "age": "Âge du prospect",
+          "profession": "Profession du prospect",
+          "stage_id": "Étape actuelle dans le pipeline",
+          "stage_slug": "Code de l'étape actuelle",
+          "deal_value": "Valeur estimée de l'affaire en euros",
+          "close_probability": "Probabilité de closing (0-100%)",
+          "expected_close_date": "Date de closing prévue",
+          "qualification": "Niveau de qualification IA: CHAUD, TIEDE, FROID, non_qualifie",
+          "score_ia": "Score de qualification par l'IA (0-100)",
+          "analyse_ia": "Analyse textuelle détaillée par l'IA",
+          "derniere_qualification": "Date de la dernière qualification IA",
+          "total_commission_earned": "Total des commissions gagnées sur ce prospect",
+          "products_sold": "Nombre de produits vendus à ce prospect",
+          "source": "Source d'acquisition (form_test, linkedin, referral...)",
+          "source_detail": "Détail de la source d'acquisition",
+          "assigned_to": "Conseiller assigné au prospect",
+          "tags": "Liste des tags/étiquettes (array)",
+          "notes": "Notes libres sur le prospect",
+          "lost_reason": "Raison de perte si affaire perdue",
+          "won_date": "Date de gain si affaire gagnée",
+          "lost_date": "Date de perte si affaire perdue",
+          "last_activity_at": "Date de dernière activité",
+          "created_at": "Date de création du prospect",
+          "updated_at": "Date de dernière modification"
+        }
+      },
+      "deal_products": {
+        "description": "Produits vendus par prospect avec calcul automatique des revenus",
+        "columns": {
+          "id": "Identifiant unique de la vente (UUID)",
+          "organization_id": "Organisation concernée",
+          "prospect_id": "Prospect qui a acheté",
+          "product_id": "Produit vendu",
+          "advisor_id": "Conseiller qui a vendu",
+          "client_amount": "Montant investi/acheté par le client en euros",
+          "company_revenue": "Chiffre d'affaires généré pour l'entreprise (calculé automatiquement)",
+          "advisor_commission": "Commission du conseiller en euros (calculé automatiquement)",
+          "commission_rate_used": "Taux du produit utilisé pour le calcul",
+          "advisor_commission_rate": "Taux du conseiller utilisé pour le calcul",
+          "closed_at": "Date de finalisation de la vente",
+          "notes": "Notes sur la vente",
+          "created_at": "Date de création de l'enregistrement"
+        }
+      },
+      "crm_activities": {
+        "description": "Historique de toutes les interactions avec les prospects",
+        "columns": {
+          "id": "Identifiant unique de l'activité (UUID)",
+          "organization_id": "Organisation concernée",
+          "prospect_id": "Prospect concerné par l'activité",
+          "user_id": "Utilisateur qui a effectué l'activité",
+          "type": "Type d'activité: note, call, email, meeting, task",
+          "direction": "Direction: inbound (entrant) ou outbound (sortant)",
+          "subject": "Objet/titre de l'activité",
+          "content": "Contenu détaillé de l'activité",
+          "email_status": "Statut de l'email si type=email (sent, delivered, opened)",
+          "email_opened_at": "Date d'ouverture de l'email",
+          "email_opened_count": "Nombre d'ouvertures de l'email",
+          "duration_minutes": "Durée en minutes si appel/meeting",
+          "outcome": "Résultat de l'activité",
+          "metadata": "Données supplémentaires (JSON)",
+          "created_at": "Date de création de l'activité"
+        }
+      },
+      "crm_events": {
+        "description": "Événements et tâches du planning (compatible bi-mode)",
+        "columns": {
+          "id": "Identifiant unique de l'événement (UUID)",
+          "organization_id": "Organisation concernée",
+          "prospect_id": "Prospect lié à l'événement (si mode CRM)",
+          "prospect_sheet_id": "ID de ligne Google Sheet (si mode Sheet)",
+          "prospect_name": "Nom du prospect pour affichage",
+          "type": "Type: task, call, meeting, reminder, email",
+          "title": "Titre de l'événement",
+          "description": "Description détaillée",
+          "start_date": "Date et heure de début",
+          "end_date": "Date et heure de fin",
+          "due_date": "Date d'échéance pour les tâches",
+          "all_day": "Événement sur toute la journée",
+          "status": "Statut: pending, completed, cancelled",
+          "completed_at": "Date de completion",
+          "assigned_to": "Utilisateur assigné",
+          "created_by": "Utilisateur créateur",
+          "priority": "Priorité: low, medium, high, urgent",
+          "meet_link": "Lien Google Meet généré",
+          "calendar_link": "Lien calendrier pour invitations",
+          "external_id": "ID Google Calendar pour synchronisation",
+          "external_source": "Source externe (google_calendar)",
+          "metadata": "Données supplémentaires (JSON)",
+          "created_at": "Date de création",
+          "updated_at": "Date de dernière modification"
+        }
+      },
+      "voice_config": {
+        "description": "Configuration des agents d'appel IA par organisation",
+        "columns": {
+          "id": "Identifiant unique de la configuration (UUID)",
+          "organization_id": "Organisation concernée",
+          "vapi_assistant_id": "ID de l'assistant Vapi.ai configuré",
+          "vapi_api_key": "Clé API Vapi.ai",
+          "phone_number": "Numéro de téléphone pour les appels sortants",
+          "is_enabled": "Configuration active ou non",
+          "working_days": "Jours de travail (array: [1,2,3,4,5] = lun-ven)",
+          "working_hours_start": "Heure de début des appels (09:00)",
+          "working_hours_end": "Heure de fin des appels (18:00)",
+          "call_delay_minutes": "Délai d'attente avant l'appel automatique (en minutes)",
+          "max_call_duration": "Durée maximale d'appel en minutes",
+          "voice_settings": "Paramètres de la voix (JSON)",
+          "greeting_message": "Message d'accueil personnalisé",
+          "created_at": "Date de création de la configuration",
+          "updated_at": "Date de dernière modification"
+        }
+      },
+      "phone_calls": {
+        "description": "Historique complet des appels téléphoniques",
+        "columns": {
+          "id": "Identifiant unique de l'appel (UUID)",
+          "organization_id": "Organisation concernée",
+          "prospect_id": "Prospect appelé",
+          "user_id": "Utilisateur qui a initié l'appel",
+          "to_number": "Numéro de téléphone appelé",
+          "from_number": "Numéro de téléphone appelant",
+          "vapi_call_id": "ID de l'appel chez Vapi.ai",
+          "vapi_assistant_id": "Assistant Vapi utilisé",
+          "status": "Statut: queued, ringing, in_progress, completed, failed, cancelled",
+          "call_type": "Type: outbound_manual, outbound_auto, inbound",
+          "source": "Source: webhook_auto, manual, scheduled",
+          "started_at": "Date/heure de début d'appel",
+          "ended_at": "Date/heure de fin d'appel",
+          "duration_seconds": "Durée de l'appel en secondes",
+          "recording_url": "URL de l'enregistrement audio",
+          "transcript": "Transcription textuelle de l'appel",
+          "summary": "Résumé automatique de l'appel",
+          "sentiment": "Analyse de sentiment (positive, neutral, negative)",
+          "outcome": "Résultat: rdv_pris, pas_interesse, callback_demande, injoignable",
+          "scheduled_at": "Date/heure programmée pour l'appel",
+          "error_message": "Message d'erreur en cas d'échec",
+          "metadata": "Données supplémentaires (JSON)",
+          "created_at": "Date de création de l'enregistrement"
+        }
+      },
+      "meeting_transcripts": {
+        "description": "Transcriptions et analyses IA des meetings",
+        "columns": {
+          "id": "Identifiant unique de la transcription (UUID)",
+          "organization_id": "Organisation concernée",
+          "prospect_id": "Prospect concerné par le meeting",
+          "user_id": "Utilisateur qui a mené le meeting",
+          "meeting_date": "Date et heure du meeting",
+          "duration_seconds": "Durée du meeting en secondes",
+          "google_meet_link": "Lien Google Meet utilisé",
+          "transcript_text": "Transcription brute du meeting",
+          "transcript_json": "Transcription structurée avec speakers (JSON)",
+          "ai_summary": "Résumé intelligent généré par IA",
+          "key_points": "Points clés extraits (JSON array)",
+          "objections_detected": "Objections détectées avec réponses suggérées (JSON)",
+          "next_actions": "Prochaines actions recommandées (JSON array)",
+          "pdf_url": "URL du rapport PDF généré",
+          "created_at": "Date de création de la transcription"
+        }
+      },
+      "lead_searches": {
+        "description": "Campagnes de recherche de leads via APIs externes",
+        "columns": {
+          "id": "Identifiant unique de la recherche (UUID)",
+          "organization_id": "Organisation qui lance la recherche",
+          "user_id": "Utilisateur qui a lancé la recherche",
+          "search_type": "Type de recherche: google_places, outscraper, linkedin",
+          "query": "Requête de recherche (ex: 'restaurant Paris')",
+          "location": "Localisation géographique ciblée",
+          "max_results": "Nombre maximum de résultats souhaités",
+          "filters": "Filtres appliqués (JSON)",
+          "status": "Statut: pending, running, completed, failed",
+          "results_count": "Nombre de résultats trouvés",
+          "credits_used": "Crédits consommés pour cette recherche",
+          "api_response": "Réponse brute de l'API (JSON)",
+          "started_at": "Date/heure de début de recherche",
+          "completed_at": "Date/heure de fin de recherche",
+          "error_message": "Message d'erreur si échec",
+          "created_at": "Date de création de la campagne"
+        }
+      },
+      "lead_results": {
+        "description": "Résultats individuels des recherches de leads",
+        "columns": {
+          "id": "Identifiant unique du lead (UUID)",
+          "organization_id": "Organisation concernée",
+          "search_id": "Campagne de recherche d'origine",
+          "name": "Nom du contact ou de l'entreprise",
+          "company_name": "Nom de l'entreprise",
+          "email": "Adresse email du lead",
+          "phone": "Numéro de téléphone",
+          "website": "Site web de l'entreprise",
+          "address": "Adresse complète",
+          "city": "Ville",
+          "postal_code": "Code postal",
+          "country": "Pays",
+          "profession": "Secteur d'activité/profession",
+          "source": "Source du lead (google_places, outscraper)",
+          "quality_score": "Score de qualité du lead (0-100)",
+          "imported_to_crm": "Lead importé dans le CRM",
+          "prospect_id": "ID du prospect créé si importé",
+          "imported_at": "Date d'import dans le CRM",
+          "imported_by": "Utilisateur qui a importé",
+          "created_at": "Date de découverte du lead"
+        }
+      },
+      "linkedin_agent_config": {
+        "description": "Configuration de l'agent LinkedIn automatisé",
+        "columns": {
+          "id": "Identifiant unique de la configuration (UUID)",
+          "organization_id": "Organisation concernée",
+          "is_enabled": "Agent LinkedIn activé",
+          "linkedin_credentials": "Identifiants LinkedIn (JSON)",
+          "cabinet_name": "Nom du cabinet pour la signature",
+          "cabinet_description": "Description du cabinet",
+          "post_frequency": "Fréquence de publication (daily, weekly)",
+          "preferred_themes": "Thèmes préférés pour les posts (JSON array)",
+          "target_audience": "Audience cible (chefs_entreprise, particuliers)",
+          "post_tone": "Ton des posts (professionnel, amical, expert)",
+          "hashtags_default": "Hashtags par défaut (JSON array)",
+          "created_at": "Date de configuration",
+          "updated_at": "Date de dernière modification"
+        }
+      },
+      "linkedin_posts": {
+        "description": "Posts LinkedIn générés et publiés automatiquement",
+        "columns": {
+          "id": "Identifiant unique du post (UUID)",
+          "organization_id": "Organisation concernée",
+          "config_id": "Configuration LinkedIn utilisée",
+          "theme": "Thème du post (fiscalite, patrimoine, assurance, investissement)",
+          "content": "Contenu textuel du post",
+          "hashtags": "Hashtags utilisés (JSON array)",
+          "status": "Statut: draft, scheduled, published, failed",
+          "scheduled_at": "Date/heure de publication programmée",
+          "published_at": "Date/heure de publication effective",
+          "linkedin_post_id": "ID du post sur LinkedIn",
+          "engagement_metrics": "Métriques d'engagement (likes, comments, shares)",
+          "generated_by": "Utilisateur qui a généré le post",
+          "ai_prompt_used": "Prompt IA utilisé pour la génération",
+          "created_at": "Date de génération du post"
+        }
+      },
+      "daily_stats": {
+        "description": "Statistiques quotidiennes consolidées par organisation",
+        "columns": {
+          "id": "Identifiant unique du record (UUID)",
+          "organization_id": "Organisation concernée",
+          "date": "Date des statistiques (format YYYY-MM-DD)",
+          "total_prospects": "Nombre total de prospects",
+          "prospects_chaud": "Nombre de prospects CHAUDS",
+          "prospects_tiede": "Nombre de prospects TIÈDES",
+          "prospects_froid": "Nombre de prospects FROIDS",
+          "mails_envoyes": "Nombre d'emails envoyés",
+          "rdv_pris": "Nombre de RDV pris",
+          "revenue_generated": "Chiffre d'affaires généré en euros",
+          "commissions_paid": "Total des commissions versées en euros",
+          "products_sold": "Nombre de produits vendus",
+          "conversion_rate": "Taux de conversion global (pourcentage)",
+          "created_at": "Date de création du record"
+        }
+      },
+      "activity_logs": {
+        "description": "Journal d'audit de toutes les actions dans le système",
+        "columns": {
+          "id": "Identifiant unique du log (UUID)",
+          "organization_id": "Organisation concernée",
+          "user_id": "Utilisateur qui a effectué l'action",
+          "action": "Action effectuée (create, update, delete, login, export)",
+          "entity_type": "Type d'entité concernée (prospect, product, meeting, user)",
+          "entity_id": "ID de l'entité concernée",
+          "details": "Détails de l'action (JSON)",
+          "ip_address": "Adresse IP de l'utilisateur",
+          "user_agent": "Navigateur/client utilisé",
+          "created_at": "Date/heure de l'action"
+        }
+      },
+      "admin_thresholds": {
+        "description": "Seuils configurables pour les alertes du dashboard admin",
+        "columns": {
+          "id": "Identifiant unique du seuil (UUID)",
+          "organization_id": "Organisation concernée",
+          "metric_name": "Nom de la métrique (conversion_rate, activity_target, revenue_goal)",
+          "threshold_value": "Valeur du seuil",
+          "threshold_type": "Type d'alerte: warning (avertissement) ou critical (critique)",
+          "description": "Description du seuil et de son utilité",
+          "is_active": "Seuil activé ou désactivé",
+          "created_at": "Date de création du seuil",
+          "updated_at": "Date de dernière modification"
+        }
+      },
+      "agent_runs": {
+        "description": "Historique d'exécution des agents IA automatisés",
+        "columns": {
+          "id": "Identifiant unique de l'exécution (UUID)",
+          "organization_id": "Organisation concernée",
+          "agent_type": "Type d'agent: qualification, email, analysis, linkedin",
+          "trigger_event": "Événement déclencheur de l'agent",
+          "input_data": "Données d'entrée pour l'agent (JSON)",
+          "output_data": "Résultats produits par l'agent (JSON)",
+          "status": "Statut: pending, running, completed, failed",
+          "tokens_used": "Nombre de tokens IA consommés",
+          "duration_ms": "Durée d'exécution en millisecondes",
+          "error_message": "Message d'erreur en cas d'échec",
+          "created_at": "Date/heure de lancement"
+        }
+      },
+      "system_settings": {
+        "description": "Paramètres système configurables par organisation",
+        "columns": {
+          "id": "Identifiant unique du paramètre (UUID)",
+          "organization_id": "Organisation concernée",
+          "setting_key": "Clé du paramètre (ai_model, email_limits, features_enabled)",
+          "setting_value": "Valeur du paramètre (JSON flexible)",
+          "is_active": "Paramètre actif ou désactivé",
+          "updated_by": "Utilisateur qui a modifié le paramètre",
+          "created_at": "Date de création du paramètre",
+          "updated_at": "Date de dernière modification"
+        }
+      },
+      "email_logs": {
+        "description": "Journal de tous les emails envoyés par le système",
+        "columns": {
+          "id": "Identifiant unique de l'email (UUID)",
+          "organization_id": "Organisation expéditrice",
+          "prospect_id": "Prospect destinataire",
+          "user_id": "Utilisateur qui a envoyé l'email",
+          "email_type": "Type: qualification, rappel, plaquette, suivi, manuel",
+          "template_id": "Template d'email utilisé",
+          "to_email": "Adresse email destinataire",
+          "from_email": "Adresse email expéditrice",
+          "subject": "Objet de l'email",
+          "content": "Contenu de l'email (HTML)",
+          "status": "Statut: sent, delivered, opened, clicked, bounced, failed",
+          "sent_at": "Date/heure d'envoi",
+          "opened_at": "Date/heure d'ouverture",
+          "clicked_at": "Date/heure de clic",
+          "bounce_reason": "Raison du bounce si applicable",
+          "tracking_data": "Données de tracking (JSON)",
+          "created_at": "Date de création de l'enregistrement"
+        }
+      },
+      "scheduled_emails": {
+        "description": "Emails programmés en attente d'envoi",
+        "columns": {
+          "id": "Identifiant unique de la programmation (UUID)",
+          "organization_id": "Organisation concernée",
+          "prospect_id": "Prospect destinataire",
+          "user_id": "Utilisateur qui a programmé l'email",
+          "email_type": "Type d'email à envoyer",
+          "template_id": "Template à utiliser",
+          "scheduled_date": "Date/heure prévue d'envoi",
+          "status": "Statut: pending, sent, cancelled, failed",
+          "qstash_message_id": "ID du message dans QStash",
+          "email_data": "Données pour personnalisation (JSON)",
+          "sent_at": "Date/heure d'envoi effectif",
+          "error_message": "Message d'erreur si échec",
+          "created_at": "Date de programmation"
+        }
+      },
+      "crm_email_templates": {
+        "description": "Templates d'emails réutilisables",
+        "columns": {
+          "id": "Identifiant unique du template (UUID)",
+          "organization_id": "Organisation propriétaire",
+          "name": "Nom du template",
+          "subject": "Objet de l'email (avec variables: {{first_name}})",
+          "content": "Contenu HTML du template (avec variables)",
+          "template_type": "Type: qualification, rappel, suivi, commercial",
+          "variables": "Liste des variables disponibles (JSON array)",
+          "is_active": "Template actif ou archivé",
+          "created_by": "Utilisateur créateur",
+          "created_at": "Date de création",
+          "updated_at": "Date de dernière modification"
+        }
+      },
+      "prompts": {
+        "description": "Prompts IA configurables par organisation",
+        "columns": {
+          "id": "Identifiant unique du prompt (UUID)",
+          "organization_id": "Organisation propriétaire",
+          "prompt_type": "Type: qualification, synthese, rappel, plaquette, linkedin",
+          "name": "Nom descriptif du prompt",
+          "content": "Contenu du prompt avec instructions IA",
+          "variables": "Variables utilisables dans le prompt (JSON)",
+          "is_active": "Prompt actif ou désactivé",
+          "is_default": "Prompt par défaut pour ce type",
+          "created_by": "Utilisateur créateur",
+          "created_at": "Date de création",
+          "updated_at": "Date de dernière modification"
+        }
+      },
+      "crm_saved_filters": {
+        "description": "Filtres de recherche sauvegardés par les utilisateurs",
+        "columns": {
+          "id": "Identifiant unique du filtre (UUID)",
+          "organization_id": "Organisation concernée",
+          "user_id": "Utilisateur propriétaire du filtre",
+          "name": "Nom du filtre sauvegardé",
+          "filter_type": "Type: prospects, activities, deals",
+          "filter_data": "Critères de filtrage (JSON)",
+          "is_shared": "Filtre partagé avec l'équipe",
+          "created_at": "Date de création",
+          "updated_at": "Date de dernière modification"
+        }
+      }
+    },
+    "relationships": {
+      "organizations_users": "Une organisation peut avoir plusieurs utilisateurs (1:N)",
+      "users_prospects": "Un utilisateur (conseiller) peut être assigné à plusieurs prospects (1:N)",
+      "organizations_products": "Une organisation peut avoir plusieurs produits dans son catalogue (1:N)",
+      "prospects_activities": "Un prospect peut avoir plusieurs activités/interactions (1:N)",
+      "prospects_events": "Un prospect peut avoir plusieurs événements/tâches planifiés (1:N)",
+      "prospects_deal_products": "Un prospect peut acheter plusieurs produits (1:N)",
+      "products_deal_products": "Un produit peut être vendu à plusieurs prospects (1:N)",
+      "users_advisor_commissions": "Un utilisateur peut avoir des commissions personnalisées sur plusieurs produits (1:N)",
+      "organizations_pipeline_stages": "Une organisation peut personnaliser ses étapes de pipeline (1:N)",
+      "prospects_phone_calls": "Un prospect peut avoir plusieurs appels téléphoniques (1:N)",
+      "prospects_meeting_transcripts": "Un prospect peut avoir plusieurs meetings transcrits (1:N)",
+      "organizations_lead_searches": "Une organisation peut lancer plusieurs campagnes de recherche de leads (1:N)",
+      "lead_searches_lead_results": "Une campagne de recherche génère plusieurs résultats de leads (1:N)",
+      "lead_results_prospects": "Un lead peut être importé pour devenir un prospect (1:1)",
+      "organizations_linkedin_config": "Une organisation a une configuration LinkedIn (1:1)",
+      "linkedin_config_posts": "Une configuration génère plusieurs posts LinkedIn (1:N)",
+      "organizations_voice_config": "Une organisation peut avoir une configuration d'agent vocal (1:1)",
+      "voice_config_phone_calls": "Une configuration génère plusieurs appels automatiques (1:N)",
+      "organizations_daily_stats": "Une organisation génère des statistiques quotidiennes (1:N)",
+      "users_activity_logs": "Un utilisateur génère plusieurs logs d'activité (1:N)"
+    },
+    "business_logic": {
+      "qualification_ai": {
+        "description": "Le système utilise l'IA pour qualifier automatiquement les prospects",
+        "scoring_factors": [
+          "revenus_annuels (25% du score): Plus élevés = meilleur score",
+          "patrimoine_estime (25% du score): Plus important = meilleur score",
+          "analyse_ia (50% du score): Analyse contextuelle du profil et des interactions"
+        ],
+        "thresholds": "Configurables via organizations.scoring_config : CHAUD (70+), TIEDE (40-69), FROID (<40)"
+      },
+      "commission_calculation": {
+        "description": "Calcul automatique des commissions selon le type de produit",
+        "fixed_products": "company_revenue = fixed_value, advisor_commission = company_revenue * advisor_rate",
+        "commission_products": "company_revenue = client_amount * commission_rate, advisor_commission = company_revenue * advisor_rate"
+      },
+      "data_modes": {
+        "sheet_mode": "Mode lecture seule avec Google Sheets, planning via Google Calendar",
+        "crm_mode": "Mode complet avec CRUD sur tous les prospects et fonctionnalités avancées"
+      },
+      "automation_triggers": {
+        "voice_calls": "Déclenchement automatique d'appels selon voice_config.call_delay_minutes",
+        "email_sequences": "Envoi d'emails programmés selon les templates et actions prospect",
+        "linkedin_posting": "Publication automatique selon linkedin_agent_config.post_frequency",
+        "ai_qualification": "Qualification automatique lors de création/modification prospect"
+      }
+    }
+  }
+}

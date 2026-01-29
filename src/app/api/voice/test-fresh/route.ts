@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'call_id requis' }, { status: 400 });
     }
 
-    console.log('🆕 Test FRESH exécution appel:', call_id);
+    console.log('🆕 Test FRESH exécution appel V2:', call_id);
 
     // Récupérer les détails de l'appel
     const { data: call, error: callError } = await supabase

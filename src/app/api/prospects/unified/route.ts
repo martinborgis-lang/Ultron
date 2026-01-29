@@ -2,7 +2,7 @@ import { logger } from '@/lib/logger';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUserAndOrganization } from '@/lib/services/get-organization';
-import { getProspectService } from '@/lib/services/factories/prospect-factory';
+import { CrmProspectService } from '@/lib/services/crm/prospect-service';
 import PaginationHelper, { COMMON_SORT_FIELDS } from '@/lib/pagination/pagination-helper';
 import type { ProspectData } from '@/lib/services/interfaces';
 
@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
     }
 
     const { organization } = context;
-    const service = getProspectService(organization);
+    const service = new CrmProspectService(organization.id);
 
     // ✅ PAGINATION : Parse des paramètres standardisés
     const paginationParams = PaginationHelper.parseParams(request.nextUrl.searchParams);
@@ -72,29 +72,14 @@ export async function GET(request: NextRequest) {
       transformedProspects = prospects.map(transformToUnifiedFormat);
     }
 
-    // ✅ PAGINATION : Pour les services qui ne supportent pas encore la pagination native,
-    // on applique la pagination en mémoire (temporaire pour Sheet mode)
-    if (organization.data_mode === 'sheet') {
-      const paginatedResult = PaginationHelper.paginateInMemory(transformedProspects, paginationParams);
-
-      return NextResponse.json({
-        ...paginatedResult,
-        meta: {
-          dataMode: organization.data_mode,
-          filters: { stage, qualification, search }
-        }
-      });
-    }
-
-    // Pour le mode CRM, si le service retourne déjà un format paginé
+    // ✅ PAGINATION : Pour le mode CRM, pagination en mémoire pour compatibilité
     if (Array.isArray(prospects)) {
-      // Pagination en mémoire pour rétrocompatibilité
       const paginatedResult = PaginationHelper.paginateInMemory(transformedProspects, paginationParams);
 
       return NextResponse.json({
         ...paginatedResult,
         meta: {
-          dataMode: organization.data_mode,
+          dataMode: 'crm',
           filters: { stage, qualification, search }
         }
       });
@@ -133,13 +118,13 @@ export async function POST(request: NextRequest) {
     logger.debug('🔧 API unified POST - Request received:', {
       organizationId: organization.id,
       organizationName: organization.name,
-      dataMode: organization.data_mode,
+      dataMode: 'crm',
       userId: user.id,
       body,
     });
 
-    const service = getProspectService(organization);
-    logger.debug('🔧 API unified POST - Service type:', organization.data_mode === 'sheet' ? 'SheetProspectService' : 'CrmProspectService');
+    const service = new CrmProspectService(organization.id);
+    logger.debug('🔧 API unified POST - Service type: CrmProspectService');
 
     const prospect = await service.create(body);
     logger.debug('🔧 API unified POST - Prospect created:', prospect);

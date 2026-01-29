@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUserAndOrganization } from '@/lib/services/get-organization';
-import { getPlanningService } from '@/lib/services/factories/planning-factory';
+import { CrmPlanningService } from '@/lib/services/crm/planning-service';
 import { PlanningFilters } from '@/lib/services/interfaces';
 
 export const dynamic = 'force-dynamic';
@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
     }
 
     const { user, organization } = context;
-    const service = getPlanningService(organization, user.id);
+    const service = new CrmPlanningService(organization.id, user.id);
 
     const filter = request.nextUrl.searchParams.get('filter') || 'all';
     const prospectId = request.nextUrl.searchParams.get('prospectId');
@@ -41,18 +41,9 @@ export async function POST(request: NextRequest) {
 
     const { user, organization } = context;
 
-    // Verifier que le mode CRM est actif pour la creation
-    if (organization.data_mode === 'sheet') {
-      return NextResponse.json(
-        {
-          error:
-            "La creation de taches n'est pas disponible en mode Google Sheet. Les taches sont gerees via Google Calendar.",
-        },
-        { status: 400 }
-      );
-    }
+    // Mode CRM uniquement - création de tâches disponible
 
-    const service = getPlanningService(organization, user.id);
+    const service = new CrmPlanningService(organization.id, user.id);
     const body = await request.json();
 
     // Cast to any to allow additional properties for Google Meet

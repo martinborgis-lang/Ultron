@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUserAndOrganization } from '@/lib/services/get-organization';
-import { getProspectService } from '@/lib/services/factories/prospect-factory';
+import { CrmProspectService } from '@/lib/services/crm/prospect-service';
 
 export const dynamic = 'force-dynamic';
 
@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Non authentifie' }, { status: 401 });
     }
 
-    const service = getProspectService(context.organization);
+    const service = new CrmProspectService(context.organization.id);
     const byStage = await service.getByStage();
 
     return NextResponse.json(byStage);

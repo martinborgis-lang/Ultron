@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUserAndOrganization } from '@/lib/services/get-organization';
-import { getPlanningService } from '@/lib/services/factories/planning-factory';
+import { CrmPlanningService } from '@/lib/services/crm/planning-service';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,7 +17,7 @@ export async function GET(
     }
 
     const { user, organization } = context;
-    const service = getPlanningService(organization, user.id);
+    const service = new CrmPlanningService(organization.id, user.id);
 
     const event = await service.getById(id);
 
@@ -45,7 +45,7 @@ export async function PATCH(
     }
 
     const { user, organization } = context;
-    const service = getPlanningService(organization, user.id);
+    const service = new CrmPlanningService(organization.id, user.id);
     const body = await request.json();
 
     const event = await service.update(id, {
@@ -82,7 +82,7 @@ export async function DELETE(
     }
 
     const { user, organization } = context;
-    const service = getPlanningService(organization, user.id);
+    const service = new CrmPlanningService(organization.id, user.id);
 
     await service.delete(id);
 

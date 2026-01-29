@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUserAndOrganization } from '@/lib/services/get-organization';
-import { getProspectService } from '@/lib/services/factories/prospect-factory';
+import { CrmProspectService } from '@/lib/services/crm/prospect-service';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,7 +16,7 @@ export async function GET(
       return NextResponse.json({ error: 'Non authentifie' }, { status: 401 });
     }
 
-    const service = getProspectService(context.organization);
+    const service = new CrmProspectService(context.organization.id);
     const prospect = await service.getById(id);
 
     if (!prospect) {
@@ -42,7 +42,7 @@ export async function PATCH(
       return NextResponse.json({ error: 'Non authentifie' }, { status: 401 });
     }
 
-    const service = getProspectService(context.organization);
+    const service = new CrmProspectService(context.organization.id);
     const body = await request.json();
 
     const prospect = await service.update(id, body);
@@ -65,7 +65,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Non authentifie' }, { status: 401 });
     }
 
-    const service = getProspectService(context.organization);
+    const service = new CrmProspectService(context.organization.id);
     await service.delete(id);
 
     return NextResponse.json({ success: true });
