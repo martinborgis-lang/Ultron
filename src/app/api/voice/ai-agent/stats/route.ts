@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
     // Statistiques des appels
     const { data: callStats, error: callError } = await supabase
       .from('phone_calls')
-      .select('status, duration_seconds, qualification_result, created_at')
+      .select('status, duration_seconds, qualification_result, created_at, outcome, cost_cents')
       .eq('organization_id', organization.id)
       .order('created_at', { ascending: false })
       .limit(100);
