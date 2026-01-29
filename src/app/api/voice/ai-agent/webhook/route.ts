@@ -310,7 +310,7 @@ async function scheduleCallWithDelay(prospect: any, voiceConfig: any, scheduledT
       to_number: prospect.phone,
       from_number: process.env.TWILIO_PHONE_NUMBER,
       vapi_assistant_id: voiceConfig.vapi_assistant_id || 'default',
-      status: 'queued',
+      status: 'scheduled', // ✅ CHANGÉ de 'queued' à 'scheduled'
       source: 'webhook_scheduled',
       scheduled_at: scheduledTime.toISOString()
     })
