@@ -303,10 +303,14 @@ export interface VapiFunction {
 
 // Requête création appel Vapi
 export interface VapiCallRequest {
-  phoneNumber: { twilioPhoneNumber: string; twilioAccountSid: string } | { number: string } | string; // ✅ VAPI évolue: Twilio format requis
   assistantId?: string;
   assistant?: VapiAssistant;
   phoneNumberId?: string;
+  customer?: {
+    number: string;         // ✅ Nouveau format VAPI: customer.number
+    name?: string;         // Nom du prospect (optionnel)
+  };
+  phoneNumber?: string;     // Legacy pour compatibilité
   name?: string;
   metadata?: Record<string, any>;
 }

@@ -106,14 +106,12 @@ export class VapiService {
   async createCall(request: VapiCallRequest): Promise<VapiCallResponse> {
     // Extraire le numéro de téléphone selon le format reçu
     let rawPhoneNumber: string;
-    if (typeof request.phoneNumber === 'string') {
+    if (request.customer?.number) {
+      rawPhoneNumber = request.customer.number;
+    } else if (request.phoneNumber) {
       rawPhoneNumber = request.phoneNumber;
-    } else if ('twilioPhoneNumber' in request.phoneNumber) {
-      rawPhoneNumber = request.phoneNumber.twilioPhoneNumber;
-    } else if ('number' in request.phoneNumber) {
-      rawPhoneNumber = request.phoneNumber.number;
     } else {
-      throw new Error('Format de numéro de téléphone non reconnu');
+      throw new Error('Numéro de téléphone requis (customer.number ou phoneNumber)');
     }
 
     // Validation du numéro de téléphone
@@ -127,14 +125,18 @@ export class VapiService {
 
     const callData: VapiCallRequest = {
       ...request,
-      // Utiliser phoneNumberId VAPI au lieu de Twilio direct pour éviter "Number Not Found"
+      // ✅ Format VAPI correct selon nouvelle API
+      assistantId: request.assistantId,
       phoneNumberId: process.env.VAPI_PHONE_NUMBER_ID, // ID du numéro configuré dans VAPI
-      phoneNumber: phoneNumber, // Revenir au format simple string
+      customer: {
+        number: phoneNumber,                           // Numéro du prospect à appeler
+        name: request.metadata?.prospect_name         // Optionnel: nom du prospect
+      },
       metadata: {
         ...request.metadata,
         created_by: 'ultron_ai_agent',
         timestamp: new Date().toISOString(),
-        version: 'v2026-01-29-v2'
+        version: 'v2026-01-29-v3'
       }
     };
 
