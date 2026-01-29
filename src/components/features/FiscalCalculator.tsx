@@ -30,6 +30,7 @@ import {
   Line,
   BarChart,
   Bar,
+  Cell,
 } from 'recharts';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -175,7 +176,37 @@ function ProspectSearch({ onSelectProspect, selectedProspect }: ProspectSearchPr
       const response = await fetch(`/api/prospects/unified?search=${encodeURIComponent(searchTerm)}`);
       if (response.ok) {
         const data = await response.json();
-        setProspects(data.prospects || []);
+        console.log('Response data:', data); // Debug
+
+        // L'API unified retourne soit un array direct, soit un objet avec data
+        let prospectsData = [];
+        if (Array.isArray(data)) {
+          prospectsData = data;
+        } else if (data.data && Array.isArray(data.data)) {
+          prospectsData = data.data;
+        } else if (data.prospects && Array.isArray(data.prospects)) {
+          prospectsData = data.prospects;
+        }
+
+        // Mapper vers le format ProspectForFiscal attendu
+        const mappedProspects = prospectsData.map((prospect: any) => ({
+          id: prospect.id,
+          first_name: prospect.firstName || prospect.first_name,
+          last_name: prospect.lastName || prospect.last_name,
+          email: prospect.email,
+          phone: prospect.phone,
+          revenus_annuels: prospect.revenusAnnuels || prospect.revenus_annuels,
+          patrimoine_estime: prospect.patrimoineEstime || prospect.patrimoine_estime,
+          situation_familiale: prospect.situationFamiliale || prospect.situation_familiale,
+          nb_enfants: prospect.nbEnfants || prospect.nb_enfants,
+          age: prospect.age,
+          profession: prospect.profession,
+          missing_fiscal_data: [] // À compléter selon les champs manquants
+        }));
+
+        setProspects(mappedProspects);
+      } else {
+        console.error('Erreur API:', response.status, await response.text());
       }
     } catch (error) {
       console.error('Erreur recherche prospects:', error);
@@ -276,7 +307,11 @@ function MissingFieldsForm({ missingFields, profile, onUpdateProfile }: MissingF
                   type="number"
                   min={config.min}
                   max={config.max}
-                  value={profile[config.field_name as keyof ProspectProfile] || ''}
+                  value={
+                    typeof profile[config.field_name as keyof ProspectProfile] === 'number'
+                      ? String(profile[config.field_name as keyof ProspectProfile])
+                      : ''
+                  }
                   onChange={(e) => onUpdateProfile({
                     [config.field_name]: e.target.value ? Number(e.target.value) : undefined
                   })}
@@ -291,7 +326,7 @@ function MissingFieldsForm({ missingFields, profile, onUpdateProfile }: MissingF
             {config.type === 'boolean' && (
               <Select
                 value={profile[config.field_name as keyof ProspectProfile] ? 'true' : 'false'}
-                onValueChange={(value) => onUpdateProfile({
+                onValueChange={(value: string) => onUpdateProfile({
                   [config.field_name]: value === 'true'
                 })}
               >
@@ -964,10 +999,13 @@ export function FiscalCalculator() {
                             className="text-xs"
                           />
                           <RechartsTooltip
-                            formatter={(value) => [
-                              `${value >= 0 ? '+' : ''}${formatCurrency(value as number)}`,
-                              value >= 0 ? 'Économie vs CTO' : 'Surcoût vs CTO'
-                            ]}
+                            formatter={(value) => {
+                              const numValue = Number(value || 0);
+                              return [
+                                `${numValue >= 0 ? '+' : ''}${formatCurrency(numValue)}`,
+                                numValue >= 0 ? 'Économie vs CTO' : 'Surcoût vs CTO'
+                              ];
+                            }}
                             contentStyle={{
                               backgroundColor: 'hsl(var(--card))',
                               borderColor: 'hsl(var(--border))',
@@ -976,7 +1014,6 @@ export function FiscalCalculator() {
                           />
                           <Bar
                             dataKey="savings"
-                            fill={(data) => data >= 0 ? '#16a34a' : '#dc2626'}
                             radius={[4, 4, 0, 0]}
                           >
                             {simulationResult.fiscal_comparison.products
@@ -984,8 +1021,8 @@ export function FiscalCalculator() {
                               .map((product, index) => {
                                 const savings = simulationResult.fiscal_comparison.savings_vs_cto[product.product_type] || 0;
                                 return (
-                                  <Bar
-                                    key={index}
+                                  <Cell
+                                    key={`cell-${index}`}
                                     fill={savings >= 0 ? '#16a34a' : '#dc2626'}
                                   />
                                 );
