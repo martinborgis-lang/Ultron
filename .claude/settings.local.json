@@ -30,7 +30,9 @@
       "Bash(xargs cat:*)",
       "Bash(grep:*)",
       "Bash(timeout 300 npm run build)",
-      "Bash(timeout 30s bash -c 'until curl -s https://ultron-murex.vercel.app/api/voice/fix-status > /dev/null; do sleep 1; done')"
+      "Bash(timeout 30s bash -c 'until curl -s https://ultron-murex.vercel.app/api/voice/fix-status > /dev/null; do sleep 1; done')",
+      "Bash(rm:*)",
+      "Bash(find:*)"
     ],
     "deny": [],
     "ask": []

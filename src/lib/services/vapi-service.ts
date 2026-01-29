@@ -114,7 +114,7 @@ export class VapiService {
       ...request,
       phoneNumber: {
         twilioPhoneNumber: phoneNumber,
-        twilioAccountSid: process.env.TWILIO_ACCOUNT_SID // ✅ Utiliser variable d'environnement
+        twilioAccountSid: process.env.TWILIO_ACCOUNT_SID || undefined // ✅ Optionnel si non défini
       },
       metadata: {
         ...request.metadata,
