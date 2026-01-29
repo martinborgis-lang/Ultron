@@ -43,10 +43,15 @@ export class VapiService {
       model: {
         provider: "openai",
         model: "gpt-3.5-turbo",
-        temperature: 0.7
+        temperature: 0.7,
+        messages: [
+          {
+            role: "system",
+            content: this.buildSystemPrompt(config, organizationData)
+          }
+        ]
       },
-      systemMessage: this.buildSystemPrompt(config, organizationData),
-      language: "fr-FR",
+      language: "fr",
       firstMessage: `Bonjour, je suis ${agentName} du ${cabinetName}. Je vous contacte suite à votre demande d'information sur nos services de gestion de patrimoine. Avez-vous quelques minutes pour en discuter ?`,
       endCallMessage: `Merci pour votre temps. Vous recevrez un email de confirmation si nous avons programmé un rendez-vous. Au revoir et bonne journée !`,
       maxDurationSeconds: config.max_call_duration_seconds,
@@ -65,13 +70,18 @@ export class VapiService {
     const assistantData: Partial<VapiAssistant> = {
       name: config.agent_name,
       voice: this.formatVoiceForVapi(config.agent_voice),
-      language: "fr-FR",
+      language: "fr",
       model: {
         provider: "openai",
         model: "gpt-3.5-turbo",
-        temperature: 0.7
+        temperature: 0.7,
+        messages: [
+          {
+            role: "system",
+            content: this.buildSystemPrompt(config, organizationData)
+          }
+        ]
       },
-      systemMessage: this.buildSystemPrompt(config, organizationData),
       maxDurationSeconds: config.max_call_duration_seconds
     };
 

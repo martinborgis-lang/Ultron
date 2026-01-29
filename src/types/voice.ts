@@ -273,8 +273,11 @@ export interface VapiAssistant {
     provider: string;
     model: string;
     temperature?: number;
+    messages?: Array<{
+      role: string;
+      content: string;
+    }>;
   };
-  systemMessage?: string;
   functions?: VapiFunction[];
   firstMessage?: string;
   endCallMessage?: string;

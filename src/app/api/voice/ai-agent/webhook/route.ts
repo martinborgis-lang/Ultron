@@ -431,8 +431,8 @@ async function scheduleCallWithQStash(call: any, scheduledTime: Date): Promise<a
   console.log('📅 QStash webhook URL:', webhookUrl);
   console.log('⏰ Délai programmé:', delay, 'secondes');
 
-  // Utiliser QStash v2 avec le bon format
-  const qstashUrl = `https://qstash.upstash.io/v2/publish/${encodeURIComponent(webhookUrl)}`;
+  // Utiliser QStash v2 - NE PAS encoder l'URL complète, juste les paramètres
+  const qstashUrl = `https://qstash.upstash.io/v2/publish/${webhookUrl}`;
 
   const response = await fetch(qstashUrl, {
     method: 'POST',
