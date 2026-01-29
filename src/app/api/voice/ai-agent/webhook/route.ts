@@ -206,10 +206,17 @@ function isValidPhoneNumber(phone: string): boolean {
 
 function isWithinWorkingHours(voiceConfig: any, checkTime?: Date): boolean {
   const timeToCheck = checkTime || new Date();
-  const currentDay = timeToCheck.getDay() === 0 ? 7 : timeToCheck.getDay();
+  const timezone = voiceConfig.timezone || 'Europe/Paris';
+
+  // Convertir vers le timezone configuré
+  const localTime = new Date(timeToCheck.toLocaleString("en-US", {timeZone: timezone}));
+  const currentDay = localTime.getDay() === 0 ? 7 : localTime.getDay();
 
   console.log('🕒 [DEBUG] Vérification horaires de travail:', {
     checkTime: timeToCheck.toLocaleString(),
+    checkTimeUTC: timeToCheck.toISOString(),
+    localTime: localTime.toLocaleString(),
+    timezone,
     currentDay,
     working_days: voiceConfig.working_days,
     working_hours_start: voiceConfig.working_hours_start,
@@ -222,8 +229,8 @@ function isWithinWorkingHours(voiceConfig: any, checkTime?: Date): boolean {
     return false;
   }
 
-  const currentHour = timeToCheck.getHours();
-  const currentMinute = timeToCheck.getMinutes();
+  const currentHour = localTime.getHours();
+  const currentMinute = localTime.getMinutes();
 
   // Parser les heures de travail (supporter format HH:MM:SS ou HH:MM)
   const startTime = voiceConfig.working_hours_start || '09:00';
@@ -467,6 +474,7 @@ async function scheduleCallWithQStash(call: any, scheduledTime: Date): Promise<a
 
 function getNextAvailableCallTime(voiceConfig: any): Date | null {
   const now = new Date();
+  const timezone = voiceConfig.timezone || 'Europe/Paris';
   const workingDays = voiceConfig.working_days || [1, 2, 3, 4, 5]; // Lun-Ven par défaut
   const startTime = voiceConfig.working_hours_start || '09:00';
   const endTime = voiceConfig.working_hours_end || '18:00';
@@ -477,10 +485,13 @@ function getNextAvailableCallTime(voiceConfig: any): Date | null {
 
   // Chercher le prochain créneau disponible (max 7 jours)
   for (let i = 1; i <= 7; i++) {
+    // Créer la date dans le timezone local de l'organisation
     const checkDate = new Date(now);
     checkDate.setDate(checkDate.getDate() + i);
 
-    const dayOfWeek = checkDate.getDay() === 0 ? 7 : checkDate.getDay();
+    // Convertir vers le timezone configuré pour déterminer le jour de la semaine
+    const localCheckDate = new Date(checkDate.toLocaleString("en-US", {timeZone: timezone}));
+    const dayOfWeek = localCheckDate.getDay() === 0 ? 7 : localCheckDate.getDay();
 
     if (workingDays.includes(dayOfWeek)) {
       // Programmer au début des heures de bureau + délai configuré
