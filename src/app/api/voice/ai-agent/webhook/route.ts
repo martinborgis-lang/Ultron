@@ -327,39 +327,7 @@ async function scheduleCallWithDelay(prospect: any, voiceConfig: any, scheduledT
     return await executeCallNow(call, prospect, voiceConfig);
   }
 
-  // Mode développement : simulation locale du délai
-  if (process.env.NODE_ENV === 'development') {
-    console.log(`🧪 MODE DEV: Simulation délai de ${delayMinutes} minutes`);
-    console.log('📅 En production, l\'appel serait programmé via QStash pour:', scheduledTime.toISOString());
-
-    // Simulation : attendre quelques secondes puis exécuter
-    setTimeout(async () => {
-      console.log('🚀 SIMULATION: Exécution de l\'appel après délai simulé');
-      try {
-        await executeCallNow(call, prospect, voiceConfig);
-        console.log('✅ SIMULATION: Appel exécuté avec succès');
-      } catch (error) {
-        console.error('❌ SIMULATION: Erreur lors de l\'exécution:', error);
-      }
-    }, 30000); // 30 secondes au lieu des minutes complètes
-
-    // Mettre à jour le statut en "scheduled"
-    await supabase
-      .from('phone_calls')
-      .update({
-        status: 'scheduled',
-        metadata: {
-          simulation: true,
-          original_delay_minutes: delayMinutes,
-          scheduled_for: scheduledTime.toISOString()
-        }
-      })
-      .eq('id', call.id);
-
-    return call;
-  }
-
-  // Production : utiliser QStash réel
+  // Programmer via QStash
   try {
     const qstashResponse = await scheduleCallWithQStash(call, scheduledTime);
     console.log('📅 Appel programmé via QStash:', qstashResponse);
