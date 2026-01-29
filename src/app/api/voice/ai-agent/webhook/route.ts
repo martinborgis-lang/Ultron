@@ -208,26 +208,56 @@ function isWithinWorkingHours(voiceConfig: any, checkTime?: Date): boolean {
   const timeToCheck = checkTime || new Date();
   const currentDay = timeToCheck.getDay() === 0 ? 7 : timeToCheck.getDay();
 
+  console.log('🕒 [DEBUG] Vérification horaires de travail:', {
+    checkTime: timeToCheck.toLocaleString(),
+    currentDay,
+    working_days: voiceConfig.working_days,
+    working_hours_start: voiceConfig.working_hours_start,
+    working_hours_end: voiceConfig.working_hours_end
+  });
+
   // Vérifier si on est dans les jours de travail
   if (!voiceConfig.working_days || !voiceConfig.working_days.includes(currentDay)) {
+    console.log('❌ [DEBUG] Hors jour de travail');
     return false;
   }
 
   const currentHour = timeToCheck.getHours();
   const currentMinute = timeToCheck.getMinutes();
 
-  // Parser les heures de travail
+  // Parser les heures de travail (supporter format HH:MM:SS ou HH:MM)
   const startTime = voiceConfig.working_hours_start || '09:00';
   const endTime = voiceConfig.working_hours_end || '18:00';
 
-  const [startHour, startMinute] = startTime.split(':').map(Number);
-  const [endHour, endMinute] = endTime.split(':').map(Number);
+  const [startHour, startMinute] = startTime.split(':').slice(0, 2).map(Number);
+  const [endHour, endMinute] = endTime.split(':').slice(0, 2).map(Number);
 
   const currentMinutes = currentHour * 60 + currentMinute;
   const startMinutes = startHour * 60 + startMinute;
   const endMinutes = endHour * 60 + endMinute;
 
-  return currentMinutes >= startMinutes && currentMinutes < endMinutes;
+  console.log('🕒 [DEBUG] Calcul horaires:', {
+    currentTime: `${currentHour}:${currentMinute}`,
+    currentMinutes,
+    startTime: `${startHour}:${startMinute}`,
+    startMinutes,
+    endTime: `${endHour}:${endMinute}`,
+    endMinutes,
+    isWithin: currentMinutes >= startMinutes && currentMinutes < endMinutes
+  });
+
+  // Gérer les horaires qui traversent minuit (ex: 20h-5h)
+  if (endMinutes <= startMinutes) {
+    // Horaires de nuit (ex: 20h-5h)
+    const isWithinNightHours = currentMinutes >= startMinutes || currentMinutes < endMinutes;
+    console.log('🌙 [DEBUG] Horaires de nuit détectés, résultat:', isWithinNightHours);
+    return isWithinNightHours;
+  } else {
+    // Horaires normaux (ex: 9h-18h)
+    const isWithinDayHours = currentMinutes >= startMinutes && currentMinutes < endMinutes;
+    console.log('☀️ [DEBUG] Horaires de jour, résultat:', isWithinDayHours);
+    return isWithinDayHours;
+  }
 }
 
 async function programCallDirectly(prospect: any, voiceConfig: any): Promise<any> {

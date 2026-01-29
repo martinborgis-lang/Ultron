@@ -33,7 +33,11 @@
       "Bash(timeout 30s bash -c 'until curl -s https://ultron-murex.vercel.app/api/voice/fix-status > /dev/null; do sleep 1; done')",
       "Bash(rm:*)",
       "Bash(find:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(timeout 60s npx tsc --noEmit --skipLibCheck)",
+      "Bash(timeout 30s npx tsc --noEmit --skipLibCheck)",
+      "Bash(git restore:*)",
+      "Bash(git ls-tree:*)"
     ],
     "deny": [],
     "ask": []
