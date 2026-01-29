@@ -112,7 +112,7 @@ export class VapiService {
 
     const callData: VapiCallRequest = {
       ...request,
-      phoneNumber: phoneNumber, // ✅ Format simplifié : juste le numéro
+      phoneNumber: { number: phoneNumber }, // ✅ VAPI exige maintenant un objet
       metadata: {
         ...request.metadata,
         created_by: 'ultron_ai_agent',

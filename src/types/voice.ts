@@ -303,7 +303,7 @@ export interface VapiFunction {
 
 // Requête création appel Vapi
 export interface VapiCallRequest {
-  phoneNumber: string; // ✅ Format simplifié VAPI (juste le numéro)
+  phoneNumber: { number: string } | string; // ✅ VAPI exige maintenant un objet { number: "..." }
   assistantId?: string;
   assistant?: VapiAssistant;
   phoneNumberId?: string;

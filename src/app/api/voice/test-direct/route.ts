@@ -64,8 +64,8 @@ export async function POST(request: NextRequest) {
     console.log('📞 Appel DIRECT à VAPI...');
 
     const vapiPayload = {
-      // Test différents formats pour voir lequel fonctionne
-      phoneNumber: prospect.phone, // Format simple
+      // Format objet requis par VAPI
+      phoneNumber: { number: prospect.phone }, // ✅ VAPI exige un objet
       assistant: {
         name: "Assistant Test Direct",
         voice: {
