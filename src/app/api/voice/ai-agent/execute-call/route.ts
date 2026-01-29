@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Vérifier que l'appel n'a pas déjà été exécuté
-    if (call.status !== 'scheduled') {
+    if (call.status !== 'queued') {
       console.log('ℹ️ Appel déjà traité, statut:', call.status);
       return NextResponse.json({
         success: true,
@@ -228,7 +228,7 @@ async function rescheduleCall(callId: string, newTime: Date): Promise<void> {
     .from('phone_calls')
     .update({
       scheduled_at: newTime.toISOString(),
-      status: 'queued' // Remettre en queue
+      status: 'queued' // Remettre en queue pour reprogrammation
     })
     .eq('id', callId);
 

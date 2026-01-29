@@ -310,7 +310,7 @@ async function scheduleCallWithDelay(prospect: any, voiceConfig: any, scheduledT
       to_number: prospect.phone,
       from_number: process.env.TWILIO_PHONE_NUMBER,
       vapi_assistant_id: voiceConfig.vapi_assistant_id || 'default',
-      status: 'scheduled', // ✅ CHANGÉ de 'queued' à 'scheduled'
+      status: 'queued', // ✅ Utilise statut autorisé par la contrainte DB
       source: 'webhook_scheduled',
       scheduled_at: scheduledTime.toISOString()
     })
@@ -336,7 +336,7 @@ async function scheduleCallWithDelay(prospect: any, voiceConfig: any, scheduledT
     await supabase
       .from('phone_calls')
       .update({
-        status: 'scheduled',
+        status: 'queued',
         metadata: { qstash_message_id: qstashResponse?.messageId }
       })
       .eq('id', call.id);
