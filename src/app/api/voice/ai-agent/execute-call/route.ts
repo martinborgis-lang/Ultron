@@ -74,6 +74,32 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    // Vérifier que l'appel était programmé et que le moment est arrivé
+    if (!call.scheduled_at) {
+      console.log('ℹ️ Appel non programmé (pas de scheduled_at)');
+      return NextResponse.json({
+        success: false,
+        message: 'Appel non programmé',
+        call_status: call.status
+      });
+    }
+
+    const scheduledTime = new Date(call.scheduled_at);
+    const now = new Date();
+
+    if (scheduledTime > now) {
+      console.log(`⏰ Appel programmé pour ${scheduledTime.toLocaleString()}, trop tôt (maintenant: ${now.toLocaleString()})`);
+      return NextResponse.json({
+        success: false,
+        message: 'Trop tôt pour exécuter l\'appel',
+        scheduled_at: call.scheduled_at,
+        current_time: now.toISOString()
+      });
+    }
+
+    console.log(`✅ Appel programmé pour ${scheduledTime.toLocaleString()}, prêt à exécuter`);
+
+
     // Récupérer le prospect
     const { data: prospect, error: prospectError } = await supabase
       .from('crm_prospects')
