@@ -264,48 +264,92 @@ async function rescheduleCall(callId: string, newTime: Date): Promise<void> {
 
 function isWithinWorkingHours(voiceConfig: any, checkTime?: Date): boolean {
   const timeToCheck = checkTime || new Date();
-  const currentDay = timeToCheck.getDay() === 0 ? 7 : timeToCheck.getDay();
+  const timezone = voiceConfig.timezone || 'Europe/Paris';
+
+  // Convertir vers le timezone configuré
+  const localTime = new Date(timeToCheck.toLocaleString("en-US", {timeZone: timezone}));
+  const currentDay = localTime.getDay() === 0 ? 7 : localTime.getDay();
+
+  console.log('🕒 [EXECUTE-CALL DEBUG] Vérification horaires de travail:', {
+    checkTime: timeToCheck.toLocaleString(),
+    checkTimeUTC: timeToCheck.toISOString(),
+    localTime: localTime.toLocaleString(),
+    timezone,
+    currentDay,
+    working_days: voiceConfig.working_days,
+    working_hours_start: voiceConfig.working_hours_start,
+    working_hours_end: voiceConfig.working_hours_end
+  });
 
   // Vérifier si on est dans les jours de travail
   if (!voiceConfig.working_days || !voiceConfig.working_days.includes(currentDay)) {
+    console.log('❌ [EXECUTE-CALL DEBUG] Hors jour de travail');
     return false;
   }
 
-  const currentHour = timeToCheck.getHours();
-  const currentMinute = timeToCheck.getMinutes();
+  const currentHour = localTime.getHours();
+  const currentMinute = localTime.getMinutes();
 
-  // Parser les heures de travail
+  // Parser les heures de travail (supporter format HH:MM:SS ou HH:MM)
   const startTime = voiceConfig.working_hours_start || '09:00';
   const endTime = voiceConfig.working_hours_end || '18:00';
 
-  const [startHour, startMinute] = startTime.split(':').map(Number);
-  const [endHour, endMinute] = endTime.split(':').map(Number);
+  const [startHour, startMinute] = startTime.split(':').slice(0, 2).map(Number);
+  const [endHour, endMinute] = endTime.split(':').slice(0, 2).map(Number);
 
   const currentMinutes = currentHour * 60 + currentMinute;
   const startMinutes = startHour * 60 + startMinute;
   const endMinutes = endHour * 60 + endMinute;
 
-  return currentMinutes >= startMinutes && currentMinutes < endMinutes;
+  console.log('🕒 [EXECUTE-CALL DEBUG] Calcul horaires:', {
+    currentTime: `${currentHour}:${currentMinute}`,
+    currentMinutes,
+    startTime: `${startHour}:${startMinute}`,
+    startMinutes,
+    endTime: `${endHour}:${endMinute}`,
+    endMinutes,
+    isWithin: currentMinutes >= startMinutes && currentMinutes < endMinutes
+  });
+
+  // Gérer les horaires qui traversent minuit (ex: 20h-5h)
+  if (endMinutes <= startMinutes) {
+    // Horaires de nuit (ex: 20h-5h)
+    const isWithinNightHours = currentMinutes >= startMinutes || currentMinutes < endMinutes;
+    console.log('🌙 [EXECUTE-CALL DEBUG] Horaires de nuit détectés, résultat:', isWithinNightHours);
+    return isWithinNightHours;
+  } else {
+    // Horaires normaux (ex: 9h-18h)
+    const isWithinDayHours = currentMinutes >= startMinutes && currentMinutes < endMinutes;
+    console.log('☀️ [EXECUTE-CALL DEBUG] Horaires de jour, résultat:', isWithinDayHours);
+    return isWithinDayHours;
+  }
 }
 
 function getNextAvailableCallTime(voiceConfig: any): Date | null {
   const now = new Date();
+  const timezone = voiceConfig.timezone || 'Europe/Paris';
   const workingDays = voiceConfig.working_days || [1, 2, 3, 4, 5]; // Lun-Ven par défaut
   const startTime = voiceConfig.working_hours_start || '09:00';
+  const endTime = voiceConfig.working_hours_end || '18:00';
 
   // Parser les heures
   const [startHour, startMinute] = startTime.split(':').map(Number);
+  const [endHour, endMinute] = endTime.split(':').map(Number);
 
   // Chercher le prochain créneau disponible (max 7 jours)
   for (let i = 1; i <= 7; i++) {
+    // Créer la date dans le timezone local de l'organisation
     const checkDate = new Date(now);
     checkDate.setDate(checkDate.getDate() + i);
 
-    const dayOfWeek = checkDate.getDay() === 0 ? 7 : checkDate.getDay();
+    // Convertir vers le timezone configuré pour déterminer le jour de la semaine
+    const localCheckDate = new Date(checkDate.toLocaleString("en-US", {timeZone: timezone}));
+    const dayOfWeek = localCheckDate.getDay() === 0 ? 7 : localCheckDate.getDay();
 
     if (workingDays.includes(dayOfWeek)) {
-      // Programmer au début des heures de bureau
-      checkDate.setHours(startHour, startMinute, 0, 0);
+      // Programmer au début des heures de bureau + délai configuré
+      const delayMinutes = voiceConfig.call_delay_minutes || 5;
+      checkDate.setHours(startHour, startMinute + delayMinutes, 0, 0);
 
       // Vérifier que c'est encore dans les heures de travail
       if (isWithinWorkingHours(voiceConfig, checkDate)) {
