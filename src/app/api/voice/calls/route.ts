@@ -24,37 +24,32 @@ export async function GET(request: NextRequest) {
 
     const supabase = await createClient();
 
-    // Construction de la requête
+    // Construction de la requête - Utiliser la table phone_calls correcte
     let query = supabase
-      .from('voice_calls')
+      .from('phone_calls')
       .select(`
         id,
-        twilio_call_sid,
+        vapi_call_id,
         prospect_id,
-        prospect_name,
-        phone_number,
-        direction,
+        to_number,
+        from_number,
         status,
         outcome,
         duration_seconds,
-        recording_url,
-        transcript,
-        ai_summary,
-        ai_key_points,
-        ai_next_actions,
-        ai_objections,
-        ai_outcome,
-        sentiment_overall,
-        sentiment_score,
-        notes,
+        transcript_text,
+        transcript_json,
+        qualification_score,
+        qualification_result,
+        qualification_notes,
+        appointment_date,
+        cost_cents,
+        answered,
+        source,
+        error_message,
         created_at,
         started_at,
         ended_at,
-        user_id,
-        users:user_id (
-          full_name,
-          email
-        )
+        user_id
       `)
       .eq('organization_id', organization.id)
       .order('created_at', { ascending: false });

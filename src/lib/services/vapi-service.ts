@@ -124,10 +124,9 @@ export class VapiService {
 
     const callData: VapiCallRequest = {
       ...request,
-      phoneNumber: {
-        twilioPhoneNumber: phoneNumber, // ✅ VAPI exige maintenant Twilio format
-        twilioAccountSid: process.env.TWILIO_ACCOUNT_SID || 'default_sid'
-      },
+      // Utiliser phoneNumberId VAPI au lieu de Twilio direct pour éviter "Number Not Found"
+      phoneNumberId: process.env.VAPI_PHONE_NUMBER_ID, // ID du numéro configuré dans VAPI
+      phoneNumber: phoneNumber, // Revenir au format simple string
       metadata: {
         ...request.metadata,
         created_by: 'ultron_ai_agent',
