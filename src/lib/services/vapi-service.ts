@@ -42,8 +42,8 @@ export class VapiService {
       voice: this.formatVoiceForVapi(config.agent_voice),
       model: {
         provider: "openai",
-        model: "gpt-3.5-turbo",
-        temperature: 0.7,
+        model: "gpt-4o-mini", // ✅ Modèle plus rapide et naturel
+        temperature: 0.8, // ✅ Plus naturel et moins robotique
         messages: [
           {
             role: "system",
@@ -55,8 +55,10 @@ export class VapiService {
       firstMessage: `Bonjour, je suis ${agentName} du ${cabinetName}. Je vous contacte suite à votre demande d'information sur nos services de gestion de patrimoine. Avez-vous quelques minutes pour en discuter ?`,
       endCallMessage: `Merci pour votre temps. Vous recevrez un email de confirmation si nous avons programmé un rendez-vous. Au revoir et bonne journée !`,
       maxDurationSeconds: config.max_call_duration_seconds,
-      silenceTimeoutSeconds: 30,
-      responseDelaySeconds: 1
+      silenceTimeoutSeconds: 45, // ✅ Plus de temps pour réfléchir
+      responseDelaySeconds: 0.5, // ✅ Réponse plus rapide
+      backgroundDenoisingEnabled: true, // ✅ Meilleure qualité audio
+      backgroundSoundEnabled: false
     };
 
     const response = await this.makeRequest<VapiAssistant>('POST', '/assistant', assistantData);
@@ -73,8 +75,8 @@ export class VapiService {
       language: "fr",
       model: {
         provider: "openai",
-        model: "gpt-3.5-turbo",
-        temperature: 0.7,
+        model: "gpt-4o-mini", // ✅ Modèle plus rapide et naturel
+        temperature: 0.8, // ✅ Plus naturel et moins robotique
         messages: [
           {
             role: "system",
@@ -82,7 +84,11 @@ export class VapiService {
           }
         ]
       },
-      maxDurationSeconds: config.max_call_duration_seconds
+      maxDurationSeconds: config.max_call_duration_seconds,
+      silenceTimeoutSeconds: 45, // ✅ Plus de temps pour réfléchir
+      responseDelaySeconds: 0.5, // ✅ Réponse plus rapide
+      backgroundDenoisingEnabled: true, // ✅ Meilleure qualité audio
+      backgroundSoundEnabled: false
     };
 
     const response = await this.makeRequest<VapiAssistant>('PATCH', `/assistant/${assistantId}`, assistantData);
@@ -229,28 +235,48 @@ export class VapiService {
 
     return `${systemPrompt}
 
-INSTRUCTIONS SPÉCIFIQUES :
+🎯 OBJECTIF PRINCIPAL : Qualifier le prospect et prendre un rendez-vous physique
 
-1. OBJECTIF : Qualifier le prospect et prendre un rendez-vous si intéressé
-2. DURÉE MAXIMALE : ${Math.floor(config.max_call_duration_seconds / 60)} minutes
-3. QUESTIONS À POSER : ${config.qualification_questions?.map((q, i) => `${i + 1}. ${q}`).join(' ') || 'Aucune question spécifique définie'}
+⏱️ DURÉE MAXIMALE : ${Math.floor(config.max_call_duration_seconds / 60)} minutes
+❓ QUESTIONS DE QUALIFICATION : ${config.qualification_questions?.map((q, i) => `${i + 1}. ${q}`).join(' ') || 'Secteur d\'activité, situation patrimoniale, objectifs'}
 
-RÈGLES IMPORTANTES :
-- Présentez-vous comme ${agentName} du ${cabinetName}
-- Soyez naturel et conversationnel
-- Écoutez les objections et répondez avec empathie
-- Si le prospect est intéressé, proposez un créneau de rendez-vous
-- Utilisez la fonction check_availability pour vérifier les créneaux
-- Utilisez la fonction book_appointment pour confirmer un RDV
-- Si pas intéressé, remerciez poliment et terminez l'appel
-- Ne jamais insister si la personne refuse
+🗣️ SCRIPT DE CONVERSATION - ÉTAPE PAR ÉTAPE :
+
+ÉTAPE 1 - INTRODUCTION (FAIT AUTOMATIQUEMENT) :
+"Bonjour, je suis ${agentName} du ${cabinetName}. Je vous contacte suite à votre demande d'information sur nos services de gestion de patrimoine. Avez-vous quelques minutes pour en discuter ?"
+
+ÉTAPE 2 - APRÈS RÉPONSE POSITIVE ("OUI") :
+✅ DIRE IMMÉDIATEMENT : "Parfait ! Nous accompagnons les particuliers dans l'optimisation de leur patrimoine et leur situation fiscale."
+✅ ENCHAÎNER AVEC : "Pour vous orienter au mieux, puis-je vous demander dans quel secteur vous travaillez ?"
+
+ÉTAPE 3 - QUALIFICATION (3-4 QUESTIONS MAX) :
+🔹 Question 1 : Secteur d'activité / profession
+🔹 Question 2 : Investissements/placements actuels
+🔹 Question 3 : Objectifs patrimoniaux principaux
+🔹 Question 4 : Horizon d'investissement
+
+ÉTAPE 4 - TRANSITION VERS RDV :
+"D'après ce que vous me dites, nos services pourraient effectivement vous intéresser. Nous proposons un premier entretien gratuit de 30 minutes pour analyser votre situation. Êtes-vous disponible cette semaine ou la semaine prochaine ?"
+
+ÉTAPE 5 - PRISE DE RDV :
+- Proposer 2-3 créneaux précis
+- Confirmer coordonnées
+- Confirmer lieu de rendez-vous
+
+🚨 RÈGLES CRITIQUES POUR ÉVITER LES SILENCES :
+- JAMAIS se taire après "oui j'ai quelques minutes"
+- TOUJOURS enchaîner avec l'étape suivante
+- Si la personne ne répond pas pendant 3 secondes, relancer : "M'entendez-vous bien ?"
+- Chaque réponse du prospect doit déclencher une nouvelle question ou commentaire
+- Parler naturellement comme un vrai conseiller, pas un robot
 
 INFORMATION ENTREPRISE :
-- Nom : ${cabinetName}
-- Spécialités : Investissements, optimisation fiscale, retraite
-- Approche personnalisée selon le profil de chaque client
+- ${cabinetName} - Cabinet de gestion de patrimoine
+- Spécialités : Investissements, défiscalisation, retraite, transmission
+- Premier rendez-vous GRATUIT de 30 minutes
+- Approche personnalisée selon chaque profil
 
-Commencez toujours par vous présenter et demander si la personne a quelques minutes.`;
+💡 ASTUCE : Soyez curieux et rebondissez sur les réponses pour maintenir l'engagement !`;
   }
 
   /**
@@ -430,21 +456,27 @@ Commencez toujours par vous présenter et demander si la personne a quelques min
    * Formater une voix pour l'API Vapi
    */
   private formatVoiceForVapi(voice: string): any {
-    // Mapping des anciennes voix vers les nouvelles voix VAPI
+    // Mapping avec voix ElevenLabs plus naturelles
     const voiceMapping: { [key: string]: { provider: string; voiceId: string } } = {
-      'jennifer': { provider: 'openai', voiceId: 'alloy' },
-      'alex': { provider: 'openai', voiceId: 'alloy' },
-      'sarah': { provider: 'openai', voiceId: 'nova' },
-      'mike': { provider: 'openai', voiceId: 'onyx' },
-      'emma': { provider: 'openai', voiceId: 'nova' },
-      'john': { provider: 'openai', voiceId: 'echo' },
-      'lisa': { provider: 'openai', voiceId: 'shimmer' },
-      'david': { provider: 'openai', voiceId: 'fable' },
-      'lucile': { provider: 'openai', voiceId: 'nova' } // ✅ Ajout de lucile
+      // ✅ ElevenLabs - voix françaises naturelles
+      'jennifer': { provider: 'eleven-labs', voiceId: 'EXAVITQu4vr4xnSDxMaL' }, // Bella (féminine naturelle)
+      'lucile': { provider: 'eleven-labs', voiceId: 'EXAVITQu4vr4xnSDxMaL' }, // Bella (féminine naturelle)
+      'sarah': { provider: 'eleven-labs', voiceId: 'ErXwobaYiN019PkySvjV' }, // Antoni (féminine douce)
+      'emma': { provider: 'eleven-labs', voiceId: 'ErXwobaYiN019PkySvjV' }, // Antoni (féminine douce)
+      'lisa': { provider: 'eleven-labs', voiceId: 'EXAVITQu4vr4xnSDxMaL' }, // Bella (féminine naturelle)
+
+      // ✅ ElevenLabs - voix masculines naturelles
+      'alex': { provider: 'eleven-labs', voiceId: 'pNInz6obpgDQGcFmaJgB' }, // Adam (masculine claire)
+      'mike': { provider: 'eleven-labs', voiceId: 'VR6AewLTigWG4xSOukaG' }, // Arnold (masculine forte)
+      'john': { provider: 'eleven-labs', voiceId: 'pNInz6obpgDQGcFmaJgB' }, // Adam (masculine claire)
+      'david': { provider: 'eleven-labs', voiceId: 'VR6AewLTigWG4xSOukaG' }, // Arnold (masculine forte)
+
+      // ✅ Fallback OpenAI si ElevenLabs indisponible
+      'fallback': { provider: 'openai', voiceId: 'nova' }
     };
 
-    // Utiliser le mapping ou la voix par défaut OpenAI
-    const voiceConfig = voiceMapping[voice] || { provider: 'openai', voiceId: 'alloy' };
+    // Utiliser ElevenLabs par défaut pour meilleure qualité
+    const voiceConfig = voiceMapping[voice] || voiceMapping['jennifer']; // Bella par défaut
 
     return voiceConfig;
   }
