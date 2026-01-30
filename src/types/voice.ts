@@ -261,7 +261,16 @@ export type VapiVoice =
   | 'emma'          // Voix féminine jeune
   | 'john'          // Voix masculine autoritaire
   | 'lisa'          // Voix féminine douce
-  | 'david';        // Voix masculine mature
+  | 'david'         // Voix masculine mature
+  | 'lucile'        // Voix féminine professionnelle FR
+  // 🚀 VOIX OPTIMISÉES LATENCE + QUALITÉ
+  | 'natural_fast'  // Rachel FR optimisée (recommandée)
+  | 'ultra_fast'    // OpenAI Nova ultra-rapide
+  // 🧪 VOIX DE TEST
+  | 'test_openai_nova'    // Test OpenAI Nova
+  | 'test_openai_alloy'   // Test OpenAI Alloy
+  | 'test_openai_echo'    // Test OpenAI Echo
+  | 'test_openai_shimmer' // Test OpenAI Shimmer
 
 // Configuration assistant Vapi
 export interface VapiAssistant {
