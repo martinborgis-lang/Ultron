@@ -623,15 +623,94 @@ function ConfigurationModal({
   onSave: () => void;
   saving: boolean;
 }) {
-  const voiceOptions: Array<{ value: VapiVoice; label: string }> = [
-    { value: 'jennifer', label: 'Jennifer (Féminine, naturelle)' },
-    { value: 'alex', label: 'Alex (Masculine, clair)' },
-    { value: 'sarah', label: 'Sarah (Féminine, professionnelle)' },
-    { value: 'mike', label: 'Mike (Masculine, chaleureux)' },
-    { value: 'emma', label: 'Emma (Féminine, jeune)' },
-    { value: 'john', label: 'John (Masculine, autoritaire)' },
-    { value: 'lisa', label: 'Lisa (Féminine, douce)' },
-    { value: 'david', label: 'David (Masculine, mature)' }
+  // 🎙️ VOIX ULTRA-NATURELLES - OPTIMISÉES POUR CGP
+  const voiceOptions: Array<{
+    value: VapiVoice;
+    label: string;
+    provider: string;
+    quality: 'Ultra' | 'High' | 'Medium';
+    latency: 'Ultra-Fast' | 'Fast' | 'Normal';
+    description: string;
+  }> = [
+    // 🚀 VOIX OPTIMISÉES VITESSE + QUALITÉ
+    {
+      value: 'natural_fast',
+      label: '🚀 Rachel FR (Recommandée)',
+      provider: 'ElevenLabs',
+      quality: 'Ultra',
+      latency: 'Ultra-Fast',
+      description: 'Voix féminine française ultra-naturelle, optimisée vitesse'
+    },
+    {
+      value: 'ultra_fast',
+      label: '⚡ Nova (Ultra-rapide)',
+      provider: 'OpenAI',
+      quality: 'High',
+      latency: 'Ultra-Fast',
+      description: 'Voix très rapide pour tests de latence'
+    },
+
+    // 🇫🇷 VOIX FRANÇAISES PREMIUM
+    {
+      value: 'jennifer',
+      label: '👩 Rachel FR - Naturelle',
+      provider: 'ElevenLabs',
+      quality: 'Ultra',
+      latency: 'Fast',
+      description: 'Féminine française, très naturelle et professionnelle'
+    },
+    {
+      value: 'lucile',
+      label: '👩‍💼 Domi FR - Professionnelle',
+      provider: 'ElevenLabs',
+      quality: 'Ultra',
+      latency: 'Fast',
+      description: 'Féminine française, ton professionnel CGP'
+    },
+    {
+      value: 'sarah',
+      label: '👩‍🎤 Rachel FR - Douce',
+      provider: 'ElevenLabs',
+      quality: 'Ultra',
+      latency: 'Normal',
+      description: 'Féminine française, ton doux et rassurant'
+    },
+
+    // 🧑 VOIX MASCULINES
+    {
+      value: 'alex',
+      label: '👨 Adam - Claire',
+      provider: 'ElevenLabs',
+      quality: 'High',
+      latency: 'Fast',
+      description: 'Masculine claire, multilingue français'
+    },
+    {
+      value: 'mike',
+      label: '👨‍💼 Arnold - Forte',
+      provider: 'ElevenLabs',
+      quality: 'High',
+      latency: 'Fast',
+      description: 'Masculine forte et convaincante'
+    },
+
+    // 🧪 VOIX DE TEST COMPARAISON
+    {
+      value: 'test_openai_nova',
+      label: '🧪 Test: OpenAI Nova',
+      provider: 'OpenAI',
+      quality: 'Medium',
+      latency: 'Ultra-Fast',
+      description: 'Pour comparaison OpenAI vs ElevenLabs'
+    },
+    {
+      value: 'test_openai_alloy',
+      label: '🧪 Test: OpenAI Alloy',
+      provider: 'OpenAI',
+      quality: 'Medium',
+      latency: 'Ultra-Fast',
+      description: 'Voix OpenAI standard'
+    }
   ];
 
   return (
@@ -662,23 +741,80 @@ function ConfigurationModal({
               />
             </div>
 
-            <div>
-              <Label htmlFor="agent_voice">Voix</Label>
-              <Select
-                value={config.agent_voice}
-                onValueChange={(value: VapiVoice) => setConfig({...config, agent_voice: value})}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Choisir une voix" />
-                </SelectTrigger>
-                <SelectContent>
-                  {voiceOptions.map(option => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <div className="col-span-2">
+              <Label className="text-base font-medium flex items-center gap-2">
+                <Volume2 className="h-4 w-4" />
+                Sélection de Voix (🎯 Optimisées pour Naturalité + Vitesse)
+              </Label>
+
+              <div className="space-y-3 mt-2">
+                {voiceOptions.map(option => {
+                  const isSelected = config.agent_voice === option.value;
+                  const selectedVoice = voiceOptions.find(v => v.value === config.agent_voice);
+
+                  return (
+                    <div
+                      key={option.value}
+                      className={`p-3 border rounded-lg cursor-pointer transition-all ${
+                        isSelected
+                          ? 'border-blue-500 bg-blue-50'
+                          : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                      }`}
+                      onClick={() => setConfig({...config, agent_voice: option.value})}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium">{option.label}</span>
+                            <Badge variant={option.provider === 'ElevenLabs' ? 'default' : 'secondary'}>
+                              {option.provider}
+                            </Badge>
+                            <Badge
+                              variant={option.quality === 'Ultra' ? 'default' : option.quality === 'High' ? 'secondary' : 'outline'}
+                            >
+                              {option.quality}
+                            </Badge>
+                            <Badge
+                              variant={option.latency === 'Ultra-Fast' ? 'default' : 'outline'}
+                            >
+                              {option.latency}
+                            </Badge>
+                          </div>
+                          <p className="text-sm text-gray-600 mt-1">{option.description}</p>
+                        </div>
+
+                        {isSelected && (
+                          <CheckCircle className="h-5 w-5 text-blue-500" />
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Informations voix sélectionnée */}
+              {config.agent_voice && (
+                <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+                  <div className="flex items-center gap-2 mb-2">
+                    <CheckCircle className="h-4 w-4 text-green-600" />
+                    <span className="font-medium text-green-800">Voix Sélectionnée</span>
+                  </div>
+                  {(() => {
+                    const selected = voiceOptions.find(v => v.value === config.agent_voice);
+                    return selected ? (
+                      <div className="text-sm">
+                        <p><strong>{selected.label}</strong></p>
+                        <p className="text-green-700">{selected.description}</p>
+                        <div className="flex gap-2 mt-1">
+                          <Badge variant="outline">{selected.provider}</Badge>
+                          <Badge variant="outline">Qualité: {selected.quality}</Badge>
+                          <Badge variant="outline">Latence: {selected.latency}</Badge>
+                        </div>
+                      </div>
+                    ) : null;
+                  })()}
+                </div>
+              )}
             </div>
           </div>
         </div>

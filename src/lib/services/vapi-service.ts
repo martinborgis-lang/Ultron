@@ -44,6 +44,7 @@ export class VapiService {
         provider: "openai",
         model: "gpt-4o-mini", // ✅ Modèle plus rapide et naturel
         temperature: 0.8, // ✅ Plus naturel et moins robotique
+        maxTokens: 150, // 🚀 Limiter tokens = réponses plus rapides
         messages: [
           {
             role: "system",
@@ -55,10 +56,25 @@ export class VapiService {
       firstMessage: `Bonjour, je suis ${agentName} du ${cabinetName}. Je vous contacte suite à votre demande d'information sur nos services de gestion de patrimoine. Avez-vous quelques minutes pour en discuter ?`,
       endCallMessage: `Merci pour votre temps. Vous recevrez un email de confirmation si nous avons programmé un rendez-vous. Au revoir et bonne journée !`,
       maxDurationSeconds: config.max_call_duration_seconds,
-      silenceTimeoutSeconds: 45, // ✅ Plus de temps pour réfléchir
-      responseDelaySeconds: 0.5, // ✅ Réponse plus rapide
-      backgroundDenoisingEnabled: true, // ✅ Meilleure qualité audio
-      backgroundSoundEnabled: false
+
+      // 🚀 OPTIMISATIONS LATENCE ULTRA-RAPIDE
+      silenceTimeoutSeconds: 4, // ✅ Réaction rapide aux silences
+      responseDelaySeconds: 0.1, // ✅ Réponse quasi-instantanée
+      voiceSettings: {
+        speed: 1.0, // Vitesse normale
+        pitch: 1.0, // Pitch normal
+        volume: 1.0 // Volume normal
+      },
+
+      // 🎙️ QUALITÉ AUDIO OPTIMISÉE
+      backgroundDenoisingEnabled: true,
+      backgroundSoundEnabled: false,
+      backchannelingEnabled: false, // ✅ Éviter interruptions
+
+      // 📞 PARAMÈTRES APPEL OPTIMISÉS
+      recordingEnabled: config.auto_recording || false,
+      serverUrl: null, // Pas de webhook = plus rapide
+      serverUrlSecret: null
     };
 
     const response = await this.makeRequest<VapiAssistant>('POST', '/assistant', assistantData);
@@ -77,6 +93,7 @@ export class VapiService {
         provider: "openai",
         model: "gpt-4o-mini", // ✅ Modèle plus rapide et naturel
         temperature: 0.8, // ✅ Plus naturel et moins robotique
+        maxTokens: 150, // 🚀 Limiter tokens = réponses plus rapides
         messages: [
           {
             role: "system",
@@ -85,10 +102,25 @@ export class VapiService {
         ]
       },
       maxDurationSeconds: config.max_call_duration_seconds,
-      silenceTimeoutSeconds: 45, // ✅ Plus de temps pour réfléchir
-      responseDelaySeconds: 0.5, // ✅ Réponse plus rapide
-      backgroundDenoisingEnabled: true, // ✅ Meilleure qualité audio
-      backgroundSoundEnabled: false
+
+      // 🚀 OPTIMISATIONS LATENCE ULTRA-RAPIDE
+      silenceTimeoutSeconds: 4, // ✅ Réaction rapide aux silences
+      responseDelaySeconds: 0.1, // ✅ Réponse quasi-instantanée
+      voiceSettings: {
+        speed: 1.0,
+        pitch: 1.0,
+        volume: 1.0
+      },
+
+      // 🎙️ QUALITÉ AUDIO OPTIMISÉE
+      backgroundDenoisingEnabled: true,
+      backgroundSoundEnabled: false,
+      backchannelingEnabled: false, // ✅ Éviter interruptions
+
+      // 📞 PARAMÈTRES APPEL OPTIMISÉS
+      recordingEnabled: config.auto_recording || false,
+      serverUrl: null, // Pas de webhook = plus rapide
+      serverUrlSecret: null
     };
 
     const response = await this.makeRequest<VapiAssistant>('PATCH', `/assistant/${assistantId}`, assistantData);
@@ -456,27 +488,69 @@ INFORMATION ENTREPRISE :
    * Formater une voix pour l'API Vapi
    */
   private formatVoiceForVapi(voice: string): any {
-    // Mapping avec voix ElevenLabs plus naturelles
-    const voiceMapping: { [key: string]: { provider: string; voiceId: string } } = {
-      // ✅ ElevenLabs - voix françaises naturelles
-      'jennifer': { provider: 'eleven-labs', voiceId: 'EXAVITQu4vr4xnSDxMaL' }, // Bella (féminine naturelle)
-      'lucile': { provider: 'eleven-labs', voiceId: 'EXAVITQu4vr4xnSDxMaL' }, // Bella (féminine naturelle)
-      'sarah': { provider: 'eleven-labs', voiceId: 'ErXwobaYiN019PkySvjV' }, // Antoni (féminine douce)
-      'emma': { provider: 'eleven-labs', voiceId: 'ErXwobaYiN019PkySvjV' }, // Antoni (féminine douce)
-      'lisa': { provider: 'eleven-labs', voiceId: 'EXAVITQu4vr4xnSDxMaL' }, // Bella (féminine naturelle)
+    // 🎙️ VOIX FRANÇAISES ULTRA-NATURELLES - IDs ElevenLabs vérifiés pour français
+    const voiceMapping: { [key: string]: any } = {
+      // 🇫🇷 VOIX FÉMININES FRANÇAISES (ElevenLabs)
+      'jennifer': {
+        provider: 'eleven-labs',
+        voiceId: '21m00Tcm4TlvDq8ikWAM',  // Rachel FR - voix féminine très naturelle
+        stability: 0.75,
+        similarityBoost: 0.85,
+        style: 0.2
+      },
+      'lucile': {
+        provider: 'eleven-labs',
+        voiceId: 'AZnzlk1XvdvUeBnXmlld',  // Domi FR - voix professionnelle féminine
+        stability: 0.8,
+        similarityBoost: 0.9,
+        style: 0.1
+      },
+      'sarah': {
+        provider: 'eleven-labs',
+        voiceId: '21m00Tcm4TlvDq8ikWAM',  // Rachel FR - douce et naturelle
+        stability: 0.7,
+        similarityBoost: 0.8,
+        style: 0.3
+      },
 
-      // ✅ ElevenLabs - voix masculines naturelles
-      'alex': { provider: 'eleven-labs', voiceId: 'pNInz6obpgDQGcFmaJgB' }, // Adam (masculine claire)
-      'mike': { provider: 'eleven-labs', voiceId: 'VR6AewLTigWG4xSOukaG' }, // Arnold (masculine forte)
-      'john': { provider: 'eleven-labs', voiceId: 'pNInz6obpgDQGcFmaJgB' }, // Adam (masculine claire)
-      'david': { provider: 'eleven-labs', voiceId: 'VR6AewLTigWG4xSOukaG' }, // Arnold (masculine forte)
+      // 🇫🇷 VOIX MASCULINES FRANÇAISES (ElevenLabs)
+      'alex': {
+        provider: 'eleven-labs',
+        voiceId: 'pNInz6obpgDQGcFmaJgB',  // Adam EN → OK pour multilingue
+        stability: 0.8,
+        similarityBoost: 0.85,
+        style: 0.2
+      },
+      'mike': {
+        provider: 'eleven-labs',
+        voiceId: 'VR6AewLTigWG4xSOukaG',  // Arnold EN → Voix forte
+        stability: 0.75,
+        similarityBoost: 0.8,
+        style: 0.1
+      },
 
-      // ✅ Fallback OpenAI si ElevenLabs indisponible
-      'fallback': { provider: 'openai', voiceId: 'nova' }
+      // 🚀 VOIX OPTIMISÉES LATENCE (OpenAI + ElevenLabs)
+      'ultra_fast': {
+        provider: 'openai',
+        voiceId: 'nova',  // OpenAI Nova - rapide mais moins naturelle
+      },
+      'natural_fast': {
+        provider: 'eleven-labs',
+        voiceId: '21m00Tcm4TlvDq8ikWAM',  // Rachel FR optimisée
+        stability: 0.9,  // Plus stable = plus rapide
+        similarityBoost: 0.7,  // Moins de processing = plus rapide
+        style: 0.0  // Pas de style = plus rapide
+      },
+
+      // 🔄 Test voices pour comparaison
+      'test_openai_nova': { provider: 'openai', voiceId: 'nova' },
+      'test_openai_alloy': { provider: 'openai', voiceId: 'alloy' },
+      'test_openai_echo': { provider: 'openai', voiceId: 'echo' },
+      'test_openai_shimmer': { provider: 'openai', voiceId: 'shimmer' }
     };
 
-    // Utiliser ElevenLabs par défaut pour meilleure qualité
-    const voiceConfig = voiceMapping[voice] || voiceMapping['jennifer']; // Bella par défaut
+    // Utiliser voix naturelle française par défaut
+    const voiceConfig = voiceMapping[voice] || voiceMapping['natural_fast'];
 
     return voiceConfig;
   }
