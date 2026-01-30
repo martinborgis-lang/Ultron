@@ -40,6 +40,14 @@ export class VapiService {
     const assistantData: VapiAssistant = {
       name: config.agent_name,
       voice: this.formatVoiceForVapi(config.agent_voice),
+
+      // 🎤 TRANSCRIPTION FRANÇAISE OPTIMISÉE
+      transcriber: {
+        provider: "deepgram",
+        model: "nova-2",
+        language: "fr"  // ✅ Reconnaissance vocale française
+      },
+
       model: {
         provider: "openai",
         model: "gpt-4o-mini", // ✅ Modèle plus rapide et naturel
@@ -73,6 +81,14 @@ export class VapiService {
       name: config.agent_name,
       voice: this.formatVoiceForVapi(config.agent_voice),
       language: "fr",
+
+      // 🎤 TRANSCRIPTION FRANÇAISE OPTIMISÉE
+      transcriber: {
+        provider: "deepgram",
+        model: "nova-2",
+        language: "fr"  // ✅ Reconnaissance vocale française
+      },
+
       model: {
         provider: "openai",
         model: "gpt-4o-mini", // ✅ Modèle plus rapide et naturel
@@ -456,9 +472,27 @@ INFORMATION ENTREPRISE :
    * Formater une voix pour l'API Vapi
    */
   private formatVoiceForVapi(voice: string): any {
-    // 🎙️ VOIX FRANÇAISES ULTRA-NATURELLES - IDs ElevenLabs vérifiés pour français
+    // 🎙️ VOIX FRANÇAISES ULTRA-NATURELLES - Providers multiples
     const voiceMapping: { [key: string]: any } = {
-      // 🇫🇷 VOIX FÉMININES FRANÇAISES (ElevenLabs)
+      // 🏆 VOIX AZURE FRANÇAISES PREMIUM (Recommandées)
+      'vivienne': {
+        provider: 'azure',
+        voiceId: 'fr-FR-VivienneMultilingualNeural'  // 🎯 VOIX RECOMMANDÉE - Vivienne Multilingue
+      },
+      'denise': {
+        provider: 'azure',
+        voiceId: 'fr-FR-DeniseNeural'  // Voix féminine professionnelle
+      },
+      'henri': {
+        provider: 'azure',
+        voiceId: 'fr-FR-HenriNeural'  // Voix masculine française
+      },
+      'alain': {
+        provider: 'azure',
+        voiceId: 'fr-FR-AlainNeural'  // Voix masculine chaleureuse
+      },
+
+      // 🇫🇷 VOIX FÉMININES FRANÇAISES (ElevenLabs - backup)
       'jennifer': {
         provider: '11labs',
         voiceId: '21m00Tcm4TlvDq8ikWAM',  // Rachel FR - voix féminine très naturelle
@@ -481,7 +515,7 @@ INFORMATION ENTREPRISE :
         style: 0.3
       },
 
-      // 🇫🇷 VOIX MASCULINES FRANÇAISES (ElevenLabs)
+      // 🇫🇷 VOIX MASCULINES FRANÇAISES (ElevenLabs - backup)
       'alex': {
         provider: '11labs',
         voiceId: 'pNInz6obpgDQGcFmaJgB',  // Adam EN → OK pour multilingue
@@ -497,24 +531,23 @@ INFORMATION ENTREPRISE :
         style: 0.1
       },
 
-      // 🚀 VOIX OPTIMISÉES LATENCE (OpenAI + ElevenLabs)
+      // 🚀 VOIX OPTIMISÉES LATENCE
       'ultra_fast': {
         provider: 'openai',
-        voiceId: 'nova',  // OpenAI Nova - rapide mais moins naturelle
+        voiceId: 'nova'  // OpenAI Nova - ultra rapide
       },
       'natural_fast': {
-        provider: '11labs',
-        voiceId: '21m00Tcm4TlvDq8ikWAM',  // Rachel FR optimisée
-        stability: 0.9,  // Plus stable = plus rapide
-        similarityBoost: 0.7,  // Moins de processing = plus rapide
-        style: 0.0  // Pas de style = plus rapide
+        provider: 'azure',
+        voiceId: 'fr-FR-VivienneMultilingualNeural'  // 🎯 VOIX PAR DÉFAUT - Azure optimisée
       },
 
       // 🔄 Test voices pour comparaison
       'test_openai_nova': { provider: 'openai', voiceId: 'nova' },
       'test_openai_alloy': { provider: 'openai', voiceId: 'alloy' },
       'test_openai_echo': { provider: 'openai', voiceId: 'echo' },
-      'test_openai_shimmer': { provider: 'openai', voiceId: 'shimmer' }
+      'test_openai_shimmer': { provider: 'openai', voiceId: 'shimmer' },
+      'test_azure_vivienne': { provider: 'azure', voiceId: 'fr-FR-VivienneMultilingualNeural' },
+      'test_azure_denise': { provider: 'azure', voiceId: 'fr-FR-DeniseNeural' }
     };
 
     // Utiliser voix naturelle française par défaut

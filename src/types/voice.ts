@@ -254,6 +254,12 @@ export interface VoiceDailyStats {
 
 // Voix disponibles Vapi
 export type VapiVoice =
+  // 🏆 VOIX AZURE PREMIUM (Recommandées)
+  | 'vivienne'      // Azure Vivienne Multilingue (RECOMMANDÉE)
+  | 'denise'        // Azure Denise professionnelle
+  | 'henri'         // Azure Henri masculine
+  | 'alain'         // Azure Alain chaleureux
+  // 🇫🇷 VOIX ELEVENLABS (Backup)
   | 'jennifer'      // Voix féminine naturelle
   | 'alex'          // Voix masculine claire
   | 'sarah'         // Voix féminine professionnelle
@@ -264,13 +270,15 @@ export type VapiVoice =
   | 'david'         // Voix masculine mature
   | 'lucile'        // Voix féminine professionnelle FR
   // 🚀 VOIX OPTIMISÉES LATENCE + QUALITÉ
-  | 'natural_fast'  // Rachel FR optimisée (recommandée)
+  | 'natural_fast'  // Azure Vivienne optimisée (PAR DÉFAUT)
   | 'ultra_fast'    // OpenAI Nova ultra-rapide
   // 🧪 VOIX DE TEST
   | 'test_openai_nova'    // Test OpenAI Nova
   | 'test_openai_alloy'   // Test OpenAI Alloy
   | 'test_openai_echo'    // Test OpenAI Echo
   | 'test_openai_shimmer' // Test OpenAI Shimmer
+  | 'test_azure_vivienne' // Test Azure Vivienne
+  | 'test_azure_denise'   // Test Azure Denise
 
 // Configuration assistant Vapi
 export interface VapiAssistant {

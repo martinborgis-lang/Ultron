@@ -632,15 +632,49 @@ function ConfigurationModal({
     latency: 'Ultra-Fast' | 'Fast' | 'Normal';
     description: string;
   }> = [
-    // 🚀 VOIX OPTIMISÉES VITESSE + QUALITÉ
+    // 🏆 VOIX AZURE PREMIUM (Recommandées)
     {
       value: 'natural_fast',
-      label: '🚀 Rachel FR (Recommandée)',
-      provider: 'ElevenLabs',
+      label: '🏆 Vivienne FR (RECOMMANDÉE)',
+      provider: 'Azure',
       quality: 'Ultra',
       latency: 'Ultra-Fast',
-      description: 'Voix féminine française ultra-naturelle, optimisée vitesse'
+      description: 'Voix française Vivienne Multilingue - Qualité premium'
     },
+    {
+      value: 'vivienne',
+      label: '👩 Vivienne Multilingue',
+      provider: 'Azure',
+      quality: 'Ultra',
+      latency: 'Fast',
+      description: 'Voix française conversationnelle avec interjections'
+    },
+    {
+      value: 'denise',
+      label: '👩 Denise Professionnelle',
+      provider: 'Azure',
+      quality: 'Ultra',
+      latency: 'Fast',
+      description: 'Voix féminine française professionnelle'
+    },
+    {
+      value: 'henri',
+      label: '👨 Henri Français',
+      provider: 'Azure',
+      quality: 'Ultra',
+      latency: 'Fast',
+      description: 'Voix masculine française claire'
+    },
+    {
+      value: 'alain',
+      label: '👨 Alain Chaleureux',
+      provider: 'Azure',
+      quality: 'Ultra',
+      latency: 'Fast',
+      description: 'Voix masculine française chaleureuse'
+    },
+
+    // ⚡ VOIX RAPIDE
     {
       value: 'ultra_fast',
       label: '⚡ Nova (Ultra-rapide)',
@@ -650,7 +684,7 @@ function ConfigurationModal({
       description: 'Voix très rapide pour tests de latence'
     },
 
-    // 🇫🇷 VOIX FRANÇAISES PREMIUM
+    // 🇫🇷 VOIX FRANÇAISES ELEVENLABS (Backup)
     {
       value: 'jennifer',
       label: '👩 Rachel FR - Naturelle',
