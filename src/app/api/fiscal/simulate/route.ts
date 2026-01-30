@@ -133,7 +133,7 @@ function generateChartData(
   productTaxEngine: ProductTaxEngine
 ): ChartDataPoint[] {
   const data: ChartDataPoint[] = [];
-  const max_years = Math.max(investment.horizon_years, 15); // Au moins 15 ans pour le graphique
+  const max_years = investment.horizon_years; // Utilise uniquement l'horizon de placement défini
 
   for (let year = 1; year <= max_years; year++) {
     const year_investment = {
