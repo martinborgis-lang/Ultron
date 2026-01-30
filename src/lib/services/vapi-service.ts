@@ -88,22 +88,7 @@ export class VapiService {
 
       // 🚀 OPTIMISATIONS LATENCE ULTRA-RAPIDE
       silenceTimeoutSeconds: 4, // ✅ Réaction rapide aux silences
-      responseDelaySeconds: 0.1, // ✅ Réponse quasi-instantanée
-      voiceSettings: {
-        speed: 1.0,
-        pitch: 1.0,
-        volume: 1.0
-      },
-
-      // 🎙️ QUALITÉ AUDIO OPTIMISÉE
-      backgroundDenoisingEnabled: true,
-      backgroundSoundEnabled: false,
-      backchannelingEnabled: false, // ✅ Éviter interruptions
-
-      // 📞 PARAMÈTRES APPEL OPTIMISÉS
-      recordingEnabled: config.auto_recording || false,
-      serverUrl: null, // Pas de webhook = plus rapide
-      serverUrlSecret: null
+      responseDelaySeconds: 0.1 // ✅ Réponse quasi-instantanée
     };
 
     const response = await this.makeRequest<VapiAssistant>('PATCH', `/assistant/${assistantId}`, assistantData);
