@@ -33,7 +33,7 @@ export class VapiService {
   /**
    * Créer un assistant Vapi configuré pour la qualification CGP
    */
-  async createAssistant(config: VoiceConfig, organizationData?: { name: string }): Promise<VapiAssistant> {
+  async createAssistant(config: VoiceConfig, organizationData?: { name: string }, prospectData?: any): Promise<VapiAssistant> {
     const cabinetName = organizationData?.name || 'Cabinet de gestion de patrimoine Ultron';
     const agentName = config.agent_name || 'Assistant';
 
@@ -47,7 +47,7 @@ export class VapiService {
         messages: [
           {
             role: "system",
-            content: this.buildSystemPrompt(config, organizationData)
+            content: this.buildSystemPrompt(config, organizationData, prospectData)
           }
         ]
       },
@@ -75,7 +75,7 @@ export class VapiService {
   /**
    * Mettre à jour un assistant existant
    */
-  async updateAssistant(assistantId: string, config: VoiceConfig, organizationData?: { name: string }): Promise<VapiAssistant> {
+  async updateAssistant(assistantId: string, config: VoiceConfig, organizationData?: { name: string }, prospectData?: any): Promise<VapiAssistant> {
     const assistantData: Partial<VapiAssistant> = {
       name: config.agent_name,
       voice: this.formatVoiceForVapi(config.agent_voice),
@@ -87,7 +87,7 @@ export class VapiService {
         messages: [
           {
             role: "system",
-            content: this.buildSystemPrompt(config, organizationData)
+            content: this.buildSystemPrompt(config, organizationData, prospectData)
           }
         ]
       },
@@ -238,7 +238,7 @@ export class VapiService {
   /**
    * Construire le prompt système pour l'assistant
    */
-  private buildSystemPrompt(config: VoiceConfig, organizationData?: { name: string }): string {
+  private buildSystemPrompt(config: VoiceConfig, organizationData?: { name: string }, prospectData?: any): string {
     // Récupérer les valeurs pour injection
     const cabinetName = organizationData?.name || 'Cabinet de gestion de patrimoine Ultron';
     const agentName = config.agent_name || 'Assistant';
@@ -251,7 +251,26 @@ export class VapiService {
       .replace(/\{\{cabinet_name\}\}/g, cabinetName)
       .replace(/\{\{agent_name\}\}/g, agentName);
 
-    return `${systemPrompt}
+    // Injecter les informations du prospect si disponibles
+    let prospectInfo = '';
+    if (prospectData) {
+      prospectInfo = `
+
+🔍 INFORMATIONS PROSPECT POUR CET APPEL :
+- NOM COMPLET : ${prospectData.first_name || ''} ${prospectData.last_name || ''} ${prospectData.last_name ? `(DIRE "M./Mme ${prospectData.last_name}")` : '(pas de nom disponible)'}
+- PROFESSION : ${prospectData.profession || prospectData.job_title || '(non renseignée - ne pas demander)'}
+- ENTREPRISE : ${prospectData.company || '(non renseignée)'}
+- INTÉRÊT DÉCLARÉ : ${prospectData.source_detail || 'Services de gestion de patrimoine'}
+- SOURCE : ${prospectData.source || 'Contact direct'}
+- EMAIL : ${prospectData.email || '(non renseigné)'}
+
+🎯 INSTRUCTIONS SPÉCIALES POUR CET APPEL :
+${prospectData.last_name ? `✅ COMMENCER PAR : "Bonjour M./Mme ${prospectData.last_name}"` : '❌ PAS DE NOM - dire juste "Bonjour"'}
+${prospectData.profession || prospectData.job_title ? `✅ MENTIONNER : "Je vois que vous travaillez dans ${prospectData.profession || prospectData.job_title}"` : '❌ PAS DE PROFESSION - ne pas demander le secteur'}
+✅ FAIRE RÉFÉRENCE À : "${prospectData.source_detail || 'vos besoins en gestion de patrimoine'}"`;
+    }
+
+    return `${systemPrompt}${prospectInfo}
 
 🎯 OBJECTIF UNIQUE : PRENDRE UN RENDEZ-VOUS PHYSIQUE RAPIDEMENT
 
@@ -267,18 +286,30 @@ Tu reçois automatiquement toutes les informations du prospect dans les métadon
 - revenus_annuels, patrimoine_estime → Situation financière si disponible
 - notes → Notes additionnelles sur le prospect
 
-🎯 UTILISATION OBLIGATOIRE :
-- TOUJOURS commencer par "Bonjour M./Mme [LAST_NAME]" si tu as le nom
-- MENTIONNER la profession si disponible : "Je vois que vous travaillez dans [PROFESSION]"
-- FAIRE RÉFÉRENCE à l'intérêt déclaré : "concernant [SOURCE_DETAIL]"
+🎯 UTILISATION OBLIGATOIRE DES MÉTADONNÉES :
+Les informations du prospect sont dans les métadonnées de l'appel. Tu DOIS les utiliser ainsi :
+
+✅ SI tu as last_name dans les métadonnées → "Bonjour M./Mme [utilise le last_name réel]"
+✅ SI tu n'as pas le nom → "Bonjour"
+✅ SI tu as profession dans les métadonnées → "Je vois que vous travaillez dans [utilise la profession réelle]"
+✅ SI tu as source_detail dans les métadonnées → "concernant [utilise le source_detail réel]"
+✅ NE JAMAIS dire "[LAST_NAME]" ou "[PROFESSION]" - utilise les VRAIES VALEURS des métadonnées !
 
 📞 SCRIPT SIMPLIFIÉ - DIRECT VERS RDV :
 
 ÉTAPE 1 - INTRODUCTION PERSONNALISÉE :
-"Bonjour M./Mme [LAST_NAME], je suis ${agentName} du ${cabinetName}. Je vous contacte suite à votre demande d'information concernant [SOURCE_DETAIL]. Avez-vous quelques minutes pour en discuter ?"
+- VÉRIFIER les métadonnées pour last_name et source_detail
+- SI last_name existe : "Bonjour M./Mme [UTILISE LA VRAIE VALEUR], je suis ${agentName} du ${cabinetName}."
+- SI source_detail existe : "Je vous contacte suite à votre demande d'information concernant [UTILISE LA VRAIE VALEUR]."
+- SINON : "Je vous contacte suite à votre demande d'information sur nos services de gestion de patrimoine."
+- TERMINER par : "Avez-vous quelques minutes pour en discuter ?"
 
 ÉTAPE 2 - APRÈS RÉPONSE POSITIVE ("OUI") :
-✅ DIRE IMMÉDIATEMENT : "Parfait ! Je vois que vous travaillez dans [PROFESSION] et que vous êtes intéressé par [SOURCE_DETAIL]. C'est effectivement notre spécialité."
+✅ VÉRIFIER les métadonnées pour profession et source_detail
+✅ CONSTRUIRE la phrase avec les VRAIES VALEURS :
+- SI profession existe : "Parfait ! Je vois que vous travaillez dans [VRAIE PROFESSION]"
+- SI source_detail existe : "et que vous êtes intéressé par [VRAIE SOURCE_DETAIL]"
+- TERMINER : "C'est effectivement notre spécialité."
 
 ✅ PROPOSITION DIRECTE RDV : "Plutôt que de tout expliquer par téléphone, je pense qu'un premier entretien GRATUIT de 30 minutes serait plus adapté pour analyser votre situation personnelle et voir comment nous pouvons vous aider. Seriez-vous disponible cette semaine ou la semaine prochaine pour un rendez-vous ?"
 

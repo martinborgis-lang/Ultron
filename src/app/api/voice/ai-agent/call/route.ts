@@ -47,6 +47,7 @@ export async function POST(request: NextRequest) {
     } = body;
 
     console.log('📞 Appel pour:', { prospect_id, phone_number, script_type });
+    console.log('📞 Metadata reçues:', metadata);
 
     // Validation des données
     if (!phone_number) {
@@ -417,6 +418,17 @@ async function initiateVapiCall(
 
     const vapiService = VapiService.createFromConfig(voiceConfig);
 
+    // Créer un assistant temporaire avec les infos du prospect
+    let assistantId = voiceConfig.vapi_assistant_id;
+
+    if (prospect) {
+      console.log('👤 Création assistant personnalisé pour:', prospect.first_name, prospect.last_name);
+
+      const customAssistant = await vapiService.createAssistant(voiceConfig, undefined, prospect);
+      assistantId = customAssistant.id;
+      console.log('✅ Assistant personnalisé créé:', assistantId);
+    }
+
     // Préparer les métadonnées complètes pour l'assistant
     const callMetadata = {
       call_id: call.id,
@@ -449,7 +461,7 @@ async function initiateVapiCall(
 
     const vapiCallRequest: VapiCallRequest = {
       phoneNumber: call.to_number,
-      assistantId: voiceConfig.vapi_assistant_id,
+      assistantId: assistantId, // Utilise l'assistant personnalisé si créé
       metadata: callMetadata
     };
 
@@ -466,6 +478,7 @@ async function initiateVapiCall(
       .eq('id', call.id);
 
     console.log('✅ Appel Vapi initié:', vapiCall.id);
+    console.log('📋 Métadonnées envoyées à VAPI:', JSON.stringify(callMetadata, null, 2));
 
     return {
       success: true,

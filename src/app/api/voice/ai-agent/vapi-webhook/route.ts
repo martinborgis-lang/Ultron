@@ -22,6 +22,17 @@ export async function POST(request: NextRequest) {
 
     // Log pour debugging
     console.log('📨 Type événement:', event.type);
+    console.log('🔍 Event complet:', JSON.stringify(event, null, 2));
+
+    // Validation de la structure de l'événement
+    if (!event.call || !event.call.id) {
+      console.log('❌ Structure événement invalide - pas de call.id');
+      return NextResponse.json(
+        { error: 'Structure événement invalide' },
+        { status: 400 }
+      );
+    }
+
     console.log('📞 ID Appel:', event.call.id);
 
     // Valider la signature du webhook (si configuré)
