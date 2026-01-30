@@ -60,6 +60,9 @@ export class VapiService {
       endCallMessage: `Merci pour votre temps. Vous recevrez un email de confirmation si nous avons programmé un rendez-vous. Au revoir et bonne journée !`,
       maxDurationSeconds: config.max_call_duration_seconds,
 
+      // 🎯 WEBHOOK CONFIGURATION (au niveau assistant)
+      serverUrl: `${process.env.NEXT_PUBLIC_APP_URL}/api/voice/ai-agent/vapi-webhook`,
+
       // 🚀 OPTIMISATIONS LATENCE ULTRA-RAPIDE
       silenceTimeoutSeconds: 10, // ✅ Minimum requis par VAPI API
       responseDelaySeconds: 0.1 // ✅ Réponse quasi-instantanée
@@ -92,6 +95,9 @@ export class VapiService {
       // 🔧 FONCTIONS DISPONIBLES POUR L'AGENT IA
       functions: this.buildAssistantFunctions(),
       maxDurationSeconds: config.max_call_duration_seconds,
+
+      // 🎯 WEBHOOK CONFIGURATION (au niveau assistant)
+      serverUrl: `${process.env.NEXT_PUBLIC_APP_URL}/api/voice/ai-agent/vapi-webhook`,
 
       // 🚀 OPTIMISATIONS LATENCE ULTRA-RAPIDE
       silenceTimeoutSeconds: 10, // ✅ Minimum requis par VAPI API
@@ -145,14 +151,13 @@ export class VapiService {
         name: request.metadata?.prospect_name         // Optionnel: nom du prospect
       },
 
-      // 🎯 WEBHOOK POUR CAPTURE D'ÉVÉNEMENTS
-      webhookUrl: `${process.env.NEXT_PUBLIC_APP_URL}/api/voice/ai-agent/vapi-webhook`,
+      // 🎯 WEBHOOK configuré au niveau assistant, pas par appel
 
       metadata: {
         ...request.metadata,
         created_by: 'ultron_ai_agent',
         timestamp: new Date().toISOString(),
-        version: 'v2026-01-29-transcription-workflow',
+        version: 'v2026-01-30-webhook-fix',
         organization_id: request.metadata?.organization_id,
         prospect_id: request.metadata?.prospect_id
       }

@@ -300,6 +300,7 @@ export interface VapiAssistant {
   maxDurationSeconds?: number;
   silenceTimeoutSeconds?: number;
   responseDelaySeconds?: number;
+  serverUrl?: string; // URL webhook pour événements
 }
 
 // Fonctions Vapi pour l'assistant
