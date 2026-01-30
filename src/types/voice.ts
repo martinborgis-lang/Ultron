@@ -329,7 +329,6 @@ export interface VapiCallRequest {
   };
   phoneNumber?: string;     // Legacy pour compatibilité
   name?: string;
-  webhookUrl?: string;      // ✅ URL webhook pour événements
   metadata?: Record<string, any>;
 }
 
