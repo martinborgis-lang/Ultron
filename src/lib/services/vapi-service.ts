@@ -44,7 +44,6 @@ export class VapiService {
         provider: "openai",
         model: "gpt-4o-mini", // ✅ Modèle plus rapide et naturel
         temperature: 0.8, // ✅ Plus naturel et moins robotique
-        maxTokens: 150, // 🚀 Limiter tokens = réponses plus rapides
         messages: [
           {
             role: "system",
@@ -93,7 +92,6 @@ export class VapiService {
         provider: "openai",
         model: "gpt-4o-mini", // ✅ Modèle plus rapide et naturel
         temperature: 0.8, // ✅ Plus naturel et moins robotique
-        maxTokens: 150, // 🚀 Limiter tokens = réponses plus rapides
         messages: [
           {
             role: "system",
