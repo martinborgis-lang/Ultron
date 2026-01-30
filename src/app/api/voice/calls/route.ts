@@ -36,11 +36,10 @@ export async function GET(request: NextRequest) {
         status,
         outcome,
         duration_seconds,
-        transcript_text,
-        transcript_json,
+        transcript,
+        ai_analysis,
         qualification_score,
         qualification_result,
-        qualification_notes,
         appointment_date,
         cost_cents,
         answered,
@@ -49,7 +48,11 @@ export async function GET(request: NextRequest) {
         created_at,
         started_at,
         ended_at,
-        user_id
+        scheduled_call_at,
+        processing_notes,
+        twilio_call_sid,
+        vapi_assistant_id,
+        transcript_confidence
       `)
       .eq('organization_id', organization.id)
       .order('created_at', { ascending: false });

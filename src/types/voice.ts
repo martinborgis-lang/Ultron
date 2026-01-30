@@ -88,13 +88,12 @@ export interface PhoneCall {
   duration_seconds?: number;
 
   // Conversation
-  transcript_text?: string;
-  transcript_json?: VapiTranscript[];
+  transcript?: string;
+  ai_analysis?: any;
 
   // Qualification
   qualification_score?: number;
   qualification_result?: QualificationResult;
-  qualification_notes?: string;
 
   // Résultat
   outcome: CallOutcome;
@@ -329,6 +328,7 @@ export interface VapiCallRequest {
   };
   phoneNumber?: string;     // Legacy pour compatibilité
   name?: string;
+  webhookUrl?: string;      // ✅ URL webhook pour événements
   metadata?: Record<string, any>;
 }
 

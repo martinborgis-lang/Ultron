@@ -96,9 +96,36 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('Erreur initiation appel:', error);
+
+    // Log détaillé pour le debug
+    if (error instanceof Error) {
+      console.error('Stack trace:', error.stack);
+      console.error('Error name:', error.name);
+      console.error('Error message:', error.message);
+    }
+
+    let errorMessage = 'Erreur lors de l\'initiation de l\'appel';
+    let statusCode = 500;
+
+    if (error instanceof Error) {
+      errorMessage = error.message;
+
+      // Erreurs spécifiques Twilio
+      if (error.message.includes('Missing Twilio credentials')) {
+        errorMessage = 'Configuration Twilio manquante - contactez l\'administrateur';
+        statusCode = 503;
+      } else if (error.message.includes('Failed to make call')) {
+        errorMessage = 'Erreur lors de l\'appel - vérifiez le numéro de téléphone';
+        statusCode = 400;
+      }
+    }
+
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Erreur lors de l\'initiation de l\'appel' },
-      { status: 500 }
+      {
+        error: errorMessage,
+        details: process.env.NODE_ENV === 'development' ? error instanceof Error ? error.message : String(error) : undefined
+      },
+      { status: statusCode }
     );
   }
 }

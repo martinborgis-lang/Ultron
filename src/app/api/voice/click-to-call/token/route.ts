@@ -31,9 +31,30 @@ export async function GET(request: NextRequest) {
 
   } catch (error) {
     console.error('Erreur génération token Twilio:', error);
+
+    // Log détaillé pour le debug
+    if (error instanceof Error) {
+      console.error('Stack trace:', error.stack);
+      console.error('Error name:', error.name);
+      console.error('Error message:', error.message);
+    }
+
+    let errorMessage = 'Erreur lors de la génération du token';
+    let statusCode = 500;
+
+    if (error instanceof Error) {
+      if (error.message.includes('Missing Twilio API credentials')) {
+        errorMessage = 'Configuration Twilio manquante - contactez l\'administrateur';
+        statusCode = 503;
+      }
+    }
+
     return NextResponse.json(
-      { error: 'Erreur lors de la génération du token' },
-      { status: 500 }
+      {
+        error: errorMessage,
+        details: process.env.NODE_ENV === 'development' ? error instanceof Error ? error.message : String(error) : undefined
+      },
+      { status: statusCode }
     );
   }
 }

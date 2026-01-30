@@ -177,8 +177,8 @@ async function handleCallEnded(event: VapiWebhookEvent) {
 
   // Ajouter les données de transcription si disponibles
   if (event.call.transcript) {
-    updateData.transcript_json = event.call.transcript;
-    updateData.transcript_text = event.call.transcript
+    updateData.ai_analysis = event.call.transcript;
+    updateData.transcript = event.call.transcript
       .map(t => t.content)
       .join('\n');
   }
@@ -187,7 +187,6 @@ async function handleCallEnded(event: VapiWebhookEvent) {
   if (qualificationResult) {
     updateData.qualification_score = qualificationResult.score;
     updateData.qualification_result = qualificationResult.result;
-    updateData.qualification_notes = qualificationResult.notes;
   }
 
   await supabase
@@ -233,8 +232,8 @@ async function handleTranscriptUpdated(event: VapiWebhookEvent) {
     await supabase
       .from('phone_calls')
       .update({
-        transcript_json: event.call.transcript,
-        transcript_text: transcriptText
+        ai_analysis: event.call.transcript,
+        transcript: transcriptText
       })
       .eq('id', call.id);
 
@@ -462,8 +461,7 @@ async function handleQualifyProspect(call: PhoneCall, args: any) {
     .from('phone_calls')
     .update({
       qualification_score: args.qualification_score,
-      qualification_result: args.qualification_result,
-      qualification_notes: args.notes
+      qualification_result: args.qualification_result
     })
     .eq('id', call.id);
 
