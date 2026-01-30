@@ -417,13 +417,34 @@ async function initiateVapiCall(
 
     const vapiService = VapiService.createFromConfig(voiceConfig);
 
-    // Préparer les métadonnées pour l'assistant
+    // Préparer les métadonnées complètes pour l'assistant
     const callMetadata = {
       call_id: call.id,
       prospect_id: call.prospect_id,
       organization_id: call.organization_id,
+
+      // 🎯 INFORMATIONS PROSPECT COMPLÈTES pour personnalisation
       prospect_name: prospect ? `${prospect.first_name || ''} ${prospect.last_name || ''}`.trim() : 'Prospect',
-      script_type: 'qualification' // Default script type since metadata is not available
+      first_name: prospect?.first_name || '',
+      last_name: prospect?.last_name || '',
+      profession: prospect?.profession || prospect?.job_title || '',
+      company: prospect?.company || '',
+      age: prospect?.age || null,
+      email: prospect?.email || '',
+
+      // Informations financières pour contexte
+      revenus_annuels: prospect?.revenus_annuels || null,
+      patrimoine_estime: prospect?.patrimoine_estime || null,
+      situation_familiale: prospect?.situation_familiale || '',
+
+      // Source et intérêt déclaré
+      source: prospect?.source || 'direct',
+      source_detail: prospect?.source_detail || 'Contact direct',
+      tags: prospect?.tags || [],
+      notes: prospect?.notes || '',
+
+      // Configuration appel
+      script_type: 'rdv_direct' // Nouveau type pour prise RDV directe
     };
 
     const vapiCallRequest: VapiCallRequest = {
