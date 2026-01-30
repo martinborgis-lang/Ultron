@@ -51,6 +51,10 @@ export class VapiService {
           }
         ]
       },
+
+      // 🔧 FONCTIONS DISPONIBLES POUR L'AGENT IA
+      functions: this.buildAssistantFunctions(),
+
       language: "fr",
       firstMessage: `Bonjour, je suis ${agentName} du ${cabinetName}. Je vous contacte suite à votre demande d'information sur nos services de gestion de patrimoine. Avez-vous quelques minutes pour en discuter ?`,
       endCallMessage: `Merci pour votre temps. Vous recevrez un email de confirmation si nous avons programmé un rendez-vous. Au revoir et bonne journée !`,
@@ -84,6 +88,9 @@ export class VapiService {
           }
         ]
       },
+
+      // 🔧 FONCTIONS DISPONIBLES POUR L'AGENT IA
+      functions: this.buildAssistantFunctions(),
       maxDurationSeconds: config.max_call_duration_seconds,
 
       // 🚀 OPTIMISATIONS LATENCE ULTRA-RAPIDE
@@ -137,11 +144,17 @@ export class VapiService {
         number: phoneNumber,                           // Numéro du prospect à appeler
         name: request.metadata?.prospect_name         // Optionnel: nom du prospect
       },
+
+      // 🎯 WEBHOOK POUR CAPTURE D'ÉVÉNEMENTS
+      webhookUrl: `${process.env.NEXT_PUBLIC_APP_URL}/api/voice/ai-agent/vapi-webhook`,
+
       metadata: {
         ...request.metadata,
         created_by: 'ultron_ai_agent',
         timestamp: new Date().toISOString(),
-        version: 'v2026-01-29-final'
+        version: 'v2026-01-29-transcription-workflow',
+        organization_id: request.metadata?.organization_id,
+        prospect_id: request.metadata?.prospect_id
       }
     };
 
@@ -258,10 +271,17 @@ export class VapiService {
 ÉTAPE 4 - TRANSITION VERS RDV :
 "D'après ce que vous me dites, nos services pourraient effectivement vous intéresser. Nous proposons un premier entretien gratuit de 30 minutes pour analyser votre situation. Êtes-vous disponible cette semaine ou la semaine prochaine ?"
 
-ÉTAPE 5 - PRISE DE RDV :
-- Proposer 2-3 créneaux précis
-- Confirmer coordonnées
-- Confirmer lieu de rendez-vous
+ÉTAPE 5 - PRISE DE RDV AUTOMATIQUE :
+🎯 UTILISER LES FONCTIONS DISPONIBLES :
+1. Si le prospect accepte un RDV → Utiliser "check_availability" pour vérifier les créneaux
+2. Proposer 2-3 créneaux précis trouvés par la fonction
+3. Dès que le prospect confirme → Utiliser "book_appointment" pour réserver automatiquement
+4. Confirmer la réservation avec détails (date, heure, lieu)
+
+🔧 FONCTIONS À UTILISER :
+- check_availability(preferred_date, preferred_time_range) : Vérifier les créneaux disponibles
+- book_appointment(date, time, duration_minutes, notes) : Réserver le RDV directement
+- qualify_prospect(score, result, notes) : Enregistrer la qualification pendant l'appel
 
 🚨 RÈGLES CRITIQUES POUR ÉVITER LES SILENCES :
 - JAMAIS se taire après "oui j'ai quelques minutes"

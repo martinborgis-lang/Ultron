@@ -317,68 +317,140 @@ async function handleRecordingAvailable(event: VapiWebhookEvent) {
 // ========================================
 
 async function handleCheckAvailability(call: PhoneCall, args: any) {
-  console.log('📅 Vérification disponibilités:', args);
+  console.log('📅 [VAPI-WEBHOOK] Vérification disponibilités:', args);
 
-  // Cette fonction sera appelée depuis l'API available-slots
-  // On enregistre juste la demande pour l'instant
-  await supabase
-    .from('crm_activities')
-    .insert({
-      organization_id: call.organization_id,
-      prospect_id: call.prospect_id,
-      user_id: call.user_id,
-      type: 'note',
-      subject: 'Demande de créneaux',
-      content: `L'assistant a demandé des créneaux: ${JSON.stringify(args)}`,
-      metadata: { function_call: 'check_availability', args }
+  try {
+    // Préparer les paramètres pour l'API
+    const params = new URLSearchParams();
+    params.append('organization_id', call.organization_id);
+
+    if (args.preferred_date) {
+      params.append('start_date', args.preferred_date);
+      // End date = +7 jours
+      const endDate = new Date(args.preferred_date);
+      endDate.setDate(endDate.getDate() + 7);
+      params.append('end_date', endDate.toISOString().split('T')[0]);
+    }
+
+    if (args.preferred_time_range) {
+      params.append('preferred_time_range', args.preferred_time_range);
+    }
+
+    // Appeler notre API de créneaux disponibles
+    const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/voice/ai-agent/available-slots?${params}`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' }
     });
+
+    if (response.ok) {
+      const data = await response.json();
+      console.log('✅ [VAPI-WEBHOOK] Créneaux trouvés:', data.data?.length || 0);
+
+      // Enregistrer l'activité avec les créneaux trouvés
+      await supabase
+        .from('crm_activities')
+        .insert({
+          organization_id: call.organization_id,
+          prospect_id: call.prospect_id,
+          user_id: call.user_id,
+          type: 'note',
+          subject: 'Vérification créneaux RDV',
+          content: `L'agent IA a vérifié les créneaux. ${data.data?.length || 0} créneaux disponibles trouvés.`,
+          metadata: {
+            function_call: 'check_availability',
+            args,
+            slots_found: data.data?.length || 0,
+            slots: data.data?.slice(0, 5) // Garder 5 premiers créneaux
+          }
+        });
+    } else {
+      console.error('❌ [VAPI-WEBHOOK] Erreur API créneaux:', response.status);
+    }
+  } catch (error) {
+    console.error('❌ [VAPI-WEBHOOK] Erreur handleCheckAvailability:', error);
+  }
 }
 
 async function handleBookAppointment(call: PhoneCall, args: any) {
-  console.log('📅 Réservation RDV:', args);
+  console.log('📅 [VAPI-WEBHOOK] Réservation RDV:', args);
 
   try {
-    // Créer l'événement dans le planning
-    const eventData = {
-      organization_id: call.organization_id,
+    // Préparer les données pour l'API de réservation
+    const bookingData = {
       prospect_id: call.prospect_id,
-      type: 'meeting',
-      title: `RDV CGP - Prospect`,
-      start_date: `${args.date}T${args.time}:00`,
+      date: args.date,
+      time: args.time,
       duration_minutes: args.duration_minutes || 60,
-      assigned_to: call.user_id,
-      created_by: call.user_id,
-      status: 'pending',
-      notes: args.notes,
-      metadata: {
-        booked_via_ai: true,
-        call_id: call.id,
-        vapi_call_id: call.vapi_call_id
-      }
+      notes: args.notes || 'Rendez-vous pris via Agent IA automatique',
+      call_id: call.id
     };
 
-    const { data: event, error } = await supabase
-      .from('crm_events')
-      .insert(eventData)
-      .select('*')
-      .single();
+    console.log('📋 [VAPI-WEBHOOK] Données réservation:', bookingData);
 
-    if (!error && event) {
-      // Mettre à jour l'appel avec les infos RDV
+    // Appeler notre API de réservation
+    const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/voice/ai-agent/book-appointment`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(bookingData)
+    });
+
+    if (response.ok) {
+      const result = await response.json();
+      console.log('✅ [VAPI-WEBHOOK] RDV réservé avec succès:', result.data?.appointment_id);
+
+      // Enregistrer l'activité de réservation
+      await supabase
+        .from('crm_activities')
+        .insert({
+          organization_id: call.organization_id,
+          prospect_id: call.prospect_id,
+          user_id: call.user_id,
+          type: 'meeting',
+          subject: 'RDV réservé via Agent IA',
+          content: `Rendez-vous automatiquement réservé le ${args.date} à ${args.time} (${args.duration_minutes || 60} minutes).\n\nNotes: ${args.notes || 'Aucune'}`,
+          metadata: {
+            function_call: 'book_appointment',
+            args,
+            appointment_id: result.data?.appointment_id,
+            booking_success: true
+          }
+        });
+
+      // Mettre à jour l'appel avec le résultat
       await supabase
         .from('phone_calls')
         .update({
-          appointment_date: eventData.start_date,
+          appointment_date: `${args.date}T${args.time}:00`,
           appointment_duration_minutes: args.duration_minutes || 60,
           appointment_notes: args.notes,
           outcome: 'appointment_booked'
         })
         .eq('id', call.id);
 
-      console.log('✅ RDV créé:', event.id);
+    } else {
+      const error = await response.json();
+      console.error('❌ [VAPI-WEBHOOK] Erreur réservation RDV:', error);
+
+      // Enregistrer l'échec de réservation
+      await supabase
+        .from('crm_activities')
+        .insert({
+          organization_id: call.organization_id,
+          prospect_id: call.prospect_id,
+          user_id: call.user_id,
+          type: 'note',
+          subject: 'Échec réservation RDV via Agent IA',
+          content: `Tentative de réservation échouée: ${error.error_message || 'Erreur inconnue'}`,
+          metadata: {
+            function_call: 'book_appointment',
+            args,
+            booking_success: false,
+            error: error.error_message
+          }
+        });
     }
   } catch (error) {
-    console.error('❌ Erreur création RDV:', error);
+    console.error('❌ [VAPI-WEBHOOK] Erreur handleBookAppointment:', error);
   }
 }
 
