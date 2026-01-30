@@ -57,7 +57,7 @@ export class VapiService {
       maxDurationSeconds: config.max_call_duration_seconds,
 
       // 🚀 OPTIMISATIONS LATENCE ULTRA-RAPIDE
-      silenceTimeoutSeconds: 4, // ✅ Réaction rapide aux silences
+      silenceTimeoutSeconds: 10, // ✅ Minimum requis par VAPI API
       responseDelaySeconds: 0.1 // ✅ Réponse quasi-instantanée
     };
 
@@ -87,7 +87,7 @@ export class VapiService {
       maxDurationSeconds: config.max_call_duration_seconds,
 
       // 🚀 OPTIMISATIONS LATENCE ULTRA-RAPIDE
-      silenceTimeoutSeconds: 4, // ✅ Réaction rapide aux silences
+      silenceTimeoutSeconds: 10, // ✅ Minimum requis par VAPI API
       responseDelaySeconds: 0.1 // ✅ Réponse quasi-instantanée
     };
 
@@ -460,21 +460,21 @@ INFORMATION ENTREPRISE :
     const voiceMapping: { [key: string]: any } = {
       // 🇫🇷 VOIX FÉMININES FRANÇAISES (ElevenLabs)
       'jennifer': {
-        provider: 'eleven-labs',
+        provider: '11labs',
         voiceId: '21m00Tcm4TlvDq8ikWAM',  // Rachel FR - voix féminine très naturelle
         stability: 0.75,
         similarityBoost: 0.85,
         style: 0.2
       },
       'lucile': {
-        provider: 'eleven-labs',
+        provider: '11labs',
         voiceId: 'AZnzlk1XvdvUeBnXmlld',  // Domi FR - voix professionnelle féminine
         stability: 0.8,
         similarityBoost: 0.9,
         style: 0.1
       },
       'sarah': {
-        provider: 'eleven-labs',
+        provider: '11labs',
         voiceId: '21m00Tcm4TlvDq8ikWAM',  // Rachel FR - douce et naturelle
         stability: 0.7,
         similarityBoost: 0.8,
@@ -483,14 +483,14 @@ INFORMATION ENTREPRISE :
 
       // 🇫🇷 VOIX MASCULINES FRANÇAISES (ElevenLabs)
       'alex': {
-        provider: 'eleven-labs',
+        provider: '11labs',
         voiceId: 'pNInz6obpgDQGcFmaJgB',  // Adam EN → OK pour multilingue
         stability: 0.8,
         similarityBoost: 0.85,
         style: 0.2
       },
       'mike': {
-        provider: 'eleven-labs',
+        provider: '11labs',
         voiceId: 'VR6AewLTigWG4xSOukaG',  // Arnold EN → Voix forte
         stability: 0.75,
         similarityBoost: 0.8,
@@ -503,7 +503,7 @@ INFORMATION ENTREPRISE :
         voiceId: 'nova',  // OpenAI Nova - rapide mais moins naturelle
       },
       'natural_fast': {
-        provider: 'eleven-labs',
+        provider: '11labs',
         voiceId: '21m00Tcm4TlvDq8ikWAM',  // Rachel FR optimisée
         stability: 0.9,  // Plus stable = plus rapide
         similarityBoost: 0.7,  // Moins de processing = plus rapide
