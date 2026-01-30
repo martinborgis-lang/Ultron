@@ -228,6 +228,7 @@ export class ProductTaxEngine {
       conditions,
       warnings,
       eco_ir_immediate,
+      plafond_per_calcule: plafond_deductible,
       gain_fiscal_net: {
         conservateur: gain_fiscal_net_conservateur,
         optimiste: gain_fiscal_net_optimiste,

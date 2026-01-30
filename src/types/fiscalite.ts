@@ -110,6 +110,7 @@ export interface ProductTaxResult {
 
   // Pour PER
   eco_ir_immediate?: number;
+  plafond_per_calcule?: number; // Plafond déductible calculé ou renseigné
   gain_fiscal_net?: {
     conservateur: number;
     optimiste: number;

@@ -40,14 +40,6 @@ export class VapiService {
     const assistantData: VapiAssistant = {
       name: config.agent_name,
       voice: this.formatVoiceForVapi(config.agent_voice),
-
-      // 🎤 TRANSCRIPTION FRANÇAISE OPTIMISÉE
-      transcriber: {
-        provider: "deepgram",
-        model: "nova-2",
-        language: "fr"  // ✅ Reconnaissance vocale française
-      },
-
       model: {
         provider: "openai",
         model: "gpt-4o-mini", // ✅ Modèle plus rapide et naturel
@@ -81,14 +73,6 @@ export class VapiService {
       name: config.agent_name,
       voice: this.formatVoiceForVapi(config.agent_voice),
       language: "fr",
-
-      // 🎤 TRANSCRIPTION FRANÇAISE OPTIMISÉE
-      transcriber: {
-        provider: "deepgram",
-        model: "nova-2",
-        language: "fr"  // ✅ Reconnaissance vocale française
-      },
-
       model: {
         provider: "openai",
         model: "gpt-4o-mini", // ✅ Modèle plus rapide et naturel

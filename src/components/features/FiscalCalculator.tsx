@@ -115,10 +115,10 @@ const MISSING_FIELD_CONFIGS: MissingFieldConfig[] = [
   },
   {
     field_name: 'plafond_per_disponible',
-    label: 'Plafond PER disponible',
+    label: 'Plafond PER disponible (optionnel)',
     type: 'number',
     required: false,
-    tooltip: 'Plafond PER selon avis d\'impôt (plus précis)',
+    tooltip: 'Montant max déductible pour PER (voir avis d\'impôt). Si vide, calculé automatiquement selon revenus.',
     min: 0,
   },
   {
@@ -789,6 +789,13 @@ export function FiscalCalculator() {
                                   {product.conditions.length > 0 && (
                                     <p className="text-xs text-muted-foreground">
                                       {product.conditions[0]}
+                                    </p>
+                                  )}
+                                  {/* Affichage plafond PER calculé */}
+                                  {product.product_type === 'PER' && product.plafond_per_calcule && (
+                                    <p className="text-xs font-medium text-purple-600 dark:text-purple-400 mt-1">
+                                      Plafond PER : {formatCurrency(product.plafond_per_calcule)}
+                                      {product.conditions.some(c => c.includes('exact')) ? ' (exact)' : ' (estimé)'}
                                     </p>
                                   )}
                                 </div>
