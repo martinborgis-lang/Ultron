@@ -8,7 +8,16 @@ import { updateOrganizationEmailSettings, getOrganizationEmailSettings } from '@
  */
 export async function GET() {
   try {
-    const { organization } = await getCurrentUserAndOrganization();
+    const userOrg = await getCurrentUserAndOrganization();
+
+    if (!userOrg) {
+      return NextResponse.json(
+        { error: 'Non authentifié' },
+        { status: 401 }
+      );
+    }
+
+    const { organization } = userOrg;
 
     const settings = await getOrganizationEmailSettings(organization.id);
 
@@ -28,7 +37,16 @@ export async function GET() {
  */
 export async function PATCH(request: NextRequest) {
   try {
-    const { organization } = await getCurrentUserAndOrganization();
+    const userOrg = await getCurrentUserAndOrganization();
+
+    if (!userOrg) {
+      return NextResponse.json(
+        { error: 'Non authentifié' },
+        { status: 401 }
+      );
+    }
+
+    const { organization } = userOrg;
     const body = await request.json();
 
     // Validation des données

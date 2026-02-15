@@ -660,9 +660,9 @@ async function workflowRdv2Suivi(
 
   try {
     const result: WorkflowResult = {
+      workflow: 'rdv-2',
       success: false,
       actions: [],
-      errors: []
     };
 
     if (stageSlug === 'rdv_2_programme') {
@@ -674,7 +674,7 @@ async function workflowRdv2Suivi(
       if (emailResult.success) {
         result.actions.push('Email préparation RDV 2 envoyé au conseiller');
       } else {
-        result.errors.push(`Erreur email préparation: ${emailResult.error}`);
+        result.error = 'Erreur email préparation';
       }
 
       // Rappel 2h avant le RDV 2
@@ -682,7 +682,7 @@ async function workflowRdv2Suivi(
       if (reminderResult.success) {
         result.actions.push('Rappel RDV 2 programmé (2h avant)');
       } else {
-        result.errors.push(`Erreur rappel RDV 2: ${reminderResult.error}`);
+        result.error = 'Erreur rappel RDV 2';
       }
 
     } else if (stageSlug === 'rdv_2_effectue') {
@@ -694,7 +694,7 @@ async function workflowRdv2Suivi(
       if (suiviResult.success) {
         result.actions.push('Email suivi RDV 2 envoyé au prospect');
       } else {
-        result.errors.push(`Erreur email suivi RDV 2: ${suiviResult.error}`);
+        result.error = 'Erreur email suivi RDV 2';
       }
 
       // Qualification avancée après RDV 2
@@ -702,19 +702,20 @@ async function workflowRdv2Suivi(
       if (qualifResult.success) {
         result.actions.push('Qualification IA post-RDV 2 effectuée');
       } else {
-        result.errors.push(`Erreur qualification RDV 2: ${qualifResult.error}`);
+        result.error = 'Erreur qualification RDV 2';
       }
     }
 
-    result.success = result.errors.length === 0;
+    result.success = !result.error;
     return result;
 
   } catch (error) {
     logger.error('🔄 RDV 2 Workflow - Erreur:', error);
     return {
+      workflow: 'rdv-2',
       success: false,
       actions: [],
-      errors: [error instanceof Error ? error.message : 'Erreur inconnue']
+      error: error instanceof Error ? error.message : 'Erreur inconnue'
     };
   }
 }
@@ -732,9 +733,9 @@ async function workflowRdv3Suivi(
 
   try {
     const result: WorkflowResult = {
+      workflow: 'rdv-3',
       success: false,
       actions: [],
-      errors: []
     };
 
     if (stageSlug === 'rdv_3_programme') {
@@ -746,7 +747,7 @@ async function workflowRdv3Suivi(
       if (closingResult.success) {
         result.actions.push('Email stratégie closing RDV 3 envoyé');
       } else {
-        result.errors.push(`Erreur email closing: ${closingResult.error}`);
+        result.error = 'Erreur email closing';
       }
 
     } else if (stageSlug === 'rdv_3_effectue') {
@@ -758,7 +759,7 @@ async function workflowRdv3Suivi(
       if (propositionResult.success) {
         result.actions.push('Email proposition formelle post-RDV 3 envoyé');
       } else {
-        result.errors.push(`Erreur email proposition: ${propositionResult.error}`);
+        result.error = 'Erreur email proposition';
       }
 
       // Analyse finale et score de closing
@@ -766,19 +767,20 @@ async function workflowRdv3Suivi(
       if (scoreResult.success) {
         result.actions.push('Score closing calculé après RDV 3');
       } else {
-        result.errors.push(`Erreur calcul score: ${scoreResult.error}`);
+        result.error = 'Erreur calcul score';
       }
     }
 
-    result.success = result.errors.length === 0;
+    result.success = !result.error;
     return result;
 
   } catch (error) {
     logger.error('🔄 RDV 3 Workflow - Erreur:', error);
     return {
+      workflow: 'rdv-3',
       success: false,
       actions: [],
-      errors: [error instanceof Error ? error.message : 'Erreur inconnue']
+      error: error instanceof Error ? error.message : 'Erreur inconnue'
     };
   }
 }
@@ -795,9 +797,9 @@ async function workflowPropositionSuivi(
 
   try {
     const result: WorkflowResult = {
+      workflow: 'proposition',
       success: false,
       actions: [],
-      errors: []
     };
 
     // Email de confirmation envoi proposition
@@ -805,7 +807,7 @@ async function workflowPropositionSuivi(
     if (confirmResult.success) {
       result.actions.push('Email confirmation proposition envoyé');
     } else {
-      result.errors.push(`Erreur email confirmation: ${confirmResult.error}`);
+      result.error = 'Erreur email confirmation';
     }
 
     // Programmer relances automatiques
@@ -813,7 +815,7 @@ async function workflowPropositionSuivi(
     if (relanceResult.success) {
       result.actions.push('Relances proposition programmées (J+3, J+7, J+14)');
     } else {
-      result.errors.push(`Erreur programmation relances: ${relanceResult.error}`);
+      result.error = 'Erreur programmation relances';
     }
 
     // Alerte manager si prospect chaud
@@ -821,18 +823,19 @@ async function workflowPropositionSuivi(
     if (alertResult.success) {
       result.actions.push('Alerte manager envoyée pour prospect chaud');
     } else {
-      result.errors.push(`Erreur alerte manager: ${alertResult.error}`);
+      result.error = 'Erreur alerte manager';
     }
 
-    result.success = result.errors.length === 0;
+    result.success = !result.error;
     return result;
 
   } catch (error) {
     logger.error('🔄 Proposition Workflow - Erreur:', error);
     return {
+      workflow: 'proposition',
       success: false,
       actions: [],
-      errors: [error instanceof Error ? error.message : 'Erreur inconnue']
+      error: error instanceof Error ? error.message : 'Erreur inconnue'
     };
   }
 }

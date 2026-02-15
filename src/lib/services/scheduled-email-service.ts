@@ -3,7 +3,7 @@ import { logger } from '@/lib/logger';
 
 export interface ScheduledEmailData {
   organization_id: string;
-  prospect_id: string;
+  prospect_id: string | null;
   advisor_id: string;
   email_type: string;
   scheduled_at: Date;

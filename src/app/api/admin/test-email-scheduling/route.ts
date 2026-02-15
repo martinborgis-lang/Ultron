@@ -9,7 +9,16 @@ import { scheduleRecapEmail, getOrganizationEmailSettings } from '@/lib/services
  */
 export async function POST(request: NextRequest) {
   try {
-    const { user, organization } = await getCurrentUserAndOrganization();
+    const userOrg = await getCurrentUserAndOrganization();
+
+    if (!userOrg) {
+      return NextResponse.json(
+        { error: 'Non authentifié' },
+        { status: 401 }
+      );
+    }
+
+    const { user, organization } = userOrg;
 
     // Vérifier les permissions (admin seulement pour les tests)
     if (user.role !== 'admin') {
@@ -68,7 +77,7 @@ Ceci est un email de TEST du système de récapitulatif automatique post-RDV d'U
 - Délai configuré: ${orgSettings.email_recap_delay_hours}h
 - Email programmé pour: ${scheduledAt.toLocaleString('fr-FR')}
 - Organisation: ${organization.name}
-- Conseiller: ${user.full_name}
+- Conseiller: ${user.email}
 
 🔧 Informations techniques:
 - ID email programmé: ${new Date().getTime()}
@@ -117,7 +126,16 @@ Ultron - Assistant IA pour Gestionnaires de Patrimoine
  */
 export async function GET() {
   try {
-    const { user, organization } = await getCurrentUserAndOrganization();
+    const userOrg = await getCurrentUserAndOrganization();
+
+    if (!userOrg) {
+      return NextResponse.json(
+        { error: 'Non authentifié' },
+        { status: 401 }
+      );
+    }
+
+    const { user, organization } = userOrg;
 
     if (user.role !== 'admin') {
       return NextResponse.json(

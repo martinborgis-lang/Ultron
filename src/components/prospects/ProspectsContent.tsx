@@ -323,8 +323,8 @@ export function ProspectsContent() {
         // Format paginé complet
         unifiedProspects = data.data;
         paginationMeta = data.pagination;
-        setTotalItems(paginationMeta.total);
-        setTotalPages(paginationMeta.totalPages);
+        setTotalItems(paginationMeta?.total || 0);
+        setTotalPages(paginationMeta?.totalPages || 1);
       } else if (Array.isArray(data.data)) {
         // Format avec data array mais pas de pagination (fallback)
         unifiedProspects = data.data;
@@ -489,7 +489,7 @@ export function ProspectsContent() {
           </div>
           <h3 className="text-lg font-semibold mb-2">Erreur de chargement</h3>
           <p className="text-muted-foreground mb-6 max-w-md">{error}</p>
-          <Button onClick={fetchData} variant="outline">
+          <Button onClick={() => fetchData()} variant="outline">
             <RefreshCw className="mr-2 h-4 w-4" />
             Reessayer
           </Button>
