@@ -3,7 +3,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import {
-  Users, TrendingUp, Euro, Calendar, Target, Phone, Trophy, Activity
+  Users, TrendingUp, Euro, Calendar, Target, Trophy, Activity
 } from 'lucide-react';
 import type { AdminDashboardStats } from '@/types/crm';
 
@@ -144,23 +144,11 @@ export function AdminStatsCards({ stats }: AdminStatsCardsProps) {
       />
 
       <StatCard
-        title="Top Performer (RDV)"
-        value={stats.top_performers.by_rdv.rdv_scheduled_count}
-        description={stats.top_performers.by_rdv.full_name}
-        icon={Calendar}
-        variant="success"
-      />
-
-      <StatCard
-        title="Top Performer (CA)"
-        value={new Intl.NumberFormat('fr-FR', {
-          style: 'currency',
-          currency: 'EUR',
-          minimumFractionDigits: 0
-        }).format(stats.top_performers.by_revenue.total_deal_value)}
-        description={stats.top_performers.by_revenue.full_name}
-        icon={Euro}
-        variant="success"
+        title="Activité Totale"
+        value={`${stats.total_prospects + stats.total_rdv_scheduled}`}
+        description="Prospects + RDV programmés"
+        icon={Activity}
+        variant="default"
       />
     </div>
   );

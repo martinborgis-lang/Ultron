@@ -300,17 +300,64 @@ export class ProductTaxEngine {
       throw new Error('Montant travaux Malraux requis');
     }
 
-    const taux = investment.malraux_taux === 30 ? 0.30 : 0.22;
-    const plafond_restant = investment.malraux_plafond_4ans_restant ||
-                           taxRules.malraux.malraux_plafond_annuel;
+    if (!investment.malraux_zone_type) {
+      throw new Error('Type de zone Malraux requis (ZPPAUP ou SECTEUR_SAUVEGARDE)');
+    }
 
+    // Détermination du taux selon la zone
+    let taux: number;
+    let zone_description: string;
+
+    switch (investment.malraux_zone_type) {
+      case 'ZPPAUP':
+        taux = taxRules.malraux.malraux_taux_22;
+        zone_description = 'Zone de Protection du Patrimoine Architectural, Urbain et Paysager';
+        break;
+      case 'SECTEUR_SAUVEGARDE':
+        taux = taxRules.malraux.malraux_taux_30;
+        zone_description = 'Secteur sauvegardé ou Aires de mise en valeur du patrimoine';
+        break;
+      default:
+        throw new Error('Zone Malraux non reconnue');
+    }
+
+    // Calcul du plafond disponible (règle des 4 ans)
+    let plafond_restant: number;
+    if (investment.malraux_plafond_4ans_restant !== undefined) {
+      // Plafond restant fourni explicitement
+      plafond_restant = investment.malraux_plafond_4ans_restant;
+      conditions.push('Plafond 4 ans : montant restant fourni');
+    } else {
+      // Hypothèse : premier investissement Malraux ou plafond annuel
+      plafond_restant = Math.min(
+        taxRules.malraux.malraux_plafond_annuel,
+        taxRules.malraux.malraux_plafond_4ans
+      );
+      warnings.push('Plafond 4 ans : hypothèse premier investissement - à vérifier avec historique fiscal');
+    }
+
+    // Base éligible = minimum entre travaux et plafond disponible
     const base_eligible = Math.min(investment.malraux_travaux_eligibles, plafond_restant);
+
+    // Réduction d'impôt
     const reduction_ir = base_eligible * taux;
 
-    conditions.push(`Taux de réduction : ${taux * 100}%`);
-    conditions.push(`Plafond 4 ans : ${taxRules.malraux.malraux_plafond_4ans}€`);
-    warnings.push(`Plafonnement niches fiscales : ${taxRules.niches_fiscales.plafond_global_10k}€ (sauf exceptions)`);
-    warnings.push('Conditions strictes monuments historiques/ZPPAUP');
+    // Validation et warnings
+    if (investment.malraux_travaux_eligibles > plafond_restant) {
+      warnings.push(`Travaux (${investment.malraux_travaux_eligibles.toLocaleString('fr-FR')}€) > plafond disponible (${plafond_restant.toLocaleString('fr-FR')}€) - réduction limitée`);
+    }
+
+    conditions.push(`Type de zone : ${zone_description}`);
+    conditions.push(`Taux de réduction : ${(taux * 100).toFixed(0)}%`);
+    conditions.push(`Plafond 4 ans cumulé : ${taxRules.malraux.malraux_plafond_4ans.toLocaleString('fr-FR')}€`);
+    conditions.push(`Plafond annuel : ${taxRules.malraux.malraux_plafond_annuel.toLocaleString('fr-FR')}€`);
+    conditions.push(`Base éligible : ${base_eligible.toLocaleString('fr-FR')}€`);
+
+    // Warnings sur les contraintes Malraux
+    warnings.push('Engagement 9 ans minimum de location non meublée');
+    warnings.push('Revenus locatifs plafonnés selon zone');
+    warnings.push(`Plafonnement niches fiscales : ${taxRules.niches_fiscales.plafond_global_10k.toLocaleString('fr-FR')}€ (Malraux exonéré)`);
+    warnings.push('Validation architecte des Bâtiments de France obligatoire');
 
     return {
       product_type: 'MALRAUX',

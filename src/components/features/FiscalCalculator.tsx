@@ -91,7 +91,7 @@ const DEFAULT_INVESTMENT: InvestmentProject = {
   hyp_r: 0.04,
   scpi_rendement_yield: 0.045,
   av_primes_total_estime: '<150k',
-  malraux_taux: 22,
+  malraux_zone_type: 'ZPPAUP',
   malraux_travaux_eligibles: 100000,
   tmi_sortie_mode: 'TMI_ACTUEL',
 };

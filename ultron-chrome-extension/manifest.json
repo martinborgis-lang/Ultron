@@ -26,7 +26,6 @@
     {
       "matches": ["https://meet.google.com/*"],
       "js": [
-        "lib/audio-capture.js",
         "lib/deepgram-client.js",
         "content/content.js"
       ],

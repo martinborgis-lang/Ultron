@@ -26,8 +26,8 @@ export async function GET(request: NextRequest) {
 
     // Statistiques générales
     const { data: callsData, error: callsError } = await supabase
-      .from('voice_calls')
-      .select('id, duration_seconds, status, outcome, ai_outcome, created_at')
+      .from('phone_calls')
+      .select('id, duration_seconds, status, outcome, ai_analysis, created_at')
       .eq('organization_id', organization.id)
       .gte('created_at', startDate.toISOString())
       .lte('created_at', endDate.toISOString());
@@ -42,17 +42,18 @@ export async function GET(request: NextRequest) {
     const totalDuration = completedCalls.reduce((sum, call) => sum + (call.duration_seconds || 0), 0);
     const avgDuration = completedCalls.length > 0 ? Math.round(totalDuration / completedCalls.length) : 0;
 
-    // Calcul du taux de conversion
-    const successfulOutcomes = ['rdv_pris', 'callback_demande', 'information_demandee'];
-    const successfulCalls = callsData?.filter(call =>
-      successfulOutcomes.includes(call.ai_outcome || call.outcome || '')
-    ) || [];
+    // Calcul du taux de conversion (utiliser ai_analysis si disponible)
+    const successfulOutcomes = ['appointment_booked', 'callback_requested'];
+    const successfulCalls = callsData?.filter(call => {
+      const outcome = call.outcome || '';
+      return successfulOutcomes.includes(outcome);
+    }) || [];
     const conversionRate = totalCalls > 0 ? (successfulCalls.length / totalCalls) * 100 : 0;
 
     // Statistiques par outcome
     const outcomeStats: { [key: string]: number } = {};
     callsData?.forEach(call => {
-      const outcome = call.ai_outcome || call.outcome || 'unknown';
+      const outcome = call.outcome || 'unknown';
       outcomeStats[outcome] = (outcomeStats[outcome] || 0) + 1;
     });
 
@@ -75,7 +76,7 @@ export async function GET(request: NextRequest) {
       if (dailyStats[dateKey]) {
         dailyStats[dateKey].calls += 1;
         dailyStats[dateKey].duration += call.duration_seconds || 0;
-        if (successfulOutcomes.includes(call.ai_outcome || call.outcome || '')) {
+        if (successfulOutcomes.includes(call.outcome || '')) {
           dailyStats[dateKey].successful += 1;
         }
       }
@@ -83,13 +84,12 @@ export async function GET(request: NextRequest) {
 
     // Top performers (si plusieurs utilisateurs)
     const { data: userStats, error: userError } = await supabase
-      .from('voice_calls')
+      .from('phone_calls')
       .select(`
         user_id,
         users:user_id (full_name, email),
         duration_seconds,
-        outcome,
-        ai_outcome
+        outcome
       `)
       .eq('organization_id', organization.id)
       .gte('created_at', startDate.toISOString())
@@ -115,7 +115,7 @@ export async function GET(request: NextRequest) {
       performanceByUser[userId].total_calls += 1;
       performanceByUser[userId].total_duration += call.duration_seconds || 0;
 
-      if (successfulOutcomes.includes(call.ai_outcome || call.outcome || '')) {
+      if (successfulOutcomes.includes(call.outcome || '')) {
         performanceByUser[userId].successful_calls += 1;
       }
     });

@@ -43,10 +43,16 @@ export interface ProspectFilters {
   qualification?: string;
   search?: string;
   assignedTo?: string;
+  // Paramètres de pagination
+  limit?: number;
+  offset?: number;
+  sort?: string;
+  order?: 'asc' | 'desc';
 }
 
 export interface IProspectService {
   getAll(filters?: ProspectFilters): Promise<ProspectData[]>;
+  getTotalCount?(filters?: ProspectFilters): Promise<number>; // Optionnel pour compatibilité
   getById(id: string): Promise<ProspectData | null>;
   create(data: Partial<ProspectData>): Promise<ProspectData>;
   update(id: string, data: Partial<ProspectData>): Promise<ProspectData>;

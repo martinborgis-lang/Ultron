@@ -30,8 +30,10 @@ import { ActivityTimeline } from '@/components/crm/ActivityTimeline';
 import { ProspectTasks } from '@/components/crm/ProspectTasks';
 import { SaleClosureForm } from '@/components/crm/SaleClosureForm';
 import { LetterGeneratorModal } from '@/components/letters/LetterGeneratorModal';
+import { RDVHistorySection } from '@/components/prospects/RDVHistorySection';
 import { CrmProspect, CrmActivity, CrmTask, PipelineStage } from '@/types/crm';
 import { EmailLog } from '@/types/email';
+import { MeetingTranscript } from '@/types/meeting';
 import {
   ArrowLeft,
   Mail,
@@ -79,6 +81,7 @@ export default function ProspectDetailPage() {
   const [tasks, setTasks] = useState<CrmTask[]>([]);
   const [stages, setStages] = useState<PipelineStage[]>([]);
   const [emails, setEmails] = useState<EmailLog[]>([]);
+  const [transcriptions, setTranscriptions] = useState<MeetingTranscript[]>([]);
   const [expandedEmails, setExpandedEmails] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -164,10 +167,11 @@ export default function ProspectDetailPage() {
       const prospectEmail = sheetMode ? prospectData.email : crmProspect.email;
 
       if (!sheetMode) {
-        // Mode CRM: Fetch activities, tasks, et emails en parallèle
+        // Mode CRM: Fetch activities, tasks, transcriptions et emails en parallèle
         const secondaryRequests = [
           fetch(`/api/crm/activities?prospect_id=${prospectId}`),
           fetch(`/api/crm/tasks?prospect_id=${prospectId}`),
+          fetch(`/api/meeting/transcripts?prospect_id=${prospectId}`),
         ];
 
         // Ajouter la requête emails si l'email existe
@@ -189,21 +193,31 @@ export default function ProspectDetailPage() {
             })
           );
 
-          const [activitiesData, tasksData, emailsData] = results;
+          const [activitiesData, tasksData, transcriptionsData, emailsData] = results;
           // ✅ SÉCURITÉ : Vérifier que les données sont des arrays
           setActivities(Array.isArray(activitiesData) ? activitiesData : []);
           setTasks(Array.isArray(tasksData) ? tasksData : []);
+
+          // Gérer les transcriptions (peut être un objet avec propriété transcripts)
+          if (transcriptionsData && transcriptionsData.transcripts) {
+            setTranscriptions(Array.isArray(transcriptionsData.transcripts) ? transcriptionsData.transcripts : []);
+          } else {
+            setTranscriptions(Array.isArray(transcriptionsData) ? transcriptionsData : []);
+          }
+
           setEmails(Array.isArray(emailsData) ? emailsData : []);
         } catch (err) {
           console.error('Error fetching secondary CRM data:', err);
           setActivities([]);
           setTasks([]);
+          setTranscriptions([]);
           setEmails([]);
         }
       } else {
         // Mode Sheet: Seulement emails si nécessaire
         setActivities([]);
         setTasks([]);
+        setTranscriptions([]);
 
         if (prospectEmail) {
           try {
@@ -716,6 +730,12 @@ export default function ProspectDetailPage() {
               )}
             </CardContent>
           </Card>
+
+          {/* Section RDV Historique */}
+          <RDVHistorySection
+            transcriptions={transcriptions}
+            prospectName={fullName}
+          />
 
           {/* Besoins / Notes */}
           <Card>

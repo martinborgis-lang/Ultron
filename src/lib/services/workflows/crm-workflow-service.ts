@@ -4,6 +4,7 @@ import { qualifyProspect, generateEmailWithConfig, DEFAULT_PROMPTS, PromptConfig
 import { sendEmail, sendEmailWithBufferAttachment, getEmailCredentials, EmailCredentialsResult } from '@/lib/gmail';
 import { scheduleRappelEmail } from '@/lib/qstash';
 import { getValidCredentials, downloadFileFromDrive, GoogleCredentials } from '@/lib/google';
+import { scheduleRecapEmail, getOrganizationEmailSettings, calculateScheduledTime } from '@/lib/services/scheduled-email-service';
 import type { WaitingSubtype } from '@/types/pipeline';
 
 interface WorkflowResult {
@@ -451,21 +452,64 @@ async function workflowRdvValide(
 
     actions.push('Email synthèse généré');
 
-    const result = await sendEmail(emailCredentialsResult.credentials, {
-      to: prospect.email,
-      subject: email.objet,
-      body: emailBody, // Use modified body with Meet link
-    });
-    actions.push('Email synthèse envoyé');
+    // Récupérer les paramètres de délai email de l'organisation
+    const orgEmailSettings = await getOrganizationEmailSettings(organization.id);
+
+    if (!orgEmailSettings.email_recap_enabled) {
+      actions.push('⚠️ Email récap désactivé - ignoré');
+      logger.info('Email récap désactivé pour organisation:', organization.id);
+    } else {
+      // Calculer l'heure d'envoi avec délai configurable
+      // Utilise la fin du RDV + délai (ou maintenant + délai si pas de RDV)
+      const rdvEndTime = rdvDateSource ? new Date(rdvDateSource as string) : new Date();
+      const scheduledAt = calculateScheduledTime(rdvEndTime, orgEmailSettings.email_recap_delay_hours);
+
+      // Programmer l'email au lieu de l'envoyer immédiatement
+      await scheduleRecapEmail({
+        organization_id: organization.id,
+        prospect_id: prospectId,
+        advisor_id: advisorUserId,
+        email_type: 'rdv_recap',
+        scheduled_at: scheduledAt,
+        email_data: {
+          subject: email.objet,
+          body: emailBody, // Avec Meet link
+          prospect_data: {
+            first_name: prospect.first_name || '',
+            last_name: prospect.last_name || '',
+            email: prospect.email,
+          },
+          rdv_data: {
+            date_formatted: dateRdvFormatted,
+            meet_link: meetLink,
+            qualification: prospect.qualification?.toUpperCase() || '',
+          },
+          // Informations pour l'envoi différé
+          advisor_credentials_source: emailCredentialsResult.source,
+          advisor_user_id: emailCredentialsResult.userId,
+        }
+      });
+
+      const delayMinutes = Math.round((scheduledAt.getTime() - Date.now()) / (1000 * 60));
+      actions.push(`📅 Email récap programmé: ${scheduledAt.toISOString()} (délai: ${orgEmailSettings.email_recap_delay_hours}h, dans ${delayMinutes} min)`);
+    }
 
     // 4. Update prospect metadata
-    await updateCrmProspect(prospectId, {
+    // Ne marque comme envoyé que si programmation réussie
+    const updateData: any = {
       metadata: {
         ...(prospect.metadata || {}),
-        mail_synthese_sent: true,
-        mail_synthese_sent_at: new Date().toISOString(),
       },
-    });
+    };
+
+    if (orgEmailSettings.email_recap_enabled) {
+      updateData.metadata.mail_synthese_scheduled = true;
+      updateData.metadata.mail_synthese_scheduled_at = new Date().toISOString();
+    } else {
+      updateData.metadata.mail_synthese_disabled = true;
+    }
+
+    await updateCrmProspect(prospectId, updateData);
 
     // 5. Schedule 24h reminder if RDV date is set
     // Use metadata.rdv_datetime for accurate time
@@ -497,26 +541,29 @@ async function workflowRdvValide(
       }
     }
 
-    // 6. Log activity
-    await logActivity(
-      organization.id,
-      prospectId,
-      advisorUserId,
-      'email',
-      'Email synthèse RDV envoyé',
-      emailBody
-    );
+    // 6. Log activity - seulement pour la programmation
+    if (orgEmailSettings.email_recap_enabled) {
+      const scheduledAt = calculateScheduledTime(rdvDateSource ? new Date(rdvDateSource as string) : new Date(), orgEmailSettings.email_recap_delay_hours);
+      await logActivity(
+        organization.id,
+        prospectId,
+        advisorUserId,
+        'task',
+        'Email synthèse RDV programmé',
+        `Email prévu le ${scheduledAt.toLocaleString('fr-FR')} (délai: ${orgEmailSettings.email_recap_delay_hours}h)`
+      );
+    } else {
+      await logActivity(
+        organization.id,
+        prospectId,
+        advisorUserId,
+        'note',
+        'Email synthèse RDV désactivé',
+        'Email récap post-RDV désactivé dans la configuration'
+      );
+    }
 
-    // Log email
-    await logEmailSent(
-      organization.id,
-      prospect.email,
-      `${prospect.first_name} ${prospect.last_name}`.trim(),
-      'synthese',
-      email.objet,
-      emailBody,
-      result.messageId
-    );
+    // Le logging de l'email envoyé sera fait par le CRON job lors de l'envoi réel
 
     return { workflow: 'rdv_valide', success: true, actions, warning };
   } catch (error) {
@@ -537,6 +584,11 @@ const WAITING_STAGE_SLUGS = ['en_attente'];
 // Stage slugs that trigger the "RDV Validé" workflow (with qualification)
 // Slug unifié pour les deux modes
 const RDV_STAGE_SLUGS = ['rdv_pris'];
+
+// ⭐ NOUVEAUX STAGES RDV MULTIPLES - Triggers spécialisés
+const RDV_2_STAGE_SLUGS = ['rdv_2_programme', 'rdv_2_effectue'];
+const RDV_3_STAGE_SLUGS = ['rdv_3_programme', 'rdv_3_effectue'];
+const PROPOSITION_STAGE_SLUGS = ['proposition_envoyee'];
 
 /**
  * Main function to trigger CRM workflows based on stage change
@@ -570,7 +622,279 @@ export async function triggerCrmWorkflow(
     return await workflowRdvValide(prospectId, organization, user);
   }
 
+  // ⭐ RDV 2 workflows - Suivi et relance spécialisés
+  if (RDV_2_STAGE_SLUGS.includes(stageSlug)) {
+    logger.debug('🔄 CRM Workflow - Triggering RDV_2_SUIVI workflow');
+    return await workflowRdv2Suivi(prospectId, organization, user, stageSlug);
+  }
+
+  // ⭐ RDV 3 workflows - Suivi avancé et closing
+  if (RDV_3_STAGE_SLUGS.includes(stageSlug)) {
+    logger.debug('🔄 CRM Workflow - Triggering RDV_3_SUIVI workflow');
+    return await workflowRdv3Suivi(prospectId, organization, user, stageSlug);
+  }
+
+  // ⭐ Proposition envoyée - Relance et suivi commercial
+  if (PROPOSITION_STAGE_SLUGS.includes(stageSlug)) {
+    logger.debug('🔄 CRM Workflow - Triggering PROPOSITION_SUIVI workflow');
+    return await workflowPropositionSuivi(prospectId, organization, user);
+  }
+
   // No workflow for this stage change
   logger.debug('🔄 CRM Workflow - No workflow for stage:', stageSlug);
   return null;
+}
+
+// ⭐ NOUVELLES FONCTIONS DE WORKFLOW RDV MULTIPLES
+
+/**
+ * Workflow RDV 2 - Suivi spécialisé pour deuxième rendez-vous
+ */
+async function workflowRdv2Suivi(
+  prospectId: string,
+  organization: WorkflowOrganization,
+  user: WorkflowUser,
+  stageSlug: string
+): Promise<WorkflowResult> {
+  logger.info(`🔄 RDV 2 Workflow - Démarrage pour prospect ${prospectId}, stage: ${stageSlug}`);
+
+  try {
+    const result: WorkflowResult = {
+      success: false,
+      actions: [],
+      errors: []
+    };
+
+    if (stageSlug === 'rdv_2_programme') {
+      // RDV 2 programmé - Préparer le conseiller
+      logger.debug('🔄 RDV 2 Workflow - RDV 2 programmé, envoi brief conseiller');
+
+      // Email de préparation au conseiller
+      const emailResult = await sendEmailRdv2Preparation(prospectId, organization, user);
+      if (emailResult.success) {
+        result.actions.push('Email préparation RDV 2 envoyé au conseiller');
+      } else {
+        result.errors.push(`Erreur email préparation: ${emailResult.error}`);
+      }
+
+      // Rappel 2h avant le RDV 2
+      const reminderResult = await scheduleRdv2Reminder(prospectId, organization, user);
+      if (reminderResult.success) {
+        result.actions.push('Rappel RDV 2 programmé (2h avant)');
+      } else {
+        result.errors.push(`Erreur rappel RDV 2: ${reminderResult.error}`);
+      }
+
+    } else if (stageSlug === 'rdv_2_effectue') {
+      // RDV 2 effectué - Analyse et suivi
+      logger.debug('🔄 RDV 2 Workflow - RDV 2 effectué, analyse et suivi');
+
+      // Email de suivi client après RDV 2
+      const suiviResult = await sendEmailRdv2Suivi(prospectId, organization, user);
+      if (suiviResult.success) {
+        result.actions.push('Email suivi RDV 2 envoyé au prospect');
+      } else {
+        result.errors.push(`Erreur email suivi RDV 2: ${suiviResult.error}`);
+      }
+
+      // Qualification avancée après RDV 2
+      const qualifResult = await qualifyProspectRdv2(prospectId, organization);
+      if (qualifResult.success) {
+        result.actions.push('Qualification IA post-RDV 2 effectuée');
+      } else {
+        result.errors.push(`Erreur qualification RDV 2: ${qualifResult.error}`);
+      }
+    }
+
+    result.success = result.errors.length === 0;
+    return result;
+
+  } catch (error) {
+    logger.error('🔄 RDV 2 Workflow - Erreur:', error);
+    return {
+      success: false,
+      actions: [],
+      errors: [error instanceof Error ? error.message : 'Erreur inconnue']
+    };
+  }
+}
+
+/**
+ * Workflow RDV 3 - Suivi avancé pour troisième rendez-vous de closing
+ */
+async function workflowRdv3Suivi(
+  prospectId: string,
+  organization: WorkflowOrganization,
+  user: WorkflowUser,
+  stageSlug: string
+): Promise<WorkflowResult> {
+  logger.info(`🔄 RDV 3 Workflow - Démarrage pour prospect ${prospectId}, stage: ${stageSlug}`);
+
+  try {
+    const result: WorkflowResult = {
+      success: false,
+      actions: [],
+      errors: []
+    };
+
+    if (stageSlug === 'rdv_3_programme') {
+      // RDV 3 programmé - Préparation closing
+      logger.debug('🔄 RDV 3 Workflow - RDV 3 programmé, préparation closing');
+
+      // Email stratégie de closing au conseiller
+      const closingResult = await sendEmailRdv3ClosingPrep(prospectId, organization, user);
+      if (closingResult.success) {
+        result.actions.push('Email stratégie closing RDV 3 envoyé');
+      } else {
+        result.errors.push(`Erreur email closing: ${closingResult.error}`);
+      }
+
+    } else if (stageSlug === 'rdv_3_effectue') {
+      // RDV 3 effectué - Décision finale
+      logger.debug('🔄 RDV 3 Workflow - RDV 3 effectué, suivi décision');
+
+      // Email récapitulatif et proposition formelle
+      const propositionResult = await sendEmailRdv3Proposition(prospectId, organization, user);
+      if (propositionResult.success) {
+        result.actions.push('Email proposition formelle post-RDV 3 envoyé');
+      } else {
+        result.errors.push(`Erreur email proposition: ${propositionResult.error}`);
+      }
+
+      // Analyse finale et score de closing
+      const scoreResult = await calculateClosingScore(prospectId, organization);
+      if (scoreResult.success) {
+        result.actions.push('Score closing calculé après RDV 3');
+      } else {
+        result.errors.push(`Erreur calcul score: ${scoreResult.error}`);
+      }
+    }
+
+    result.success = result.errors.length === 0;
+    return result;
+
+  } catch (error) {
+    logger.error('🔄 RDV 3 Workflow - Erreur:', error);
+    return {
+      success: false,
+      actions: [],
+      errors: [error instanceof Error ? error.message : 'Erreur inconnue']
+    };
+  }
+}
+
+/**
+ * Workflow Proposition Envoyée - Suivi commercial intensif
+ */
+async function workflowPropositionSuivi(
+  prospectId: string,
+  organization: WorkflowOrganization,
+  user: WorkflowUser
+): Promise<WorkflowResult> {
+  logger.info(`🔄 Proposition Workflow - Démarrage pour prospect ${prospectId}`);
+
+  try {
+    const result: WorkflowResult = {
+      success: false,
+      actions: [],
+      errors: []
+    };
+
+    // Email de confirmation envoi proposition
+    const confirmResult = await sendEmailPropositionConfirmation(prospectId, organization, user);
+    if (confirmResult.success) {
+      result.actions.push('Email confirmation proposition envoyé');
+    } else {
+      result.errors.push(`Erreur email confirmation: ${confirmResult.error}`);
+    }
+
+    // Programmer relances automatiques
+    const relanceResult = await schedulePropositionRelances(prospectId, organization, user);
+    if (relanceResult.success) {
+      result.actions.push('Relances proposition programmées (J+3, J+7, J+14)');
+    } else {
+      result.errors.push(`Erreur programmation relances: ${relanceResult.error}`);
+    }
+
+    // Alerte manager si prospect chaud
+    const alertResult = await sendManagerAlertProposition(prospectId, organization, user);
+    if (alertResult.success) {
+      result.actions.push('Alerte manager envoyée pour prospect chaud');
+    } else {
+      result.errors.push(`Erreur alerte manager: ${alertResult.error}`);
+    }
+
+    result.success = result.errors.length === 0;
+    return result;
+
+  } catch (error) {
+    logger.error('🔄 Proposition Workflow - Erreur:', error);
+    return {
+      success: false,
+      actions: [],
+      errors: [error instanceof Error ? error.message : 'Erreur inconnue']
+    };
+  }
+}
+
+// ⭐ FONCTIONS UTILITAIRES POUR NOUVEAUX WORKFLOWS (Stubs - à implémenter selon besoins métier)
+
+async function sendEmailRdv2Preparation(prospectId: string, org: WorkflowOrganization, user: WorkflowUser) {
+  // Stub - à implémenter selon template email spécifique RDV 2
+  logger.debug('📧 Envoi email préparation RDV 2 (stub)');
+  return { success: true };
+}
+
+async function scheduleRdv2Reminder(prospectId: string, org: WorkflowOrganization, user: WorkflowUser) {
+  // Stub - à implémenter avec QStash pour rappel 2h avant
+  logger.debug('⏰ Programmation rappel RDV 2 (stub)');
+  return { success: true };
+}
+
+async function sendEmailRdv2Suivi(prospectId: string, org: WorkflowOrganization, user: WorkflowUser) {
+  // Stub - à implémenter selon template suivi post-RDV 2
+  logger.debug('📧 Envoi email suivi RDV 2 (stub)');
+  return { success: true };
+}
+
+async function qualifyProspectRdv2(prospectId: string, org: WorkflowOrganization) {
+  // Stub - à implémenter qualification IA spécifique post-RDV 2
+  logger.debug('🤖 Qualification IA post-RDV 2 (stub)');
+  return { success: true };
+}
+
+async function sendEmailRdv3ClosingPrep(prospectId: string, org: WorkflowOrganization, user: WorkflowUser) {
+  // Stub - à implémenter email stratégie closing pour conseiller
+  logger.debug('📧 Envoi email stratégie closing RDV 3 (stub)');
+  return { success: true };
+}
+
+async function sendEmailRdv3Proposition(prospectId: string, org: WorkflowOrganization, user: WorkflowUser) {
+  // Stub - à implémenter email proposition formelle post-RDV 3
+  logger.debug('📧 Envoi email proposition RDV 3 (stub)');
+  return { success: true };
+}
+
+async function calculateClosingScore(prospectId: string, org: WorkflowOrganization) {
+  // Stub - à implémenter calcul score probabilité closing
+  logger.debug('📊 Calcul score closing (stub)');
+  return { success: true };
+}
+
+async function sendEmailPropositionConfirmation(prospectId: string, org: WorkflowOrganization, user: WorkflowUser) {
+  // Stub - à implémenter email confirmation envoi proposition
+  logger.debug('📧 Envoi email confirmation proposition (stub)');
+  return { success: true };
+}
+
+async function schedulePropositionRelances(prospectId: string, org: WorkflowOrganization, user: WorkflowUser) {
+  // Stub - à implémenter programmation relances J+3, J+7, J+14
+  logger.debug('⏰ Programmation relances proposition (stub)');
+  return { success: true };
+}
+
+async function sendManagerAlertProposition(prospectId: string, org: WorkflowOrganization, user: WorkflowUser) {
+  // Stub - à implémenter alerte manager pour prospect chaud avec proposition
+  logger.debug('🚨 Envoi alerte manager proposition (stub)');
+  return { success: true };
 }

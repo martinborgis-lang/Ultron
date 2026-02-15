@@ -467,8 +467,29 @@ async function startDeepgramTranscription() {
       },
     });
 
-    // Start tab audio capture
-    await startAudioCapture();
+    // Start tab audio capture via unified method
+    await startTabAudioCapture();
+
+    // Create MediaRecorder for Deepgram streaming after getting the stream
+    if (mediaStream) {
+      mediaRecorder = new MediaRecorder(mediaStream, {
+        mimeType: 'audio/webm;codecs=opus',
+      });
+
+      mediaRecorder.ondataavailable = async (event) => {
+        if (event.data.size > 0 && deepgramClient && deepgramClient.isActive()) {
+          const arrayBuffer = await event.data.arrayBuffer();
+          deepgramClient.sendAudio(arrayBuffer);
+        }
+      };
+
+      // Start recording in 250ms chunks for real-time streaming
+      mediaRecorder.start(250);
+      console.log('Ultron: MediaRecorder started for Deepgram');
+
+      // Validate the setup after a short delay
+      setTimeout(() => validateAudioCapture(), 1000);
+    }
 
     isTranscribing = true;
     meetingStartTime = Date.now();
@@ -493,55 +514,35 @@ async function startDeepgramTranscription() {
   }
 }
 
-async function startAudioCapture() {
-  return new Promise((resolve, reject) => {
-    // Request tab capture stream ID from background
-    chrome.runtime.sendMessage({ type: 'GET_TAB_MEDIA_STREAM_ID' }, async (response) => {
-      if (chrome.runtime.lastError) {
-        reject(new Error(chrome.runtime.lastError.message));
-        return;
-      }
+// ========================
+// UNIFIED AUDIO CAPTURE SYSTEM
+// ========================
 
-      if (response.error) {
-        reject(new Error(response.error));
-        return;
-      }
+/**
+ * Validates that the audio capture is working correctly
+ * Provides diagnostic information for debugging
+ */
+function validateAudioCapture() {
+  console.log('Ultron Content: Audio Capture Validation');
+  console.log('- MediaStream (global):', !!mediaStream, mediaStream?.getAudioTracks()?.length || 0, 'tracks');
+  console.log('- SidePanel MediaStream:', !!sidePanelMediaStream, sidePanelMediaStream?.getAudioTracks()?.length || 0, 'tracks');
+  console.log('- MediaRecorder (global):', !!mediaRecorder, mediaRecorder?.state || 'none');
+  console.log('- SidePanel MediaRecorder:', !!sidePanelMediaRecorder, sidePanelMediaRecorder?.state || 'none');
+  console.log('- Current Audio Source:', currentAudioSource || 'none');
 
-      try {
-        // Get media stream using the stream ID
-        mediaStream = await navigator.mediaDevices.getUserMedia({
-          audio: {
-            mandatory: {
-              chromeMediaSource: 'tab',
-              chromeMediaSourceId: response.streamId,
-            },
-          },
-          video: false,
-        });
-
-        // Create MediaRecorder to send chunks to Deepgram
-        mediaRecorder = new MediaRecorder(mediaStream, {
-          mimeType: 'audio/webm;codecs=opus',
-        });
-
-        mediaRecorder.ondataavailable = async (event) => {
-          if (event.data.size > 0 && deepgramClient && deepgramClient.isActive()) {
-            const arrayBuffer = await event.data.arrayBuffer();
-            deepgramClient.sendAudio(arrayBuffer);
-          }
-        };
-
-        // Record in 250ms chunks for real-time streaming
-        mediaRecorder.start(250);
-
-        console.log('Ultron: Audio capture started');
-        resolve();
-
-      } catch (error) {
-        reject(error);
-      }
+  if (mediaStream) {
+    const tracks = mediaStream.getAudioTracks();
+    tracks.forEach((track, idx) => {
+      console.log(`- Track ${idx}:`, {
+        id: track.id,
+        kind: track.kind,
+        label: track.label,
+        enabled: track.enabled,
+        readyState: track.readyState,
+        muted: track.muted
+      });
     });
-  });
+  }
 }
 
 function handleTranscript(result) {
@@ -1001,9 +1002,13 @@ async function startTranscriptionForSidePanel() {
       status: 'connected',
     });
 
-    // Start capturing tab audio via background script
+    // Start capturing tab audio via unified method
     try {
       await startTabAudioCapture();
+      // After successful capture, set up the MediaRecorder for Side Panel
+      if (sidePanelMediaStream) {
+        setupMediaRecorder(sidePanelMediaStream);
+      }
     } catch (err) {
       console.error('Ultron Content: Tab audio capture failed, trying microphone...', err);
       // Fallback to microphone
@@ -1078,36 +1083,58 @@ async function startTabAudioCapture() {
   return new Promise((resolve, reject) => {
     chrome.runtime.sendMessage({ type: 'GET_TAB_MEDIA_STREAM_ID' }, async (response) => {
       if (chrome.runtime.lastError) {
+        console.error('Ultron Content: Runtime error:', chrome.runtime.lastError.message);
         reject(new Error(chrome.runtime.lastError.message));
         return;
       }
 
       if (response.error) {
+        console.error('Ultron Content: Background script error:', response.error);
         reject(new Error(response.error));
         return;
       }
 
-      try {
-        console.log('Ultron Content: Got stream ID, starting capture...');
+      if (!response.streamId) {
+        console.error('Ultron Content: No stream ID received');
+        reject(new Error('No stream ID received from background script'));
+        return;
+      }
 
-        sidePanelMediaStream = await navigator.mediaDevices.getUserMedia({
+      try {
+        console.log('Ultron Content: Got stream ID, starting capture with constraints...');
+
+        // Use the stream ID to get tab audio (includes ALL audio from the tab)
+        const stream = await navigator.mediaDevices.getUserMedia({
           audio: {
             mandatory: {
               chromeMediaSource: 'tab',
               chromeMediaSourceId: response.streamId,
             },
+            // Optional constraints for better quality
+            echoCancellation: false,  // We want to capture everything, not cancel echoes
+            noiseSuppression: false,  // Don't suppress any audio
+            autoGainControl: false,   // Keep original levels
           },
           video: false,
         });
 
-        // Mark that we're using tab audio (mixed audio from call)
+        console.log('Ultron Content: Stream obtained, audio tracks:', stream.getAudioTracks().length);
+
+        // Store the stream globally for both transcription systems
+        // CRITICAL: This stream contains ALL audio from the Google Meet tab,
+        // including both the advisor's and prospect's voices (mixed)
+        mediaStream = stream;
+        sidePanelMediaStream = stream;
+
+        // Mark that we're using tab audio (COMPLETE mixed audio from call)
         currentAudioSource = 'tab';
-        console.log('Ultron Content: Tab audio capture started (source: tab = mixed)');
-        setupMediaRecorder(sidePanelMediaStream);
+        console.log('Ultron Content: ✅ Tab audio capture SUCCESS (source: tab = COMPLETE MIXED AUDIO - Advisor + Prospect)');
+
         resolve();
 
       } catch (error) {
-        reject(error);
+        console.error('Ultron Content: getUserMedia failed:', error);
+        reject(new Error(`Failed to capture tab audio: ${error.message}`));
       }
     });
   });
@@ -1159,6 +1186,7 @@ function setupMediaRecorder(stream) {
     return;
   }
 
+  // Use the same MIME type configuration for consistency
   let mimeType = 'audio/webm;codecs=opus';
   if (!MediaRecorder.isTypeSupported(mimeType)) {
     mimeType = 'audio/webm';
@@ -1166,7 +1194,7 @@ function setupMediaRecorder(stream) {
       mimeType = '';
     }
   }
-  console.log('Ultron Content: Using mimeType:', mimeType || 'default');
+  console.log('Ultron Content: Using mimeType for Side Panel:', mimeType || 'default');
 
   const options = mimeType ? { mimeType } : {};
   sidePanelMediaRecorder = new MediaRecorder(stream, options);
@@ -1176,26 +1204,26 @@ function setupMediaRecorder(stream) {
     chunkCount++;
     if (event.data.size > 0) {
       if (chunkCount <= 5 || chunkCount % 20 === 0) {
-        console.log(`Ultron Content: Audio chunk #${chunkCount}, size: ${event.data.size} bytes, WS state: ${sidePanelDeepgramSocket?.readyState}`);
+        console.log(`Ultron Content: Side Panel chunk #${chunkCount}, size: ${event.data.size} bytes, WS state: ${sidePanelDeepgramSocket?.readyState}`);
       }
       if (sidePanelDeepgramSocket && sidePanelDeepgramSocket.readyState === WebSocket.OPEN) {
         sidePanelDeepgramSocket.send(event.data);
       } else {
-        console.warn('Ultron Content: WebSocket not open, cannot send audio');
+        console.warn('Ultron Content: Side Panel WebSocket not open, cannot send audio');
       }
     } else {
-      console.warn('Ultron Content: Empty audio chunk');
+      console.warn('Ultron Content: Empty audio chunk from Side Panel recorder');
     }
   };
 
   sidePanelMediaRecorder.onerror = (error) => {
-    console.error('Ultron Content: MediaRecorder error', error);
+    console.error('Ultron Content: Side Panel MediaRecorder error', error);
   };
 
   sidePanelMediaRecorder.start(250);
-  console.log('Ultron Content: MediaRecorder started, state:', sidePanelMediaRecorder.state);
+  console.log('Ultron Content: Side Panel MediaRecorder started, state:', sidePanelMediaRecorder.state);
 
-  // Notify Side Panel
+  // Notify Side Panel that we're connected
   chrome.runtime.sendMessage({
     type: 'TRANSCRIPTION_STATUS',
     status: 'connected',

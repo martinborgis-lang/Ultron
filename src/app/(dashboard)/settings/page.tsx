@@ -8,9 +8,10 @@ import { PromptsEditor } from '@/components/settings/PromptsEditor';
 import { ThemeSelector } from '@/components/settings/ThemeSelector';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
-import { FileSpreadsheet, Users, Sparkles, Palette, Database, Settings, ShoppingCart, User, Phone } from 'lucide-react';
+import { FileSpreadsheet, Users, Sparkles, Palette, Database, Settings, ShoppingCart, User, Phone, Mail } from 'lucide-react';
 import Link from 'next/link';
 import { PasswordChangeForm } from '@/components/settings/PasswordChangeForm';
+import { EmailRecapConfig } from '@/components/settings/EmailRecapConfig';
 
 async function getOrganizationData() {
   const supabase = await createClient();
@@ -61,7 +62,7 @@ export default async function SettingsPage() {
   return (
     <div className="space-y-6">
       <Tabs defaultValue="sheets" className="w-full">
-        <TabsList className="grid w-full grid-cols-6 lg:w-[720px]">
+        <TabsList className="grid w-full grid-cols-7 lg:w-[840px]">
           <TabsTrigger value="profile" className="gap-2">
             <User className="h-4 w-4" />
             <span className="hidden sm:inline">Profil</span>
@@ -69,6 +70,10 @@ export default async function SettingsPage() {
           <TabsTrigger value="data" className="gap-2">
             <Settings className="h-4 w-4" />
             <span className="hidden sm:inline">Config</span>
+          </TabsTrigger>
+          <TabsTrigger value="emails" className="gap-2">
+            <Mail className="h-4 w-4" />
+            <span className="hidden sm:inline">Emails</span>
           </TabsTrigger>
           <TabsTrigger value="sheets" className="gap-2">
             <FileSpreadsheet className="h-4 w-4" />
@@ -128,6 +133,9 @@ export default async function SettingsPage() {
                 )}
               </div>
             </div>
+          </TabsContent>
+          <TabsContent value="emails">
+            <EmailRecapConfig />
           </TabsContent>
           <TabsContent value="sheets">
             <div className="space-y-6">

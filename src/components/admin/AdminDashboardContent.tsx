@@ -9,9 +9,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
-  RefreshCw, Users, TrendingUp, Euro, Calendar, AlertTriangle,
-  Target, Trophy, Activity, BarChart3, PieChart, Clock,
-  Phone, Mail, UserCheck, TrendingDown
+  RefreshCw, TrendingUp, Calendar, AlertTriangle,
+  Target, Trophy, Activity, BarChart3, Euro
 } from 'lucide-react';
 import type { AdminDashboardStats, AdvisorStats } from '@/types/crm';
 
@@ -232,71 +231,8 @@ export function AdminDashboardContent() {
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Top performers */}
-            <TopPerformers topPerformers={dashboardStats.top_performers} />
-
-            {/* Distribution prospects/revenus */}
-            <div className="grid grid-cols-1 gap-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <PieChart className="h-5 w-5" />
-                    Répartition Prospects
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    {dashboardStats.prospects_by_advisor.slice(0, 5).map((advisor) => (
-                      <div key={advisor.advisor_id} className="flex items-center justify-between">
-                        <span className="text-sm font-medium">{advisor.advisor_name}</span>
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm text-muted-foreground">
-                            {advisor.count} ({advisor.percentage.toFixed(1)}%)
-                          </span>
-                          <div
-                            className="h-2 bg-blue-500 dark:bg-blue-400 rounded-full"
-                            style={{ width: `${Math.max(advisor.percentage * 2, 8)}px` }}
-                          />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Euro className="h-5 w-5" />
-                    Répartition CA
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    {dashboardStats.revenue_by_advisor.slice(0, 5).map((advisor) => (
-                      <div key={advisor.advisor_id} className="flex items-center justify-between">
-                        <span className="text-sm font-medium">{advisor.advisor_name}</span>
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm text-muted-foreground">
-                            {new Intl.NumberFormat('fr-FR', {
-                              style: 'currency',
-                              currency: 'EUR',
-                              minimumFractionDigits: 0
-                            }).format(advisor.revenue)}
-                          </span>
-                          <div
-                            className="h-2 bg-green-500 dark:bg-green-400 rounded-full"
-                            style={{ width: `${Math.max(advisor.percentage * 2, 8)}px` }}
-                          />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
+          {/* Top performers - Comprehensive view */}
+          <TopPerformers topPerformers={dashboardStats.top_performers} />
         </TabsContent>
 
         <TabsContent value="performance" className="space-y-6">

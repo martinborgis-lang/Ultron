@@ -39,8 +39,13 @@ const WAITING_STAGE_SLUGS = ['en_attente'];
 const WON_STAGE_SLUGS = ['gagne', 'won', 'signe']; // Stages "gagné"
 
 // Slugs qui déclenchent la modale "RDV Notes"
-// Slug unifié pour les deux modes (CRM et Sheet)
-const RDV_STAGE_SLUGS = ['rdv_pris'];
+// Slug unifié pour les deux modes (CRM et Sheet) + nouveaux stages RDV
+const RDV_STAGE_SLUGS = [
+  'rdv_pris',
+  // ⭐ NOUVEAUX STAGES RDV MULTIPLES
+  'rdv_2_programme', 'rdv_2_effectue',
+  'rdv_3_programme', 'rdv_3_effectue'
+];
 
 export function PipelineKanban({
   stages,

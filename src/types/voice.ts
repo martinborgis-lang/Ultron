@@ -489,6 +489,7 @@ export interface RecentCall {
   qualification_result?: QualificationResult;
   qualification_score?: number;
   appointment_booked: boolean;
+  ai_analysis?: any;
   created_at: string;
 }
 

@@ -24,35 +24,40 @@ export async function GET(request: NextRequest) {
 
     const supabase = await createClient();
 
-    // Construction de la requête - Utiliser la table phone_calls correcte
+    // Construction de la requête avec JOIN sur prospects
     let query = supabase
       .from('phone_calls')
       .select(`
         id,
         vapi_call_id,
+        vapi_assistant_id,
+        twilio_call_sid,
         prospect_id,
         to_number,
         from_number,
         status,
         outcome,
         duration_seconds,
-        transcript,
-        ai_analysis,
-        qualification_score,
-        qualification_result,
-        appointment_date,
-        cost_cents,
-        answered,
-        source,
-        error_message,
-        created_at,
         started_at,
         ended_at,
         scheduled_call_at,
+        transcript,
+        ai_analysis,
+        source,
         processing_notes,
-        twilio_call_sid,
-        vapi_assistant_id,
-        transcript_confidence
+        error_message,
+        created_at,
+        updated_at,
+        crm_prospects:prospect_id (
+          id,
+          first_name,
+          last_name,
+          email,
+          phone,
+          qualification,
+          score_ia,
+          analyse_ia
+        )
       `)
       .eq('organization_id', organization.id)
       .order('created_at', { ascending: false });
@@ -86,10 +91,16 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Erreur récupération des données' }, { status: 500 });
     }
 
-    // Transformation des données pour inclure le nom d'utilisateur
-    const formattedCalls = calls?.map(call => ({
+    // Transformation des données pour inclure les infos prospect
+    const formattedCalls = calls?.map((call: any) => ({
       ...call,
-      user_name: (call as any).users?.full_name || (call as any).users?.email
+      // Infos prospect depuis le JOIN
+      prospect_name: call.crm_prospects
+        ? `${call.crm_prospects.first_name || ''} ${call.crm_prospects.last_name || ''}`.trim()
+        : 'Prospect inconnu',
+      qualification_score: call.crm_prospects?.score_ia || 0,
+      qualification: call.crm_prospects?.qualification || 'non_qualifie',
+      prospect_analysis: call.crm_prospects?.analyse_ia || call.ai_analysis
     })) || [];
 
     return NextResponse.json({

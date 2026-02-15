@@ -34,7 +34,10 @@ import {
   Mic,
   Volume2,
   Target,
-  Zap
+  Zap,
+  Search,
+  X,
+  User
 } from 'lucide-react';
 import {
   VoiceConfig,
@@ -64,10 +67,29 @@ export default function AIAgentDashboard() {
     notes: ''
   });
 
+  // États recherche prospects
+  const [prospectSearch, setProspectSearch] = useState('');
+  const [prospects, setProspects] = useState<any[]>([]);
+  const [showProspectDropdown, setShowProspectDropdown] = useState(false);
+  const [selectedProspect, setSelectedProspect] = useState<any>(null);
+
   // Charger les données
   useEffect(() => {
     loadDashboardData();
   }, []);
+
+  // Recherche prospects avec debounce
+  useEffect(() => {
+    if (prospectSearch.length >= 2) {
+      const timeoutId = setTimeout(() => {
+        searchProspects(prospectSearch);
+      }, 300);
+      return () => clearTimeout(timeoutId);
+    } else {
+      setProspects([]);
+      setShowProspectDropdown(false);
+    }
+  }, [prospectSearch]);
 
   const loadDashboardData = async () => {
     try {
@@ -77,7 +99,7 @@ export default function AIAgentDashboard() {
       const [configRes, statsRes, callsRes] = await Promise.all([
         fetch('/api/voice/ai-agent/config'),
         fetch('/api/voice/ai-agent/stats'),
-        fetch('/api/voice/ai-agent/call?limit=10')
+        fetch('/api/voice/calls?limit=10')
       ]);
 
       if (configRes.ok) {
@@ -93,7 +115,7 @@ export default function AIAgentDashboard() {
 
       if (callsRes.ok) {
         const callsData = await callsRes.json();
-        setRecentCalls(callsData.data);
+        setRecentCalls(callsData.calls);
       }
 
     } catch (error) {
@@ -102,6 +124,38 @@ export default function AIAgentDashboard() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const searchProspects = async (searchTerm: string) => {
+    try {
+      const response = await fetch(`/api/prospects/unified?search=${encodeURIComponent(searchTerm)}&limit=10`);
+      if (response.ok) {
+        const data = await response.json();
+        setProspects(data.prospects || []);
+        setShowProspectDropdown(true);
+      }
+    } catch (error) {
+      console.error('Erreur recherche prospects:', error);
+    }
+  };
+
+  const selectProspect = (prospect: any) => {
+    setSelectedProspect(prospect);
+    setCallForm({
+      ...callForm,
+      prospect_id: prospect.id,
+      phone_number: prospect.phone || callForm.phone_number
+    });
+    setProspectSearch(`${prospect.first_name} ${prospect.last_name}`.trim());
+    setShowProspectDropdown(false);
+  };
+
+  const clearProspectSelection = () => {
+    setSelectedProspect(null);
+    setCallForm({ ...callForm, prospect_id: '' });
+    setProspectSearch('');
+    setProspects([]);
+    setShowProspectDropdown(false);
   };
 
   const handleSaveConfig = async () => {
@@ -153,6 +207,7 @@ export default function AIAgentDashboard() {
         toast.success('Appel lancé avec succès');
         setIsCallModalOpen(false);
         setCallForm({ phone_number: '', prospect_id: '', notes: '' });
+        clearProspectSelection();
         loadDashboardData(); // Recharger les appels
       } else {
         const error = await response.json();
@@ -228,7 +283,13 @@ export default function AIAgentDashboard() {
           </div>
 
           {/* Boutons actions */}
-          <Dialog open={isCallModalOpen} onOpenChange={setIsCallModalOpen}>
+          <Dialog open={isCallModalOpen} onOpenChange={(open) => {
+            setIsCallModalOpen(open);
+            if (!open) {
+              clearProspectSelection();
+              setCallForm({ phone_number: '', prospect_id: '', notes: '' });
+            }
+          }}>
             <DialogTrigger asChild>
               <Button>
                 <PhoneCall className="h-4 w-4 mr-2" />
@@ -254,14 +315,73 @@ export default function AIAgentDashboard() {
                   />
                 </div>
 
-                <div>
-                  <Label htmlFor="prospect">ID Prospect (optionnel)</Label>
-                  <Input
-                    id="prospect"
-                    placeholder="UUID du prospect si existant"
-                    value={callForm.prospect_id}
-                    onChange={(e) => setCallForm({...callForm, prospect_id: e.target.value})}
-                  />
+                <div className="relative">
+                  <Label htmlFor="prospect">Rechercher un prospect (optionnel)</Label>
+                  <div className="relative">
+                    <Input
+                      id="prospect"
+                      placeholder="Tapez le nom d'un prospect..."
+                      value={prospectSearch}
+                      onChange={(e) => setProspectSearch(e.target.value)}
+                      onFocus={() => prospectSearch.length >= 2 && setShowProspectDropdown(true)}
+                      className={selectedProspect ? 'pr-8' : ''}
+                    />
+                    {selectedProspect && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="absolute right-1 top-1 h-6 w-6 p-0"
+                        onClick={clearProspectSelection}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    )}
+                  </div>
+
+                  {/* Dropdown prospects */}
+                  {showProspectDropdown && prospects.length > 0 && (
+                    <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                      {prospects.map((prospect) => (
+                        <div
+                          key={prospect.id}
+                          className="px-4 py-2 hover:bg-gray-100 cursor-pointer border-b border-gray-100 last:border-b-0"
+                          onClick={() => selectProspect(prospect)}
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                              <User className="w-4 h-4 text-blue-600" />
+                            </div>
+                            <div className="flex-1">
+                              <div className="font-medium text-sm">
+                                {prospect.first_name} {prospect.last_name}
+                              </div>
+                              <div className="text-xs text-gray-500">
+                                {prospect.email} • {prospect.phone}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Message si prospect sélectionné */}
+                  {selectedProspect && (
+                    <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded-md">
+                      <div className="flex items-center gap-2 text-green-700">
+                        <CheckCircle className="w-4 h-4" />
+                        <span className="text-sm font-medium">
+                          {selectedProspect.first_name} {selectedProspect.last_name} sélectionné
+                        </span>
+                      </div>
+                      {selectedProspect.phone && (
+                        <div className="text-xs text-green-600 mt-1">
+                          Numéro: {selectedProspect.phone}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 <div>
@@ -479,12 +599,12 @@ function RecentCallsTable({ calls }: { calls: RecentCall[] }) {
                     {getOutcomeBadge(call.outcome)}
                   </div>
 
-                  {call.qualification_score && (
+                  {call.ai_analysis && (
                     <div className="text-center">
                       <div className="text-lg font-bold text-blue-600">
-                        {call.qualification_score}
+                        IA
                       </div>
-                      <div className="text-xs text-gray-500">Score IA</div>
+                      <div className="text-xs text-gray-500">Analysé</div>
                     </div>
                   )}
                 </div>

@@ -5,14 +5,23 @@ import { logger } from '@/lib/logger';
 
 export const dynamic = 'force-dynamic';
 
-// Stages par défaut - 6 stages comme voulu par l'utilisateur
+// Stages par défaut étendus avec workflow RDV multiples
 const DEFAULT_STAGES = [
   { name: 'Nouveau', slug: 'nouveau', color: '#6366f1', position: 0, is_won: false, is_lost: false },
   { name: 'En attente', slug: 'en_attente', color: '#f59e0b', position: 1, is_won: false, is_lost: false },
   { name: 'RDV Pris', slug: 'rdv_pris', color: '#10b981', position: 2, is_won: false, is_lost: false },
+
+  // ⭐ NOUVEAUX STAGES RDV MULTIPLES
+  { name: 'RDV 2 Programmé', slug: 'rdv_2_programme', color: '#8B5CF6', position: 2.1, is_won: false, is_lost: false },
+  { name: 'RDV 2 Effectué', slug: 'rdv_2_effectue', color: '#7C3AED', position: 2.2, is_won: false, is_lost: false },
+  { name: 'RDV 3 Programmé', slug: 'rdv_3_programme', color: '#6D28D9', position: 2.3, is_won: false, is_lost: false },
+  { name: 'RDV 3 Effectué', slug: 'rdv_3_effectue', color: '#5B21B6', position: 2.4, is_won: false, is_lost: false },
+  { name: 'Proposition Envoyée', slug: 'proposition_envoyee', color: '#F59E0B', position: 2.5, is_won: false, is_lost: false },
+
+  // Stages existants réorganisés
   { name: 'Négociation', slug: 'negociation', color: '#8b5cf6', position: 3, is_won: false, is_lost: false },
   { name: 'Gagné', slug: 'gagne', color: '#22c55e', position: 4, is_won: true, is_lost: false },
-  { name: 'Perdu', slug: 'perdu', color: '#ef4444', position: 5, is_won: false, is_lost: true },
+  { name: 'Perdu', slug: 'perdu', color: '#ef4444', position: 5, is_won: false, is_lost: false },
 ];
 
 export async function POST(request: NextRequest) {

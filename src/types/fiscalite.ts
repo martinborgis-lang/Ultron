@@ -80,7 +80,7 @@ export interface InvestmentProject {
   scpi_rendement_yield?: number;
   micro_foncier_eligible?: boolean;
   malraux_travaux_eligibles?: number;
-  malraux_taux?: 22 | 30;
+  malraux_zone_type?: 'ZPPAUP' | 'SECTEUR_SAUVEGARDE'; // Type de zone pour déterminer le taux
   malraux_plafond_4ans_restant?: number;
   tmi_sortie_mode?: 'TMI_ACTUEL' | 'TMI_MINUS_1_TRANCHE';
 

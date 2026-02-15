@@ -64,7 +64,21 @@ export async function GET(request: NextRequest) {
       order: paginationParams.order
     };
 
-    const prospects = await service.getAll(filters);
+    // ✅ PAGINATION: Récupérer le count total (avec fallback pour services Sheet)
+    let prospects: any;
+    let totalCount: number;
+
+    if (service.getTotalCount) {
+      // Mode CRM: récupération optimisée en parallèle
+      [prospects, totalCount] = await Promise.all([
+        service.getAll(filters),
+        service.getTotalCount({ stage, qualification, search }) // Count sans pagination
+      ]);
+    } else {
+      // Fallback pour services sans getTotalCount (ex: Sheet)
+      prospects = await service.getAll(filters);
+      totalCount = Array.isArray(prospects) ? prospects.length : 0;
+    }
 
     // ✅ TRANSFORMATION : Convertir au format unified frontend
     let transformedProspects: any[] = [];
@@ -72,15 +86,23 @@ export async function GET(request: NextRequest) {
       transformedProspects = prospects.map(transformToUnifiedFormat);
     }
 
-    // ✅ PAGINATION : Pour le mode CRM, pagination en mémoire pour compatibilité
+    // ✅ PAGINATION : Créer la réponse avec métadonnées complètes
     if (Array.isArray(prospects)) {
-      const paginatedResult = PaginationHelper.paginateInMemory(transformedProspects, paginationParams);
+      const paginationMeta = PaginationHelper.generateMeta(
+        totalCount,
+        paginationParams.page || 1,
+        paginationParams.limit || 20
+      );
 
       return NextResponse.json({
-        ...paginatedResult,
+        data: transformedProspects,
+        pagination: paginationMeta,
         meta: {
           dataMode: 'crm',
-          filters: { stage, qualification, search }
+          filters: { stage, qualification, search },
+          totalItems: totalCount,
+          currentPage: paginationMeta.page,
+          pageSize: paginationMeta.limit
         }
       });
     }

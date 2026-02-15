@@ -194,11 +194,8 @@ async function handleCallEnded(event: VapiWebhookEvent) {
       .join('\n');
   }
 
-  // Ajouter les résultats de qualification
-  if (qualificationResult) {
-    updateData.qualification_score = qualificationResult.score;
-    updateData.qualification_result = qualificationResult.result;
-  }
+  // Note: qualification_score et qualification_result ne sont pas dans la table phone_calls
+  // Ces informations sont stockées dans ai_analysis et outcome à la place
 
   await supabase
     .from('phone_calls')
@@ -467,12 +464,14 @@ async function handleBookAppointment(call: PhoneCall, args: any) {
 async function handleQualifyProspect(call: PhoneCall, args: any) {
   console.log('🎯 Qualification prospect:', args);
 
-  // Mettre à jour l'appel avec la qualification
+  // Mettre à jour l'appel avec la qualification dans ai_analysis
   await supabase
     .from('phone_calls')
     .update({
-      qualification_score: args.qualification_score,
-      qualification_result: args.qualification_result
+      ai_analysis: {
+        score: args.qualification_score,
+        result: args.qualification_result
+      }
     })
     .eq('id', call.id);
 

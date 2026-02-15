@@ -26,8 +26,10 @@ import {
   X,
   FileText,
   Sparkles,
+  Loader2,
 } from 'lucide-react';
 import { AdvancedFiltersComponent, AdvancedFilters, DEFAULT_FILTERS } from './AdvancedFilters';
+import { Pagination, usePagination } from '@/components/ui/pagination';
 
 // Helper to display readable stage names
 function getStageDisplayName(stageSlug: string): string {
@@ -48,6 +50,32 @@ function getStageDisplayName(stageSlug: string): string {
 }
 
 type QualificationFilter = 'tous' | 'CHAUD' | 'TIEDE' | 'FROID';
+
+// Interface pour les métadonnées de pagination
+interface PaginationMeta {
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+  hasNextPage: boolean;
+  hasPrevPage: boolean;
+  nextPage?: number;
+  prevPage?: number;
+  offset: number;
+}
+
+// Interface pour la réponse API avec pagination
+interface PaginatedProspectsResponse {
+  data: UnifiedProspect[];
+  pagination: PaginationMeta;
+  meta: {
+    dataMode: string;
+    filters: any;
+    totalItems: number;
+    currentPage: number;
+    pageSize: number;
+  };
+}
 
 // Unified format from /api/prospects/unified
 interface UnifiedProspect {
@@ -167,6 +195,11 @@ export function ProspectsContent() {
   const [qualificationFilter, setQualificationFilter] = useState<QualificationFilter>('tous');
   const [advancedFilters, setAdvancedFilters] = useState<AdvancedFilters>(DEFAULT_FILTERS);
 
+  // États de pagination
+  const [totalItems, setTotalItems] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+  const pagination = usePagination(20); // Page size par défaut: 20
+
   // Handler: Open default mail client with pre-filled email
   const handleSendEmail = (prospect: ProspectDisplay) => {
     const email = prospect.email;
@@ -239,13 +272,39 @@ export function ProspectsContent() {
     setAdvancedFilters(DEFAULT_FILTERS);
   };
 
-  const fetchData = async () => {
-    setLoading(true);
+  const fetchData = async (
+    page?: number,
+    pageSize?: number,
+    search?: string,
+    qualification?: QualificationFilter
+  ) => {
+    const currentPage = page ?? pagination.currentPage;
+    const currentPageSize = pageSize ?? pagination.pageSize;
+    const currentSearch = search ?? searchQuery;
+    const currentQualification = qualification ?? qualificationFilter;
+
+    pagination.setLoading(true);
     setError(null);
     setNotConnected(false);
 
     try {
-      const response = await fetch('/api/prospects/unified');
+      // Construire les paramètres de pagination et filtres
+      const params = new URLSearchParams({
+        page: currentPage.toString(),
+        limit: currentPageSize.toString(),
+        sort: 'created_at',
+        order: 'desc',
+      });
+
+      if (currentSearch) {
+        params.append('search', currentSearch);
+      }
+
+      if (currentQualification !== 'tous') {
+        params.append('qualification', currentQualification);
+      }
+
+      const response = await fetch(`/api/prospects/unified?${params}`);
       const data = await response.json();
 
       if (!response.ok) {
@@ -256,77 +315,106 @@ export function ProspectsContent() {
         throw new Error(data.error || 'Erreur');
       }
 
-      // ✅ SÉCURITÉ : Vérifier que data est bien un array ou un objet paginé
+      // ✅ TRAITEMENT : Gérer les nouveaux formats de réponse avec pagination
       let unifiedProspects: UnifiedProspect[] = [];
+      let paginationMeta: PaginationMeta | null = null;
 
-      if (Array.isArray(data)) {
-        unifiedProspects = data;
-      } else if (data && Array.isArray(data.data)) {
-        // Format paginé: { data: [...], total, offset, limit }
+      if (data.data && data.pagination) {
+        // Format paginé complet
         unifiedProspects = data.data;
+        paginationMeta = data.pagination;
+        setTotalItems(paginationMeta.total);
+        setTotalPages(paginationMeta.totalPages);
+      } else if (Array.isArray(data.data)) {
+        // Format avec data array mais pas de pagination (fallback)
+        unifiedProspects = data.data;
+        setTotalItems(data.data.length);
+        setTotalPages(1);
+      } else if (Array.isArray(data)) {
+        // Format legacy (array direct)
+        unifiedProspects = data;
+        setTotalItems(data.length);
+        setTotalPages(1);
       } else if (data && typeof data === 'object' && !data.error) {
         // Fallback: essayer d'extraire un array de l'objet
         const possibleArrays = Object.values(data).filter(Array.isArray);
         if (possibleArrays.length > 0) {
           unifiedProspects = possibleArrays[0] as UnifiedProspect[];
+          setTotalItems(unifiedProspects.length);
+          setTotalPages(1);
         }
       }
 
       setProspects(transformProspects(unifiedProspects));
+
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur lors du chargement');
+      setProspects([]);
+      setTotalItems(0);
+      setTotalPages(0);
     } finally {
-      setLoading(false);
+      pagination.setLoading(false);
     }
   };
 
+  // Debounce pour la recherche
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
+
+  // Effet pour debouncer la recherche
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  // Effet pour recharger quand la recherche debouncée change
+  useEffect(() => {
+    if (debouncedSearchQuery !== searchQuery) return; // Attendre le debounce
+    pagination.resetPagination(); // Reset à la page 1
+    fetchData(1, pagination.pageSize, debouncedSearchQuery, qualificationFilter);
+  }, [debouncedSearchQuery]);
+
+  // Effet pour recharger quand la qualification change
+  useEffect(() => {
+    pagination.resetPagination(); // Reset à la page 1
+    fetchData(1, pagination.pageSize, searchQuery, qualificationFilter);
+  }, [qualificationFilter]);
+
+  // Chargement initial
   useEffect(() => {
     fetchData();
   }, []);
 
-  // Calcul des valeurs maximales pour les sliders
+  // Handlers de pagination
+  const handlePageChange = (page: number) => {
+    pagination.handlePageChange(page);
+    fetchData(page, pagination.pageSize, searchQuery, qualificationFilter);
+  };
+
+  const handlePageSizeChange = (newSize: number) => {
+    pagination.handlePageSizeChange(newSize);
+    fetchData(1, newSize, searchQuery, qualificationFilter);
+  };
+
+  // Pour les filtres avancés, on calcule les valeurs max sur TOUS les prospects (pas seulement la page courante)
+  // Note : Idéalement, ces valeurs devraient venir d'une API dédiée pour avoir les vraies valeurs max
   const maxValues = useMemo(() => {
-    if (prospects.length === 0) {
-      return {
-        maxPatrimoine: 1000000,
-        maxRevenus: 200000,
-        maxAge: 80,
-      };
-    }
-
-    const validPatrimoine = prospects.filter(p => p.patrimoineEstime && p.patrimoineEstime > 0);
-    const validRevenus = prospects.filter(p => p.revenusAnnuels && p.revenusAnnuels > 0);
-    const validAges = prospects.filter(p => p.age && p.age > 0);
-
+    // Valeurs par défaut raisonnables pour un CGP
     return {
-      maxPatrimoine: validPatrimoine.length > 0
-        ? Math.max(...validPatrimoine.map(p => p.patrimoineEstime!))
-        : 1000000,
-      maxRevenus: validRevenus.length > 0
-        ? Math.max(...validRevenus.map(p => p.revenusAnnuels!))
-        : 200000,
-      maxAge: validAges.length > 0
-        ? Math.max(...validAges.map(p => p.age!))
-        : 80,
+      maxPatrimoine: 2000000, // 2M€
+      maxRevenus: 300000, // 300k€
+      maxAge: 75,
     };
-  }, [prospects]);
+  }, []);
 
+  // ⚠️ NOTE: Les filtres avancés sont temporairement maintenus côté client
+  // Pour une implémentation complète, ils devraient être envoyés à l'API
   const filteredProspects = useMemo(() => {
     return prospects.filter((p) => {
-      // Filtre par recherche
-      if (searchQuery) {
-        const query = searchQuery.toLowerCase();
-        const matchesSearch =
-          p.nom.toLowerCase().includes(query) ||
-          p.prenom.toLowerCase().includes(query) ||
-          p.email.toLowerCase().includes(query);
-        if (!matchesSearch) return false;
-      }
-
-      // Filtre par qualification (cumulable avec les filtres avancés)
-      if (qualificationFilter !== 'tous') {
-        if (p.qualification !== qualificationFilter) return false;
-      }
+      // Les filtres de recherche et qualification sont déjà appliqués côté serveur
+      // On ne filtre ici que les filtres avancés
 
       // Filtres avancés (patrimoine)
       if (p.patrimoineEstime !== undefined && p.patrimoineEstime !== null) {
@@ -369,16 +457,22 @@ export function ProspectsContent() {
 
       return true;
     });
-  }, [prospects, searchQuery, qualificationFilter, advancedFilters]);
+  }, [prospects, advancedFilters]);
 
   const stats = useMemo(() => {
+    // Stats basées sur la page courante pour cohérence avec l'affichage
     const chauds = prospects.filter((p) => p.qualification === 'CHAUD').length;
     const tiedes = prospects.filter((p) => p.qualification === 'TIEDE').length;
     const froids = prospects.filter((p) => p.qualification === 'FROID').length;
     return { chauds, tiedes, froids };
   }, [prospects]);
 
-  if (loading) {
+  // Handler pour refresh
+  const handleRefresh = () => {
+    fetchData(pagination.currentPage, pagination.pageSize, searchQuery, qualificationFilter);
+  };
+
+  if (pagination.loading && prospects.length === 0) {
     return <LoadingSkeleton />;
   }
 
@@ -466,8 +560,8 @@ export function ProspectsContent() {
             maxValues={maxValues}
           />
         </div>
-        <Button onClick={fetchData} variant="outline" size="sm">
-          <RefreshCw className="h-4 w-4" />
+        <Button onClick={handleRefresh} variant="outline" size="sm" disabled={pagination.loading}>
+          <RefreshCw className={`h-4 w-4 ${pagination.loading ? 'animate-spin' : ''}`} />
         </Button>
       </div>
 
@@ -529,35 +623,63 @@ export function ProspectsContent() {
         </Card>
       </div>
 
-      {/* Results count */}
-      {(() => {
-        const hasAdvancedFilters =
-          advancedFilters.patrimoineRange[0] !== 0 ||
-          advancedFilters.patrimoineRange[1] !== maxValues.maxPatrimoine ||
-          advancedFilters.revenusRange[0] !== 0 ||
-          advancedFilters.revenusRange[1] !== maxValues.maxRevenus ||
-          advancedFilters.ageRange[0] !== 18 ||
-          advancedFilters.ageRange[1] !== maxValues.maxAge;
+      {/* Results count et pagination info */}
+      <div className="flex items-center justify-between text-sm text-muted-foreground">
+        <div>
+          {(() => {
+            const hasAdvancedFilters =
+              advancedFilters.patrimoineRange[0] !== 0 ||
+              advancedFilters.patrimoineRange[1] !== maxValues.maxPatrimoine ||
+              advancedFilters.revenusRange[0] !== 0 ||
+              advancedFilters.revenusRange[1] !== maxValues.maxRevenus ||
+              advancedFilters.ageRange[0] !== 18 ||
+              advancedFilters.ageRange[1] !== maxValues.maxAge;
 
-        const hasFilters = searchQuery || qualificationFilter !== 'tous' || hasAdvancedFilters;
+            const hasFilters = searchQuery || qualificationFilter !== 'tous' || hasAdvancedFilters;
 
-        if (!hasFilters) return null;
+            if (hasFilters) {
+              return (
+                <p>
+                  {filteredProspects.length} sur {totalItems} prospects affichés
+                  {searchQuery && ` pour "${searchQuery}"`}
+                  {qualificationFilter !== 'tous' && ` (${qualificationFilter})`}
+                  {hasAdvancedFilters && ' avec filtres avancés'}
+                </p>
+              );
+            }
 
-        return (
-          <p className="text-sm text-muted-foreground">
-            {filteredProspects.length} prospect{filteredProspects.length !== 1 ? 's' : ''} trouve{filteredProspects.length !== 1 ? 's' : ''}
-            {searchQuery && ` pour "${searchQuery}"`}
-            {qualificationFilter !== 'tous' && ` (${qualificationFilter})`}
-            {hasAdvancedFilters && ' avec filtres avancés'}
-          </p>
-        );
-      })()}
+            if (totalItems > 0) {
+              return (
+                <p>
+                  {totalItems} prospects au total
+                  {totalPages > 1 && ` • Page ${pagination.currentPage} sur ${totalPages}`}
+                </p>
+              );
+            }
+
+            return null;
+          })()}
+        </div>
+
+        {/* Loading indicator */}
+        {pagination.loading && (
+          <div className="flex items-center gap-2">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            <span>Chargement...</span>
+          </div>
+        )}
+      </div>
 
       {/* Prospects table */}
       <Card className="shadow-sm">
         <CardHeader>
           <CardTitle className="text-lg font-semibold">
-            Tous les prospects ({prospects.length})
+            Prospects
+            {totalPages > 1 && (
+              <span className="text-sm font-normal text-muted-foreground ml-2">
+                (Page {pagination.currentPage} sur {totalPages})
+              </span>
+            )}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -685,6 +807,23 @@ export function ProspectsContent() {
                   ))}
                 </TableBody>
               </Table>
+            </div>
+          )}
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="mt-6 flex justify-center">
+              <Pagination
+                currentPage={pagination.currentPage}
+                totalPages={totalPages}
+                totalItems={totalItems}
+                pageSize={pagination.pageSize}
+                onPageChange={handlePageChange}
+                onPageSizeChange={handlePageSizeChange}
+                loading={pagination.loading}
+                showSizeChanger={true}
+                showInfo={true}
+              />
             </div>
           )}
         </CardContent>

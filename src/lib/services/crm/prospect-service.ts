@@ -42,8 +42,7 @@ export class CrmProspectService implements IProspectService {
     let query = this.supabase
       .from('crm_prospects')
       .select('*')
-      .eq('organization_id', this.organizationId)
-      .order('created_at', { ascending: false });
+      .eq('organization_id', this.organizationId);
 
     // ✅ SÉCURITÉ: Validation des filtres
     if (filters?.stage) {
@@ -69,6 +68,25 @@ export class CrmProspectService implements IProspectService {
       }
     }
 
+    if (filters?.assignedTo) {
+      const safeAssignedTo = validateUUID(filters.assignedTo);
+      if (safeAssignedTo) {
+        query = query.eq('assigned_to', safeAssignedTo);
+      }
+    }
+
+    // ✅ PAGINATION: Applquer tri
+    const sortField = filters?.sort || 'created_at';
+    const sortOrder = filters?.order === 'asc' ? true : false;
+    query = query.order(sortField, { ascending: sortOrder });
+
+    // ✅ PAGINATION: Appliquer limite et offset si fournis
+    if (filters?.limit && filters?.offset !== undefined) {
+      const limit = Math.min(Math.max(filters.limit, 1), 100); // Sécurité: limiter entre 1 et 100
+      const offset = Math.max(filters.offset, 0);
+      query = query.range(offset, offset + limit - 1);
+    }
+
     const { data, error } = await query;
 
     if (error) {
@@ -77,6 +95,53 @@ export class CrmProspectService implements IProspectService {
     }
 
     return (data || []).map((row) => this.mapDbToProspect(row));
+  }
+
+  async getTotalCount(filters?: ProspectFilters): Promise<number> {
+    let query = this.supabase
+      .from('crm_prospects')
+      .select('*', { count: 'exact', head: true })
+      .eq('organization_id', this.organizationId);
+
+    // Appliquer les mêmes filtres que getAll (sans pagination)
+    if (filters?.stage) {
+      const safeStage = validateStage(filters.stage);
+      if (safeStage) {
+        query = query.eq('stage_slug', safeStage);
+      }
+    }
+
+    if (filters?.qualification) {
+      const safeQualification = validateQualification(filters.qualification);
+      if (safeQualification) {
+        query = query.eq('qualification', safeQualification);
+      }
+    }
+
+    if (filters?.search) {
+      const searchPattern = createSafeSearchPattern(filters.search);
+      if (searchPattern !== '%%') {
+        query = query.or(
+          `first_name.ilike.${searchPattern},last_name.ilike.${searchPattern},email.ilike.${searchPattern}`
+        );
+      }
+    }
+
+    if (filters?.assignedTo) {
+      const safeAssignedTo = validateUUID(filters.assignedTo);
+      if (safeAssignedTo) {
+        query = query.eq('assigned_to', safeAssignedTo);
+      }
+    }
+
+    const { count, error } = await query;
+
+    if (error) {
+      logger.error('CrmProspectService.getTotalCount error:', error);
+      throw error;
+    }
+
+    return count || 0;
   }
 
   async getById(id: string): Promise<ProspectData | null> {
