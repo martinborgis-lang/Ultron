@@ -106,15 +106,26 @@ export async function refreshAccessToken(credentials: GoogleCredentials): Promis
     refresh_token: credentials.refresh_token,
   });
 
-  const { credentials: newTokens } = await oauth2Client.refreshAccessToken();
+  try {
+    const { credentials: newTokens } = await oauth2Client.refreshAccessToken();
 
-  return {
-    access_token: newTokens.access_token!,
-    refresh_token: credentials.refresh_token,
-    expiry_date: newTokens.expiry_date!,
-    token_type: newTokens.token_type!,
-    scope: newTokens.scope!,
-  };
+    return {
+      access_token: newTokens.access_token!,
+      refresh_token: newTokens.refresh_token || credentials.refresh_token, // ⭐ Utiliser le nouveau si fourni
+      expiry_date: newTokens.expiry_date!,
+      token_type: newTokens.token_type!,
+      scope: newTokens.scope!,
+    };
+  } catch (error: any) {
+    // ⚠️ Si le refresh_token a expiré (apps en mode Testing), relancer l'erreur avec contexte
+    if (error.message?.includes('invalid_grant') || error.code === 'invalid_grant') {
+      const enhancedError = new Error('Refresh token expired - reconnection required');
+      (enhancedError as any).code = 'invalid_grant';
+      (enhancedError as any).requiresReauth = true;
+      throw enhancedError;
+    }
+    throw error; // Autres erreurs
+  }
 }
 
 export function isTokenExpired(credentials: GoogleCredentials): boolean {
