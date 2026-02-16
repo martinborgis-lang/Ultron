@@ -1,5 +1,15 @@
 import { createAdminClient } from '@/lib/supabase-admin';
 import { logger } from '@/lib/logger';
+import { Client } from '@upstash/qstash';
+
+function getQStashClient() {
+  if (!process.env.QSTASH_TOKEN) {
+    throw new Error('QSTASH_TOKEN environment variable is not set');
+  }
+  return new Client({
+    token: process.env.QSTASH_TOKEN,
+  });
+}
 
 export interface ScheduledEmailData {
   organization_id: string;
@@ -53,41 +63,39 @@ export async function getOrganizationEmailSettings(organizationId: string): Prom
 }
 
 /**
- * Programme un email récapitulatif avec délai configurable
+ * Programme un email récapitulatif avec QStash (délai configurable)
  */
 export async function scheduleRecapEmail(data: ScheduledEmailData): Promise<any> {
-  const adminClient = createAdminClient();
+  const qstashClient = getQStashClient();
+  const delaySeconds = Math.max(0, Math.floor((data.scheduled_at.getTime() - Date.now()) / 1000));
 
-  logger.debug('📅 Programmation email récap:', {
+  logger.debug('📅 Programmation email récap via QStash:', {
     prospect_id: data.prospect_id,
     email_type: data.email_type,
     scheduled_at: data.scheduled_at.toISOString(),
-    delay_from_now: Math.round((data.scheduled_at.getTime() - Date.now()) / (1000 * 60)) + ' minutes'
+    delay_seconds: delaySeconds,
+    delay_minutes: Math.round(delaySeconds / 60)
   });
 
-  const { data: scheduled, error } = await adminClient
-    .from('scheduled_emails')
-    .insert({
-      organization_id: data.organization_id,
-      prospect_id: data.prospect_id,
-      advisor_id: data.advisor_id,
-      email_type: data.email_type,
-      scheduled_at: data.scheduled_at.toISOString(),
-      status: 'pending',
-      email_data: data.email_data,
-      retry_count: 0,
-      max_retries: 3,
-    })
-    .select()
-    .single();
+  // Payload pour QStash
+  const payload = {
+    organization_id: data.organization_id,
+    prospect_id: data.prospect_id,
+    advisor_id: data.advisor_id,
+    email_type: data.email_type,
+    email_data: data.email_data,
+    scheduled_at: data.scheduled_at.toISOString(),
+  };
 
-  if (error) {
-    logger.error('Erreur programmation email:', error);
-    throw error;
-  }
+  // Programmer via QStash
+  const result = await qstashClient.publishJSON({
+    url: `${process.env.NEXT_PUBLIC_APP_URL}/api/webhooks/send-scheduled-email`,
+    body: payload,
+    delay: delaySeconds,
+  });
 
-  logger.info('✅ Email programmé avec succès:', scheduled.id);
-  return scheduled;
+  logger.info('✅ Email programmé via QStash:', result.messageId);
+  return { messageId: result.messageId, scheduled_at: data.scheduled_at };
 }
 
 /**
