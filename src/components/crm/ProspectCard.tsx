@@ -90,7 +90,7 @@ export function ProspectCard({ prospect, onClick, isDragging, index = 0, onCall 
       <Card
         onClick={onClick}
         className={cn(
-          'relative p-3 cursor-pointer transition-all',
+          'relative p-2 cursor-pointer transition-all',
           'bg-card border border-border',
           isHighScore && 'border-amber-500/50 bg-gradient-to-br from-card to-amber-500/5',
           !isHighScore && 'hover:border-primary/50',
@@ -105,20 +105,20 @@ export function ProspectCard({ prospect, onClick, isDragging, index = 0, onCall 
           </div>
         )}
 
-        {/* Header: Nom + Qualification */}
-        <div className="flex items-start justify-between gap-2 mb-2">
-          <div className="flex items-center gap-2 min-w-0">
+        {/* Header: Nom + Qualification - Version compacte */}
+        <div className="flex items-start justify-between gap-2 mb-1.5">
+          <div className="flex items-center gap-1.5 min-w-0">
             <div className={cn(
-              'w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0',
+              'w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0',
               isHighScore ? 'bg-gradient-to-br from-amber-500/20 to-orange-500/20' : 'bg-primary/20'
             )}>
-              <User className={cn('w-4 h-4', isHighScore ? 'text-amber-500' : 'text-primary')} />
+              <User className={cn('w-3 h-3', isHighScore ? 'text-amber-500' : 'text-primary')} />
             </div>
             <div className="min-w-0">
-              <p className="font-medium text-sm truncate">{fullName}</p>
+              <p className="font-medium text-xs truncate">{fullName}</p>
               {prospect.company && (
-                <p className="text-xs text-muted-foreground truncate flex items-center gap-1">
-                  <Building2 className="w-3 h-3" />
+                <p className="text-[10px] text-muted-foreground truncate flex items-center gap-1">
+                  <Building2 className="w-2.5 h-2.5" />
                   {prospect.company}
                 </p>
               )}
@@ -126,74 +126,74 @@ export function ProspectCard({ prospect, onClick, isDragging, index = 0, onCall 
           </div>
           <Badge
             variant="outline"
-            className={cn('text-[10px] px-1.5 py-0 flex items-center gap-1', qualificationColors[prospect.qualification] || qualificationColors.non_qualifie)}
+            className={cn('text-[9px] px-1 py-0 flex items-center gap-1', qualificationColors[prospect.qualification] || qualificationColors.non_qualifie)}
           >
             {(!prospect.qualification || prospect.qualification === 'non_qualifie') && (
-              <Sparkles className="w-3 h-3" />
+              <Sparkles className="w-2.5 h-2.5" />
             )}
             {qualificationLabels[prospect.qualification] || qualificationLabels.non_qualifie}
           </Badge>
         </div>
 
-      {/* Deal Value */}
+      {/* Deal Value - Version compacte */}
       {prospect.deal_value && (
-        <div className="flex items-center gap-1 text-sm font-semibold text-green-400 mb-2">
-          <Euro className="w-3.5 h-3.5" />
+        <div className="flex items-center gap-1 text-xs font-semibold text-green-400 mb-1.5">
+          <Euro className="w-3 h-3" />
           {formatCurrency(prospect.deal_value)}
           {prospect.close_probability && (
-            <span className="text-xs text-muted-foreground font-normal">
+            <span className="text-[10px] text-muted-foreground font-normal">
               ({prospect.close_probability}%)
             </span>
           )}
         </div>
       )}
 
-      {/* Contact Info */}
-      <div className="flex flex-wrap gap-2 text-xs text-muted-foreground mb-2">
+      {/* Contact Info - Version compacte */}
+      <div className="flex flex-col gap-0.5 text-[10px] text-muted-foreground mb-1.5">
         {prospect.phone && (
-          <span className="flex items-center gap-1">
-            <Phone className="w-3 h-3" />
+          <span className="flex items-center gap-1 truncate">
+            <Phone className="w-2.5 h-2.5 flex-shrink-0" />
             {prospect.phone}
           </span>
         )}
         {prospect.email && (
-          <span className="flex items-center gap-1 truncate max-w-[150px]">
-            <Mail className="w-3 h-3" />
+          <span className="flex items-center gap-1 truncate">
+            <Mail className="w-2.5 h-2.5 flex-shrink-0" />
             {prospect.email}
           </span>
         )}
       </div>
 
-      {/* Actions - Bouton d'appel */}
+      {/* Actions - Bouton d'appel compacte */}
       {prospect.phone && onCall && (
-        <div className="flex justify-end mt-2">
+        <div className="flex justify-end mt-1">
           <button
             onClick={handleCallClick}
             className={cn(
-              'flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium transition-all',
+              'flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-medium transition-all',
               'bg-green-500/10 hover:bg-green-500/20 text-green-400 hover:text-green-300',
               'border border-green-500/20 hover:border-green-500/30',
               'hover:scale-105 active:scale-95'
             )}
             title="Appeler ce prospect"
           >
-            <PhoneCall className="w-3 h-3" />
+            <PhoneCall className="w-2.5 h-2.5" />
             Appeler
           </button>
         </div>
       )}
 
-        {/* Tags */}
+        {/* Tags - Version compacte */}
         {prospect.tags && prospect.tags.length > 0 && (
-          <div className="flex flex-wrap gap-1 mt-2">
-            {prospect.tags.slice(0, 3).map((tag) => (
-              <Badge key={tag} variant="secondary" className="text-[10px] px-1.5 py-0">
+          <div className="flex flex-wrap gap-0.5 mt-1">
+            {prospect.tags.slice(0, 2).map((tag) => (
+              <Badge key={tag} variant="secondary" className="text-[9px] px-1 py-0">
                 {tag}
               </Badge>
             ))}
-            {prospect.tags.length > 3 && (
-              <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
-                +{prospect.tags.length - 3}
+            {prospect.tags.length > 2 && (
+              <Badge variant="secondary" className="text-[9px] px-1 py-0">
+                +{prospect.tags.length - 2}
               </Badge>
             )}
           </div>

@@ -104,7 +104,7 @@ export function PipelineColumn({ stage, prospects, onProspectClick, onCall, colu
       {/* Prospects List */}
       <ScrollArea className="flex-1 p-2">
         <SortableContext items={prospects.map(p => p.id)} strategy={verticalListSortingStrategy}>
-          <div className="space-y-2 min-h-[100px]">
+          <div className="space-y-1.5 min-h-[100px]">
             <AnimatePresence mode="popLayout">
               {prospects.map((prospect, index) => (
                 <DraggableProspectCard
