@@ -17,8 +17,14 @@ export interface ExtensionTokenPayload {
  */
 export async function validateExtensionToken(token: string) {
   try {
+    // Valider le format JWT de base (3 parties séparées par des points)
+    const parts = token.split('.');
+    if (parts.length !== 3) {
+      throw new Error('Token format invalide - doit être au format JWT (header.payload.signature)');
+    }
+
     // D'abord essayer de décoder le token pour voir son algorithme
-    const headerBase64 = token.split('.')[0];
+    const headerBase64 = parts[0];
     const headerJson = Buffer.from(headerBase64, 'base64').toString('utf-8');
     const header = JSON.parse(headerJson);
 

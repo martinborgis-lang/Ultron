@@ -39,7 +39,8 @@
       "Bash(git restore:*)",
       "Bash(git ls-tree:*)",
       "WebFetch(domain:localhost)",
-      "Bash(timeout 30 npm run dev)"
+      "Bash(timeout 30 npm run dev)",
+      "Bash(timeout 30s bash -c 'until curl -s http://localhost:3001 > /dev/null; do sleep 1; done')"
     ],
     "deny": [],
     "ask": []

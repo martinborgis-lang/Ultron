@@ -92,6 +92,7 @@ export function ProspectCard({ prospect, onClick, isDragging, index = 0, onCall 
         className={cn(
           'relative p-2 cursor-pointer transition-all',
           'bg-card border border-border',
+          'min-h-[120px] flex flex-col', // ⭐ Hauteur minimale uniforme
           isHighScore && 'border-amber-500/50 bg-gradient-to-br from-card to-amber-500/5',
           !isHighScore && 'hover:border-primary/50',
           isDragging && 'opacity-50 rotate-2 scale-105 shadow-xl'
@@ -164,6 +165,25 @@ export function ProspectCard({ prospect, onClick, isDragging, index = 0, onCall 
         )}
       </div>
 
+      {/* Tags - Version compacte */}
+      {prospect.tags && prospect.tags.length > 0 && (
+        <div className="flex flex-wrap gap-0.5 mt-1">
+          {prospect.tags.slice(0, 2).map((tag) => (
+            <Badge key={tag} variant="secondary" className="text-[9px] px-1 py-0">
+              {tag}
+            </Badge>
+          ))}
+          {prospect.tags.length > 2 && (
+            <Badge variant="secondary" className="text-[9px] px-1 py-0">
+              +{prospect.tags.length - 2}
+            </Badge>
+          )}
+        </div>
+      )}
+
+      {/* Spacer to push actions to bottom */}
+      <div className="flex-1"></div>
+
       {/* Actions - Bouton d'appel compacte */}
       {prospect.phone && onCall && (
         <div className="flex justify-end mt-1">
@@ -182,22 +202,6 @@ export function ProspectCard({ prospect, onClick, isDragging, index = 0, onCall 
           </button>
         </div>
       )}
-
-        {/* Tags - Version compacte */}
-        {prospect.tags && prospect.tags.length > 0 && (
-          <div className="flex flex-wrap gap-0.5 mt-1">
-            {prospect.tags.slice(0, 2).map((tag) => (
-              <Badge key={tag} variant="secondary" className="text-[9px] px-1 py-0">
-                {tag}
-              </Badge>
-            ))}
-            {prospect.tags.length > 2 && (
-              <Badge variant="secondary" className="text-[9px] px-1 py-0">
-                +{prospect.tags.length - 2}
-              </Badge>
-            )}
-          </div>
-        )}
       </Card>
     </motion.div>
   );

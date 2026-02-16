@@ -18,10 +18,12 @@ export async function OPTIONS() {
 // GET /api/extension/calendar-events - Get upcoming or recent RDV events from Google Calendar
 export async function GET(request: NextRequest) {
   try {
+    console.log('[Extension Calendar] 🟢 Début requête calendar-events');
+
     // Valider le token d'extension
     const authHeader = request.headers.get('Authorization');
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      console.log('[Extension Calendar] Pas de header Authorization');
+      console.log('[Extension Calendar] ❌ Pas de header Authorization');
       return NextResponse.json(
         { error: 'Non authentifié' },
         { status: 401, headers: corsHeaders() }
@@ -29,7 +31,18 @@ export async function GET(request: NextRequest) {
     }
 
     const token = authHeader.replace('Bearer ', '');
-    const auth = await validateExtensionToken(token);
+    console.log('[Extension Calendar] 🔑 Token présent (longueur:', token.length, ')');
+
+    let auth;
+    try {
+      auth = await validateExtensionToken(token);
+    } catch (tokenError) {
+      console.error('[Extension Calendar] ❌ Erreur validation token:', tokenError);
+      return NextResponse.json(
+        { error: 'Erreur validation token: ' + (tokenError as Error).message },
+        { status: 401, headers: corsHeaders() }
+      );
+    }
 
     if (!auth) {
       console.log('[Extension Calendar] ❌ Token invalide');
@@ -43,27 +56,48 @@ export async function GET(request: NextRequest) {
     const user = auth.dbUser;
 
     // Get Google credentials from user or organization
+    console.log('[Extension Calendar] 🔍 Recherche credentials Google...');
     const adminClient = createAdminClient();
 
     // First check user's individual Gmail credentials
     let credentials: GoogleCredentials | null = (user as any).gmail_credentials;
+    console.log('[Extension Calendar] 👤 Credentials utilisateur:', !!credentials);
 
     // Fallback to organization credentials if user doesn't have individual ones
     if (!credentials) {
-      const { data: org, error: orgError } = await adminClient
-        .from('organizations')
-        .select('google_credentials')
-        .eq('id', user.organization_id)
-        .single();
+      console.log('[Extension Calendar] 🏢 Recherche credentials organisation...');
+      try {
+        const { data: org, error: orgError } = await adminClient
+          .from('organizations')
+          .select('google_credentials')
+          .eq('id', user.organization_id)
+          .single();
 
-      if (orgError || !org) {
+        if (orgError) {
+          console.error('[Extension Calendar] ❌ Erreur récupération organisation:', orgError);
+          return NextResponse.json(
+            { error: 'Erreur récupération organisation: ' + orgError.message },
+            { status: 500, headers: corsHeaders() }
+          );
+        }
+
+        if (!org) {
+          console.log('[Extension Calendar] ❌ Organisation non trouvée');
+          return NextResponse.json(
+            { error: 'Organisation non trouvée' },
+            { status: 404, headers: corsHeaders() }
+          );
+        }
+
+        credentials = org.google_credentials;
+        console.log('[Extension Calendar] 🏢 Credentials organisation:', !!credentials);
+      } catch (dbError) {
+        console.error('[Extension Calendar] ❌ Exception DB organisation:', dbError);
         return NextResponse.json(
-          { error: 'Organisation non trouvée' },
-          { status: 404, headers: corsHeaders() }
+          { error: 'Erreur base de données: ' + (dbError as Error).message },
+          { status: 500, headers: corsHeaders() }
         );
       }
-
-      credentials = org.google_credentials;
     }
 
     if (!credentials) {
@@ -81,8 +115,23 @@ export async function GET(request: NextRequest) {
     const oneMonthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
     const oneMonthLater = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
 
+    console.log('[Extension Calendar] 📅 Période recherche:', {
+      from: oneMonthAgo.toISOString().split('T')[0],
+      to: oneMonthLater.toISOString().split('T')[0]
+    });
+
     // Get all events from the past month to next month
-    const allEvents = await getCalendarEvents(credentials, oneMonthAgo, oneMonthLater);
+    let allEvents;
+    try {
+      allEvents = await getCalendarEvents(credentials, oneMonthAgo, oneMonthLater);
+      console.log('[Extension Calendar] ✅ API Google Calendar OK, événements récupérés:', allEvents?.length || 0);
+    } catch (calendarError) {
+      console.error('[Extension Calendar] ❌ Erreur API Google Calendar:', calendarError);
+      return NextResponse.json(
+        { error: 'Erreur Google Calendar: ' + (calendarError as Error).message },
+        { status: 500, headers: corsHeaders() }
+      );
+    }
 
     // Filter events that look like RDV (meetings)
     const rdvEvents = (allEvents || []).filter(event => {
@@ -99,14 +148,18 @@ export async function GET(request: NextRequest) {
 
     // ⭐ ENRICHISSEMENT : Mapper chaque événement Calendar vers un prospect Ultron
     console.log('[Extension Calendar] 🔍 Enrichissement avec prospects Ultron...');
-    const enrichedEvents = await Promise.all(
-      rdvEvents.map(async (calEvent) => {
-        const prospectName = extractProspectName(calEvent.summary || '');
-        const startDate = calEvent.start?.dateTime || calEvent.start?.date;
-        const meetLink = calEvent.hangoutLink ||
-                        calEvent.conferenceData?.entryPoints?.find(e => e.entryPointType === 'video')?.uri;
 
-        let prospectId = null;
+    let enrichedEvents = [];
+    try {
+      enrichedEvents = await Promise.all(
+        rdvEvents.map(async (calEvent) => {
+          try {
+            const prospectName = extractProspectName(calEvent.summary || '');
+            const startDate = calEvent.start?.dateTime || calEvent.start?.date;
+            const meetLink = calEvent.hangoutLink ||
+                            calEvent.conferenceData?.entryPoints?.find(e => e.entryPointType === 'video')?.uri;
+
+            let prospectId = null;
 
         try {
           // Option 1: Chercher par meet_link (le plus fiable)
@@ -235,8 +288,42 @@ export async function GET(request: NextRequest) {
           location: calEvent.location,
           description: calEvent.description
         };
-      })
-    );
+          } catch (eventError) {
+            console.error('[Extension Calendar] ❌ Erreur traitement événement:', calEvent.summary, eventError);
+            // Retourner un événement basique en cas d'erreur
+            return {
+              calendarId: calEvent.id,
+              prospectId: null,
+              id: calEvent.id,
+              title: calEvent.summary || 'Événement sans titre',
+              prospectName: '',
+              startDate: calEvent.start?.dateTime || calEvent.start?.date,
+              endDate: calEvent.end?.dateTime || calEvent.end?.date,
+              meetLink: null,
+              isPast: false,
+              location: calEvent.location,
+              description: calEvent.description
+            };
+          }
+        })
+      );
+    } catch (enrichmentError) {
+      console.error('[Extension Calendar] ❌ Erreur enrichissement global:', enrichmentError);
+      // Fallback : retourner les événements de base sans enrichissement
+      enrichedEvents = rdvEvents.map(calEvent => ({
+        calendarId: calEvent.id,
+        prospectId: null,
+        id: calEvent.id,
+        title: calEvent.summary || 'Événement sans titre',
+        prospectName: extractProspectName(calEvent.summary || ''),
+        startDate: calEvent.start?.dateTime || calEvent.start?.date,
+        endDate: calEvent.end?.dateTime || calEvent.end?.date,
+        meetLink: null,
+        isPast: false,
+        location: calEvent.location,
+        description: calEvent.description
+      }));
+    }
 
     console.log('[Extension Calendar] 📊 Enrichissement terminé:');
     enrichedEvents.forEach((event, i) => {
@@ -287,9 +374,14 @@ export async function GET(request: NextRequest) {
       { headers: corsHeaders() }
     );
   } catch (error) {
-    console.error('Extension calendar events error:', error);
+    console.error('[Extension Calendar] ❌ ERREUR GLOBALE:', error);
+    console.error('[Extension Calendar] Stack:', (error as Error).stack);
     return NextResponse.json(
-      { error: 'Erreur lors de la récupération des événements calendrier' },
+      {
+        error: 'Erreur détaillée calendar-events: ' + (error as Error).message,
+        type: (error as Error).name,
+        details: (error as Error).stack?.split('\n').slice(0, 3).join(' | ')
+      },
       { status: 500, headers: corsHeaders() }
     );
   }

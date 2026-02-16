@@ -32,15 +32,25 @@ export async function OPTIONS() {
 
 export async function POST(request: NextRequest) {
   try {
+    console.log('[analyze-prep] 🟢 Début requête analyze-prep');
+
     // Valider le token d'extension (custom HS256 ou Supabase natif)
     const authHeader = request.headers.get('Authorization');
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      console.log('[analyze-prep] Pas de header Authorization');
+      console.log('[analyze-prep] ❌ Pas de header Authorization');
       return NextResponse.json({ error: 'Non autorisé' }, { status: 401, headers: corsHeaders() });
     }
 
     const token = authHeader.replace('Bearer ', '');
-    const auth = await validateExtensionToken(token);
+    console.log('[analyze-prep] 🔑 Token présent (longueur:', token.length, ')');
+
+    let auth;
+    try {
+      auth = await validateExtensionToken(token);
+    } catch (tokenError) {
+      console.error('[analyze-prep] ❌ Erreur validation token:', tokenError);
+      return NextResponse.json({ error: 'Erreur validation token: ' + (tokenError as Error).message }, { status: 401, headers: corsHeaders() });
+    }
 
     if (!auth) {
       console.log('[analyze-prep] ❌ Token invalide');
@@ -49,15 +59,39 @@ export async function POST(request: NextRequest) {
 
     console.log('[analyze-prep] ✅ User authentifié:', auth.dbUser.email);
 
-    const body = await request.json();
+    let body;
+    try {
+      body = await request.json();
+      console.log('[analyze-prep] 📝 Body parsé, keys:', Object.keys(body));
+    } catch (jsonError) {
+      console.error('[analyze-prep] ❌ Erreur parsing JSON body:', jsonError);
+      return NextResponse.json({ error: 'Body JSON invalide: ' + (jsonError as Error).message }, { status: 400, headers: corsHeaders() });
+    }
+
     const { prospect, interactions } = body as {
       prospect: Prospect;
       interactions: Interaction[];
     };
 
+    if (!prospect) {
+      console.log('[analyze-prep] ❌ Prospect manquant dans le body');
+      return NextResponse.json({ error: 'Prospect requis' }, { status: 400, headers: corsHeaders() });
+    }
+
+    console.log('[analyze-prep] 👤 Prospect:', `${prospect.prenom} ${prospect.nom}`, 'Interactions:', interactions?.length || 0);
+
+    console.log('[analyze-prep] 🤖 Initialisation Anthropic...');
+
+    if (!process.env.ANTHROPIC_API_KEY) {
+      console.error('[analyze-prep] ❌ ANTHROPIC_API_KEY manquante');
+      return NextResponse.json({ error: 'Configuration API manquante' }, { status: 500, headers: corsHeaders() });
+    }
+
     const anthropic = new Anthropic({
       apiKey: process.env.ANTHROPIC_API_KEY,
     });
+
+    console.log('[analyze-prep] ✅ Anthropic initialisé');
 
     const systemPrompt = `Tu es un expert en gestion de patrimoine et en techniques de vente consultative.
 

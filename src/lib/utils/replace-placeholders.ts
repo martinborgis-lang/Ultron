@@ -11,7 +11,7 @@ export function replacePlaceholders(text: string, prospect: any): string {
     'prenom': prospect.prenom || prospect.first_name || prospect.prénom || '',
     'nom': prospect.nom || prospect.last_name || '',
     'email': prospect.email || '',
-    'besoins': prospect.besoins || prospect.notes_qualification || '',
+    'besoins': prospect.besoins || prospect.notes_qualification || prospect.notes || '',
     'notes_appel': prospect.notes_appel || prospect.notesAppel || '',
     'date_rdv': prospect.date_rdv || prospect.rdv_date || prospect.dateRdv || '',
     'qualification': prospect.qualification || prospect.qualificationIA || '',
