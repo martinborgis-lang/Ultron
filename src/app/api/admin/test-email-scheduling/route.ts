@@ -149,12 +149,12 @@ export async function GET() {
     const adminClient = createAdminClient();
 
     const { data: testEmails, error } = await adminClient
-      .from('scheduled_emails')
+      .from('email_logs')
       .select('*')
       .eq('organization_id', organization.id)
       .eq('email_type', 'rdv_recap_test')
-      .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
-      .order('created_at', { ascending: false })
+      .gte('sent_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
+      .order('sent_at', { ascending: false })
       .limit(10);
 
     if (error) {

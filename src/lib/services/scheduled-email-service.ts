@@ -114,72 +114,54 @@ export function calculateScheduledTime(rdvEndTime: Date, delayHours: number): Da
 }
 
 /**
- * Annule un email programmé (si pas encore envoyé)
+ * Annule un email programmé via QStash (si pas encore envoyé)
+ * Note: Avec QStash, l'annulation n'est pas directement supportée
+ * Cette fonction est conservée pour compatibilité mais ne fait rien
  */
 export async function cancelScheduledEmail(emailId: string, reason?: string): Promise<void> {
-  const adminClient = createAdminClient();
+  logger.warn('⚠️ Annulation email QStash non supportée:', emailId, reason);
 
-  const { error } = await adminClient
-    .from('scheduled_emails')
-    .update({
-      status: 'cancelled',
-      error_message: reason || 'Annulé manuellement',
-      updated_at: new Date().toISOString(),
-    })
-    .eq('id', emailId)
-    .eq('status', 'pending'); // Only cancel pending emails
+  // Avec QStash, une fois programmé, l'email ne peut pas être annulé facilement
+  // Il faudrait utiliser l'API QStash pour supprimer le message, mais cela nécessite
+  // de stocker le messageId retourné par QStash lors de la programmation
 
-  if (error) {
-    logger.error('Erreur annulation email:', error);
-    throw error;
-  }
-
-  logger.info('❌ Email programmé annulé:', emailId);
+  // Pour l'instant, on log juste l'intention d'annulation
+  logger.info('📝 Tentative annulation email programmé QStash:', emailId);
 }
 
 /**
  * Récupère les emails programmés pour une organisation
+ * Note: Avec QStash, nous n'avons plus d'historique en base
+ * Cette fonction retourne un tableau vide pour compatibilité
  */
 export async function getScheduledEmailsForOrg(organizationId: string, status?: string) {
-  const adminClient = createAdminClient();
+  logger.debug('📋 Récupération emails programmés via QStash non supportée');
 
-  let query = adminClient
-    .from('scheduled_emails')
-    .select(`
-      *,
-      prospect:crm_prospects(first_name, last_name, email),
-      advisor:users(full_name, email)
-    `)
-    .eq('organization_id', organizationId)
-    .order('scheduled_at', { ascending: true });
+  // Avec QStash, les emails sont gérés en externe
+  // Nous pourrions récupérer les logs d'emails envoyés depuis email_logs
+  // mais pas les emails programmés en attente
 
-  if (status) {
-    query = query.eq('status', status);
-  }
-
-  const { data, error } = await query;
-
-  if (error) {
-    logger.error('Erreur récupération emails programmés:', error);
-    throw error;
-  }
-
-  return data;
+  return [];
 }
 
 /**
  * Récupère les statistiques des emails programmés pour le dashboard
+ * Note: Avec QStash, les stats viennent des email_logs pour les emails envoyés
  */
 export async function getScheduledEmailsStats(organizationId: string) {
   const adminClient = createAdminClient();
 
+  logger.debug('📊 Récupération stats emails via email_logs');
+
+  // Récupérer les stats depuis email_logs (emails effectivement envoyés)
   const { data, error } = await adminClient
-    .from('scheduled_emails')
+    .from('email_logs')
     .select('email_type, status')
-    .eq('organization_id', organizationId);
+    .eq('organization_id', organizationId)
+    .gte('sent_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()); // 30 derniers jours
 
   if (error) {
-    logger.error('Erreur stats emails programmés:', error);
+    logger.error('Erreur stats emails depuis email_logs:', error);
     throw error;
   }
 
@@ -192,10 +174,10 @@ export async function getScheduledEmailsStats(organizationId: string) {
 
   return {
     total: data.length,
-    pending: data.filter(e => e.status === 'pending').length,
+    pending: 0, // Avec QStash, on ne peut pas savoir les pending
     sent: data.filter(e => e.status === 'sent').length,
     failed: data.filter(e => e.status === 'failed').length,
-    cancelled: data.filter(e => e.status === 'cancelled').length,
+    cancelled: 0, // Pas d'annulation avec QStash
     by_type: stats,
   };
 }

@@ -433,20 +433,14 @@ Colonnes:
 - tracking_data: JSONB
 - created_at: TIMESTAMPTZ
 
-#### scheduled_emails (Emails programmes)
-Colonnes:
-- id: UUID
-- organization_id: UUID
-- prospect_id: UUID
-- user_id: UUID
-- email_type: VARCHAR
-- template_id: UUID
-- scheduled_date: TIMESTAMPTZ
-- status: VARCHAR (pending, sent, cancelled, failed)
-- qstash_message_id: VARCHAR
-- email_data: JSONB
-- sent_at: TIMESTAMPTZ
-- error_message: TEXT
+#### emails programmés (QStash)
+Note: Avec QStash, les emails programmés ne sont plus stockés en base.
+Les emails envoyés sont trackés dans email_logs avec:
+- email_type: VARCHAR ('rdv_recap', 'rdv_rappel', etc.)
+- status: VARCHAR ('sent', 'failed')
+- sent_at: TIMESTAMPTZ (heure effective d'envoi)
+- recipient: VARCHAR (email destinataire)
+- gmail_message_id: VARCHAR (ID Gmail du message)
 - created_at: TIMESTAMPTZ
 
 #### crm_email_templates (Templates emails)
@@ -778,7 +772,7 @@ export function getCondensedSchema(): string {
   🎤 Voice AI: voice_config, phone_calls, meeting_transcripts
   🔍 Lead Finder: lead_searches, lead_results, lead_stats
   📱 LinkedIn: linkedin_agent_config, linkedin_posts
-  📧 Emails: email_logs, scheduled_emails, crm_email_templates
+  📧 Emails: email_logs (includes QStash scheduled), crm_email_templates
   📊 Analytics: daily_stats, activity_logs, admin_thresholds
   🤖 Agents: agent_runs, prompts, system_settings`;
 }
