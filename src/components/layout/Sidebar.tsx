@@ -49,16 +49,16 @@ export function Sidebar({ userName }: SidebarProps) {
 
   return (
     <div className="hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 bg-background border-r border-border">
-      {/* Logo */}
-      <div className="flex items-center gap-2 px-6 py-5">
+      {/* Logo - Fixed at top */}
+      <div className="flex items-center gap-2 px-6 py-5 shrink-0">
         <Bot className="h-8 w-8 text-indigo-600 dark:text-indigo-400" />
         <span className="text-xl font-bold text-foreground">ULTRON</span>
       </div>
 
-      <Separator />
+      <Separator className="shrink-0" />
 
-      {/* Navigation */}
-      <nav className="flex-1 px-4 py-4 space-y-1">
+      {/* Navigation - Scrollable area */}
+      <nav className="flex-1 overflow-y-auto px-4 py-4 space-y-1 min-h-0">
         {navigation.map((item) => {
           const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
           return (
@@ -125,8 +125,8 @@ export function Sidebar({ userName }: SidebarProps) {
         )}
       </nav>
 
-      {/* Legal links */}
-      <div className="px-4 py-2">
+      {/* Legal links - Fixed at bottom */}
+      <div className="px-4 py-2 shrink-0">
         <Separator className="mb-2" />
         <div className="flex flex-col gap-1">
           <Link
@@ -144,8 +144,8 @@ export function Sidebar({ userName }: SidebarProps) {
         </div>
       </div>
 
-      {/* User section */}
-      <div className="p-4 border-t border-border">
+      {/* User section - Fixed at bottom */}
+      <div className="p-4 border-t border-border shrink-0">
         <div className="flex items-center gap-3 px-3 py-2">
           <div className="h-8 w-8 rounded-full bg-indigo-100 dark:bg-indigo-900 flex items-center justify-center">
             <span className="text-sm font-medium text-indigo-600 dark:text-indigo-400">
