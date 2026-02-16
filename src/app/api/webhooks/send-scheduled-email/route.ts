@@ -79,23 +79,24 @@ async function handleScheduledEmail(request: NextRequest) {
     logger.debug('Conseiller trouvé:', advisor.email);
 
     // Récupérer les credentials Gmail (conseiller d'abord, puis org en fallback)
-    const emailCredentialsResult = await getEmailCredentials(advisor_id, organization_id);
+    const emailCredentialsResponse = await getEmailCredentials(organization_id, advisor_id);
 
-    if (!emailCredentialsResult) {
+    if (!emailCredentialsResponse.result) {
       logger.error('Aucun credentials Gmail disponible');
       return NextResponse.json({ error: 'Aucun credentials Gmail disponible' }, { status: 500 });
     }
 
+    const emailCredentialsResult = emailCredentialsResponse.result;
     logger.debug('Credentials Gmail récupérés:', emailCredentialsResult.source);
 
     // Envoyer l'email
-    const emailResult = await sendEmail(emailCredentialsResult.credentials, {
-      to: email_data.prospect_data.email,
-      subject: email_data.subject,
-      body: email_data.body,
-    });
+    try {
+      const emailResult = await sendEmail(emailCredentialsResult.credentials, {
+        to: email_data.prospect_data.email,
+        subject: email_data.subject,
+        body: email_data.body,
+      });
 
-    if (emailResult.success) {
       logger.info('✅ Email récap envoyé avec succès');
 
       // Enregistrer dans les logs d'email
@@ -141,11 +142,11 @@ async function handleScheduledEmail(request: NextRequest) {
         recipient: email_data.prospect_data.email,
       });
 
-    } else {
-      logger.error('❌ Erreur envoi email:', emailResult.error);
+    } catch (emailError: any) {
+      logger.error('❌ Erreur envoi email:', emailError);
       return NextResponse.json({
         error: 'Erreur envoi email',
-        details: emailResult.error
+        details: emailError.message || 'Erreur inconnue'
       }, { status: 500 });
     }
 
