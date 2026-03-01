@@ -13,7 +13,6 @@ export interface DatabaseRecord {
 export interface PlanningEventDbRecord extends DatabaseRecord {
   organization_id: string;
   prospect_id?: string;
-  prospect_sheet_id?: string;
   prospect_name?: string;
   type: 'task' | 'call' | 'meeting' | 'reminder' | 'email';
   title: string;

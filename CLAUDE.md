@@ -45,9 +45,9 @@
 
 ---
 
-## 🏗️ ARCHITECTURE BI-MODE
+## 🏗️ ARCHITECTURE CRM
 
-Ultron supporte deux modes de stockage des données, configurables par organisation :
+Ultron utilise une architecture CRM complète basée sur Supabase :
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -57,31 +57,18 @@ Ultron supporte deux modes de stockage des données, configurables par organisat
                               │
                               ▼
 ┌─────────────────────────────────────────────────────────────┐
-│              APIs Unifiées /api/prospects/unified/*          │
+│                APIs CRM /api/prospects/unified/*             │
 │              /api/planning/* (avec getCurrentUserAndOrg)     │
 └─────────────────────────────────────────────────────────────┘
                               │
                               ▼
 ┌─────────────────────────────────────────────────────────────┐
-│                    Factory Pattern                           │
-│      getProspectService() / getPlanningService()            │
+│                    CRM Services                              │
+│         CrmProspectService & CrmPlanningService             │
+│                (Supabase + RLS)                             │
+│                   FULL CRUD                                 │
 └─────────────────────────────────────────────────────────────┘
-                    │                       │
-        data_mode='sheet'          data_mode='crm'
-                    │                       │
-                    ▼                       ▼
-┌───────────────────────────┐   ┌───────────────────────────┐
-│   SheetProspectService    │   │    CrmProspectService     │
-│   SheetPlanningService    │   │    CrmPlanningService     │
-│   (Google Sheets/Cal API) │   │    (Supabase + RLS)       │
-│   READ ONLY (prospects)   │   │    FULL CRUD              │
-└───────────────────────────┘   └───────────────────────────┘
 ```
-
-### Configuration du mode
-- Stocké dans `organizations.data_mode` ('sheet' | 'crm')
-- Configurable via `/settings/data-source`
-- Mode exclusif (pas de mixage)
 
 ---
 
@@ -96,7 +83,6 @@ Ultron supporte deux modes de stockage des données, configurables par organisat
 | Auth | Supabase Auth |
 | AI | Anthropic Claude Sonnet 4 |
 | Email | Gmail API |
-| Sheets | Google Sheets API |
 | Scheduling | Upstash QStash |
 | Drag & Drop | @dnd-kit/core |
 | Icons | Lucide React |
@@ -139,7 +125,6 @@ src/
 │   │   │   └── calculateur/page.tsx
 │   │   └── settings/
 │   │       ├── page.tsx
-│   │       ├── data-source/page.tsx        # Choix mode Sheet/CRM
 │   │       ├── prompts/page.tsx
 │   │       ├── products/page.tsx           # 🆕 Gestion produits
 │   │       ├── scoring/page.tsx            # 🆕 Configuration scoring IA
@@ -151,14 +136,14 @@ src/
 │   │   └── set-password/page.tsx
 │   ├── api/
 │   │   ├── prospects/
-│   │   │   └── unified/                    # ⭐ APIs BI-MODE
+│   │   │   └── unified/                    # APIs CRM
 │   │   │       ├── route.ts                # GET/POST prospects
 │   │   │       ├── stats/route.ts          # GET stats
 │   │   │       ├── by-stage/route.ts       # GET groupé par stage
 │   │   │       └── [id]/
 │   │   │           ├── route.ts            # GET/PATCH/DELETE
 │   │   │           └── stage/route.ts      # PATCH stage (drag&drop)
-│   │   ├── planning/                       # ⭐ APIs BI-MODE
+│   │   ├── planning/                       # APIs CRM
 │   │   │   ├── route.ts                    # GET/POST events
 │   │   │   └── [id]/
 │   │   │       ├── route.ts                # GET/PATCH/DELETE
@@ -223,11 +208,6 @@ src/
 │   │   │   ├── tasks/route.ts
 │   │   │   ├── emails/route.ts
 │   │   │   └── import/route.ts
-│   │   ├── sheets/                         # APIs Google Sheets
-│   │   │   ├── prospects/route.ts
-│   │   │   ├── stats/route.ts
-│   │   │   ├── update-status/route.ts
-│   │   │   └── test/route.ts
 │   │   ├── google/
 │   │   │   ├── auth/route.ts
 │   │   │   ├── callback/route.ts
@@ -336,18 +316,12 @@ src/
 │   │   ├── server.ts
 │   │   └── admin.ts
 │   ├── supabase-admin.ts               # createAdminClient() bypass RLS
-│   ├── services/                       # ⭐ ARCHITECTURE BI-MODE
+│   ├── services/                       # ARCHITECTURE CRM
 │   │   ├── interfaces/
 │   │   │   └── index.ts                # IProspectService, IPlanningService
-│   │   ├── factories/
-│   │   │   ├── prospect-factory.ts     # getProspectService()
-│   │   │   └── planning-factory.ts     # getPlanningService()
 │   │   ├── crm/
 │   │   │   ├── prospect-service.ts     # CrmProspectService
 │   │   │   └── planning-service.ts     # CrmPlanningService
-│   │   ├── sheet/
-│   │   │   ├── prospect-service.ts     # SheetProspectService
-│   │   │   └── planning-service.ts     # SheetPlanningService
 │   │   └── get-organization.ts         # getCurrentUserAndOrganization()
 │   ├── google.ts
 │   ├── gmail.ts
@@ -400,11 +374,7 @@ CREATE TABLE organizations (
   name VARCHAR NOT NULL,
   slug VARCHAR NOT NULL UNIQUE,
 
-  -- Mode de données configurable
-  data_mode VARCHAR DEFAULT 'crm' CHECK (data_mode IN ('sheet', 'crm')), -- ⭐ Bi-mode
-
   -- Intégrations Google
-  google_sheet_id VARCHAR,
   google_credentials JSONB,
 
   -- Branding & UI
@@ -647,15 +617,14 @@ CREATE TABLE crm_activities (
 );
 ```
 
-**crm_events** - Planning bi-mode compatible
+**crm_events** - Planning CRM
 ```sql
 CREATE TABLE crm_events (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
 
-  -- Liaison prospect (bi-mode) ⭐
+  -- Liaison prospect
   prospect_id UUID REFERENCES crm_prospects(id) ON DELETE CASCADE,
-  prospect_sheet_id VARCHAR, -- ID ligne Sheet pour mode bi-mode
   prospect_name VARCHAR,
 
   -- Info événement
@@ -1334,22 +1303,20 @@ Widget d'appels WebRTC intégré directement dans l'interface :
 
 ---
 
-## 🔌 INTERFACES & SERVICES BI-MODE (Enrichi)
+## 🔌 SERVICES CRM
 
-### APIs Unifiées Complètes
+### APIs CRM Complètes
 
-| Endpoint | Méthodes | Description | Statut |
-|----------|----------|-------------|---------|
-| `/api/prospects/unified` | GET, POST | Liste/Créer prospects | ✅ Bi-Mode |
-| `/api/prospects/unified/stats` | GET | Statistiques prospects | ✅ Bi-Mode |
-| `/api/prospects/unified/by-stage` | GET | Prospects groupés par stage | ✅ Bi-Mode |
-| `/api/prospects/unified/[id]` | GET, PATCH, DELETE | CRUD prospect | ✅ Bi-Mode |
-| `/api/prospects/unified/[id]/stage` | PATCH | Update stage (drag&drop) | ✅ Bi-Mode |
-| `/api/planning` | GET, POST | Liste/Créer événements | ✅ Bi-Mode |
-| `/api/planning/[id]` | GET, PATCH, DELETE | CRUD événement | ✅ Bi-Mode |
-| `/api/planning/[id]/complete` | POST | Marquer complété | ✅ Bi-Mode |
-| `/api/stages/unified` | GET | Stages pipeline | ✅ Bi-Mode |
-| `/api/sheets/update-status` | PATCH | 🆕 Update statut Sheet | 🔶 Sheet only |
+| Endpoint | Méthodes | Description |
+|----------|----------|-------------|
+| `/api/prospects/unified` | GET, POST | Liste/Créer prospects |
+| `/api/prospects/unified/stats` | GET | Statistiques prospects |
+| `/api/prospects/unified/by-stage` | GET | Prospects groupés par stage |
+| `/api/prospects/unified/[id]` | GET, PATCH, DELETE | CRUD prospect |
+| `/api/prospects/unified/[id]/stage` | PATCH | Update stage (drag&drop) |
+| `/api/planning` | GET, POST | Liste/Créer événements |
+| `/api/planning/[id]` | GET, PATCH, DELETE | CRUD événement |
+| `/api/planning/[id]/complete` | POST | Marquer complété |
 
 ---
 
@@ -1547,11 +1514,10 @@ git checkout -b refactor/api-unified
 - **Multi-conseillers** : Taux différenciés par conseiller/produit
 - **Historique** : Traçabilité complète ventes et commissions
 
-### 🔄 Architecture Bi-Mode
-- **Mode Sheet** : Lecture seule prospects + planning Google Calendar
+### 🔄 Architecture CRM
 - **Mode CRM** : CRUD complet + fonctionnalités avancées
-- **Migration** : Possible de CRM vers Sheet (pas l'inverse)
-- **Compatibilité** : APIs unifiées garantissent fonctionnement identique
+- **Base Supabase** : PostgreSQL avec RLS pour multi-tenancy
+- **Services optimisés** : CrmProspectService et CrmPlanningService
 
 ### 🚀 Performance & Monitoring
 - **Lazy loading** : Composants chargés à la demande
@@ -1609,7 +1575,7 @@ git checkout -b refactor/api-unified
 ✅ **Alertes Proactives Configurables**
 ✅ **APIs Extension Sécurisées**
 ✅ **Modals Personnalisées Ultron**
-✅ **Architecture Bi-Mode Complète**
+✅ **Architecture CRM Complète**
 ✅ **Workflow Commissions Automatisé**
 
 Le projet Ultron est maintenant une plateforme SaaS complète et avancée pour la gestion de patrimoine, avec des fonctionnalités enterprise et une architecture scalable prête pour la production.

@@ -1,7 +1,5 @@
 import { logger } from '@/lib/logger';
-
 import { createAdminClient } from '@/lib/supabase/admin';
-import { getValidCredentials, GoogleCredentials } from '@/lib/google';
 import { generateEmailWithConfig, DEFAULT_PROMPTS, PromptConfig } from '@/lib/anthropic';
 import { sendEmail, getEmailCredentialsByEmail } from '@/lib/gmail';
 import { NextRequest, NextResponse } from 'next/server';
@@ -9,165 +7,215 @@ import type { RappelPayload } from '@/lib/qstash';
 
 export const dynamic = 'force-dynamic';
 
-async function handleRappel(request: NextRequest) {
+interface CrmRappelPayload {
+  organizationId: string;   // CRM mode - organization ID
+  prospectId?: string;      // CRM mode - prospect ID (if available)
+  conseillerId?: string;    // Optional: advisor's user ID for per-user Gmail
+  conseillerEmail?: string; // Optional: advisor's email for per-user Gmail
+  prospectData?: {          // Prospect data for reminder
+    email: string;
+    nom: string;
+    prenom: string;
+    date_rdv: string;
+    dateRdvFormatted: string;
+    qualification: string;
+    besoins?: string;
+  };
+  // Legacy fields for backward compatibility
+  sheet_id?: string;
+  rowNumber?: number;
+}
+
+export async function POST(request: NextRequest) {
   try {
-    const payload: RappelPayload = await request.json();
-    const { organizationId, conseillerId, conseillerEmail, prospectData, rowNumber } = payload;
+    const payload = await request.json() as CrmRappelPayload;
+    logger.debug('📅 Webhook send-rappel déclenché:', payload);
 
-    logger.debug('=== ENVOI RAPPEL 24H via QStash ===');
-    logger.debug('Prospect:', prospectData.email);
-    logger.debug('Organization:', organizationId);
-    logger.debug('Conseiller ID:', conseillerId || 'non specifie');
-    logger.debug('Conseiller Email:', conseillerEmail || 'non specifie');
-
-    const supabase = createAdminClient();
-
-    // Get organization with credentials
-    const { data: org, error: orgError } = await supabase
-      .from('organizations')
-      .select('id, google_credentials, prompt_rappel')
-      .eq('id', organizationId)
-      .single();
-
-    if (orgError || !org) {
-      console.error('Organization not found:', orgError);
-      return NextResponse.json({ error: 'Organization not found' }, { status: 404 });
+    // CRM Mode: Use organizationId
+    if (payload.organizationId) {
+      return await handleCrmRappel(payload);
     }
 
-    if (!org.google_credentials) {
-      console.error('No Google credentials configured');
-      return NextResponse.json({ error: 'No Google credentials' }, { status: 400 });
+    // Legacy QStash payload format
+    if (payload.organizationId && payload.prospectData) {
+      return await handleCrmRappel(payload);
     }
 
-    // Get valid credentials for Sheet operations (always org-level)
-    const sheetCredentials = await getValidCredentials(org.google_credentials as GoogleCredentials);
-
-    // Update org credentials if refreshed
-    if (sheetCredentials !== org.google_credentials) {
-      await supabase
-        .from('organizations')
-        .update({ google_credentials: sheetCredentials })
-        .eq('id', org.id);
+    // Legacy mode no longer supported
+    if (payload.sheet_id) {
+      return NextResponse.json(
+        { error: 'Google Sheets mode deprecated - Use CRM mode with organizationId' },
+        { status: 410 }
+      );
     }
-
-    // Get email credentials (advisor's Gmail by email, or fallback to org)
-    const credentialsResponse = await getEmailCredentialsByEmail(organizationId, conseillerEmail);
-
-    // Handle invalid_grant - fallback to org credentials
-    let emailCredentialsResult = credentialsResponse.result;
-    if (credentialsResponse.error?.error === 'invalid_grant') {
-      logger.debug('⚠️ Token invalide, fallback sur organisation:', credentialsResponse.error.message);
-      const orgCredentials = await getEmailCredentialsByEmail(organizationId);
-      emailCredentialsResult = orgCredentials.result;
-    }
-
-    if (!emailCredentialsResult) {
-      const errorMsg = credentialsResponse.error?.message || 'No email credentials available';
-      console.error('No email credentials available:', errorMsg);
-      return NextResponse.json({ error: errorMsg }, { status: 400 });
-    }
-    const emailCredentials = emailCredentialsResult.credentials;
-    logger.debug('Using email credentials from:', emailCredentialsResult.source, emailCredentialsResult.userId || 'org');
-
-    // Generate email with Claude using organization prompt config
-    const promptConfig = org.prompt_rappel as PromptConfig | null;
-    const email = await generateEmailWithConfig(
-      promptConfig,
-      DEFAULT_PROMPTS.rappel,
-      {
-        prenom: prospectData.prenom,
-        nom: prospectData.nom,
-        email: prospectData.email,
-        qualification: prospectData.qualification,
-        date_rdv: prospectData.dateRdvFormatted || prospectData.date_rdv,
-      }
-    );
-    logger.debug('Email generated:', email.objet);
-
-    // Send email via Gmail (using advisor's Gmail or org fallback)
-    // ✅ Email generated with real data directly, no placeholders to replace
-    const result = await sendEmail(emailCredentials, {
-      to: prospectData.email,
-      subject: email.objet,
-      body: email.corps,
-    });
-
-    logger.debug('Email sent, messageId:', result.messageId);
-
-    // Sheet update disabled in CRM-only mode
-    if (rowNumber) {
-      logger.debug('Sheet update skipped (CRM-only mode) - would have updated row', rowNumber);
-    }
-
-    // Log email sent
-    await supabase.from('email_logs').insert({
-      organization_id: org.id,
-      prospect_email: prospectData.email,
-      prospect_name: `${prospectData.prenom} ${prospectData.nom}`.trim(),
-      email_type: 'rappel',
-      subject: email.objet,
-      body: email.corps,
-      gmail_message_id: result.messageId,
-      sent_at: new Date().toISOString(),
-    });
-
-    logger.debug('Rappel envoye a', prospectData.email);
-
-    return NextResponse.json({
-      success: true,
-      messageId: result.messageId,
-      emailSentFrom: emailCredentialsResult.source === 'user' ? conseillerEmail : 'organization',
-    });
-  } catch (error) {
-    console.error('Erreur envoi rappel:', error);
-
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
 
     return NextResponse.json(
-      { error: 'Failed to send rappel email', details: errorMessage },
+      { error: 'Missing required fields: organizationId' },
+      { status: 400 }
+    );
+
+  } catch (error) {
+    logger.error('Webhook send-rappel error:', error);
+    return NextResponse.json(
+      { error: 'Erreur serveur' },
       { status: 500 }
     );
   }
 }
 
-// Verify QStash signature in production
-export async function POST(request: NextRequest) {
-  // In production, verify QStash signature
-  if (process.env.NODE_ENV === 'production' && process.env.QSTASH_CURRENT_SIGNING_KEY) {
-    const signature = request.headers.get('upstash-signature');
+async function handleCrmRappel(payload: CrmRappelPayload) {
+  const supabase = createAdminClient();
+  const actions: string[] = [];
 
-    if (!signature) {
-      return NextResponse.json({ error: 'Missing signature' }, { status: 401 });
+  // Get organization
+  const { data: org, error: orgError } = await supabase
+    .from('organizations')
+    .select('id, google_credentials, prompt_rappel')
+    .eq('id', payload.organizationId)
+    .single();
+
+  if (orgError || !org) {
+    return NextResponse.json(
+      { error: 'Organization not found' },
+      { status: 404 }
+    );
+  }
+  actions.push('Organization loaded');
+
+  let prospectData: any;
+
+  // Get prospect data - either from prospectId or from payload.prospectData
+  if (payload.prospectId) {
+    const { data: prospect, error: prospectError } = await supabase
+      .from('crm_prospects')
+      .select('*, assigned_user:assigned_to(id, email)')
+      .eq('id', payload.prospectId)
+      .eq('organization_id', payload.organizationId)
+      .single();
+
+    if (prospectError || !prospect) {
+      return NextResponse.json(
+        { error: 'Prospect not found' },
+        { status: 404 }
+      );
     }
 
-    // Dynamic import to avoid build-time errors
-    const { Receiver } = await import('@upstash/qstash');
-
-    const receiver = new Receiver({
-      currentSigningKey: process.env.QSTASH_CURRENT_SIGNING_KEY as string,
-      nextSigningKey: process.env.QSTASH_NEXT_SIGNING_KEY as string,
-    });
-
-    const body = await request.text();
-    const isValid = await receiver.verify({
-      signature,
-      body,
-    });
-
-    if (!isValid) {
-      return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
-    }
-
-    // Create a new request with the body for the handler
-    const newRequest = new NextRequest(request.url, {
-      method: request.method,
-      headers: request.headers,
-      body: body,
-    });
-
-    return handleRappel(newRequest);
+    prospectData = {
+      email: prospect.email,
+      nom: prospect.last_name,
+      prenom: prospect.first_name,
+      qualification: prospect.qualification,
+      besoins: prospect.notes,
+      assigned_user: prospect.assigned_user
+    };
+    actions.push('Prospect loaded from CRM');
+  } else if (payload.prospectData) {
+    // Use data from QStash payload
+    prospectData = payload.prospectData;
+    actions.push('Prospect data from QStash payload');
+  } else {
+    return NextResponse.json(
+      { error: 'No prospect data available' },
+      { status: 400 }
+    );
   }
 
-  // In development, skip signature verification
-  return handleRappel(request);
+  if (!prospectData.email) {
+    return NextResponse.json(
+      { error: 'Prospect email not available' },
+      { status: 400 }
+    );
+  }
+
+  try {
+    // Determine which email to use for sending
+    let senderEmail = payload.conseillerEmail;
+    if (!senderEmail && prospectData.assigned_user?.email) {
+      senderEmail = prospectData.assigned_user.email;
+    }
+
+    if (!senderEmail) {
+      return NextResponse.json(
+        { error: 'No sender email available (conseiller or assigned user)' },
+        { status: 400 }
+      );
+    }
+
+    // Generate reminder email content
+    const emailPrompt = org.prompt_rappel || DEFAULT_PROMPTS.rappel;
+    const emailContent = await generateEmailWithConfig(
+      emailPrompt,
+      DEFAULT_PROMPTS.rappel,
+      {
+        nom: prospectData.nom,
+        prenom: prospectData.prenom,
+        email: prospectData.email,
+        qualification: prospectData.qualification,
+        besoins: prospectData.besoins,
+        date_rdv: prospectData.date_rdv
+      }
+    );
+    actions.push('Email content generated');
+
+    // Send reminder email
+    const emailResult = await sendEmail(
+      org.google_credentials,
+      {
+        from: senderEmail,
+        to: prospectData.email,
+        subject: emailContent.objet,
+        body: emailContent.corps
+      },
+      payload.organizationId
+    );
+
+    if (emailResult.messageId) {
+      actions.push('✅ Email rappel envoyé');
+
+      // Update prospect if we have prospectId
+      if (payload.prospectId) {
+        await supabase
+          .from('crm_prospects')
+          .update({
+            metadata: {
+              mail_rappel_sent: true,
+              mail_rappel_sent_at: new Date().toISOString()
+            }
+          })
+          .eq('id', payload.prospectId);
+
+        actions.push('✅ Prospect updated - rappel marked as sent');
+      }
+    } else {
+      actions.push(`❌ Erreur email`);
+      return NextResponse.json({
+        success: false,
+        error: 'Failed to send reminder email',
+        actions
+      }, { status: 500 });
+    }
+
+    logger.debug('✅ Rappel workflow completed:', {
+      prospectId: payload.prospectId,
+      prospectEmail: prospectData.email,
+      actions
+    });
+
+    return NextResponse.json({
+      success: true,
+      actions,
+      message: 'Reminder email sent successfully'
+    });
+
+  } catch (error) {
+    logger.error('Rappel process error:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    actions.push(`❌ Erreur traitement: ${errorMessage}`);
+
+    return NextResponse.json({
+      success: false,
+      error: 'Failed to send reminder email',
+      actions
+    }, { status: 500 });
+  }
 }

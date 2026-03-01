@@ -1,103 +1,112 @@
 import { logger } from '@/lib/logger';
-
 import { createAdminClient } from '@/lib/supabase/admin';
-import { getValidCredentials, GoogleCredentials, downloadFileFromDrive, updateGoogleSheetCells } from '@/lib/google';
+import { getValidCredentials, GoogleCredentials, downloadFileFromDrive } from '@/lib/google';
 import { generateEmailWithConfig, DEFAULT_PROMPTS, PromptConfig } from '@/lib/anthropic';
 import { sendEmailWithBufferAttachment, getEmailCredentialsByEmail } from '@/lib/gmail';
 import { NextRequest, NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 
-interface WebhookData {
-  id?: string;
-  nom?: string;
-  prenom?: string;
-  email?: string;
-  telephone?: string;
-  age?: string;
-  situation_pro?: string;
-  revenus?: string;
-  patrimoine?: string;
-  besoins?: string;
-  notes_appel?: string;
-  statut?: string;
-  date_rdv?: string;
-  qualification?: string;
-  score?: string;
-  priorite?: string;
-  conseiller_email?: string;
-}
-
-interface WebhookPayload {
-  sheet_id: string;
+interface PlaquettePayload {
+  organizationId?: string;  // CRM mode - organization ID
+  prospectId?: string;      // CRM mode - prospect ID
+  // Legacy fields for backward compatibility
+  sheet_id?: string;
   row_number?: number;
-  conseiller_id?: string; // Optional: advisor's user ID for per-user Gmail
-  conseiller_email?: string; // Optional: advisor's email (from Apps Script column Z)
-  data: WebhookData;
-  plaquette_url?: string;
-}
-
-function mapToProspect(data: WebhookData) {
-  return {
-    id: data.id || '',
-    nom: data.nom || '',
-    prenom: data.prenom || '',
-    email: data.email || '',
-    telephone: data.telephone || '',
-    age: data.age || '',
-    situationPro: data.situation_pro || '',
-    revenus: data.revenus || '',
-    patrimoine: data.patrimoine || '',
-    besoins: data.besoins || '',
-    notesAppel: data.notes_appel || '',
-    statutAppel: data.statut || '',
-    dateRdv: data.date_rdv || '',
-    qualificationIA: data.qualification || '',
-    scoreIA: data.score || '',
-    prioriteIA: data.priorite || '',
-  };
 }
 
 export async function POST(request: NextRequest) {
-  // ❌ DEPRECATED: This webhook was for Google Sheets mode which is no longer supported
-  // The application now operates in CRM-only mode
-  return NextResponse.json(
-    {
-      error: 'Google Sheets webhooks are no longer supported',
-      message: 'Ultron now operates in CRM-only mode. Please use the CRM workflows instead.',
-      deprecated: true
-    },
-    { status: 410 } // Gone
-  );
-
-  /*
-  // LEGACY CODE - Kept for reference but no longer active
   try {
-    const payload: WebhookPayload = await request.json();
+    const payload = await request.json();
+    logger.debug('📄 Webhook plaquette déclenché:', payload);
 
-    if (!payload.sheet_id || !payload.data) {
+    // CRM Mode: Use organizationId + prospectId
+    if (payload.organizationId && payload.prospectId) {
+      return await handleCrmPlaquette(payload);
+    }
+
+    // Legacy mode no longer supported
+    if (payload.sheet_id) {
       return NextResponse.json(
-        { error: 'Missing sheet_id or data' },
-        { status: 400 }
+        { error: 'Google Sheets mode deprecated - Use CRM mode with organizationId + prospectId' },
+        { status: 410 }
       );
     }
 
-    const supabase = createAdminClient();
+    return NextResponse.json(
+      { error: 'Missing required fields: organizationId and prospectId' },
+      { status: 400 }
+    );
 
-    // Find organization by sheet_id
-    const { data: org, error: orgError } = await supabase
-      .from('organizations')
-      .select('id, google_credentials, google_sheet_id, prompt_plaquette, plaquette_url')
-      .eq('google_sheet_id', payload.sheet_id)
-      .single();
+  } catch (error) {
+    logger.error('Webhook plaquette error:', error);
+    return NextResponse.json(
+      { error: 'Erreur serveur' },
+      { status: 500 }
+    );
+  }
+}
 
-    if (orgError || !org) {
-      return NextResponse.json(
-        { error: 'Organization not found for this sheet_id' },
-        { status: 404 }
-      );
+async function handleCrmPlaquette(payload: { organizationId: string; prospectId: string }) {
+  const supabase = createAdminClient();
+  const actions: string[] = [];
+
+  // Get organization with plaquette configuration
+  const { data: org, error: orgError } = await supabase
+    .from('organizations')
+    .select('id, google_credentials, plaquette_url, prompt_plaquette')
+    .eq('id', payload.organizationId)
+    .single();
+
+  if (orgError || !org) {
+    return NextResponse.json(
+      { error: 'Organization not found' },
+      { status: 404 }
+    );
+  }
+  actions.push('Organization loaded');
+
+  if (!org.plaquette_url) {
+    return NextResponse.json(
+      { error: 'Plaquette not configured for this organization' },
+      { status: 400 }
+    );
+  }
+
+  // Get prospect from CRM
+  const { data: prospect, error: prospectError } = await supabase
+    .from('crm_prospects')
+    .select('*, assigned_user:assigned_to(id, email)')
+    .eq('id', payload.prospectId)
+    .eq('organization_id', payload.organizationId)
+    .single();
+
+  if (prospectError || !prospect) {
+    return NextResponse.json(
+      { error: 'Prospect not found' },
+      { status: 404 }
+    );
+  }
+  actions.push('Prospect loaded');
+
+  if (!prospect.email) {
+    return NextResponse.json(
+      { error: 'Prospect email not available' },
+      { status: 400 }
+    );
+  }
+
+  try {
+    // Check if plaquette already sent
+    if (prospect.metadata?.mail_plaquette_sent) {
+      return NextResponse.json({
+        success: true,
+        message: 'Plaquette already sent',
+        actions: [...actions, 'Already sent - skipped']
+      });
     }
 
+    // Get Google credentials for downloading plaquette
     if (!org.google_credentials) {
       return NextResponse.json(
         { error: 'Google credentials not configured' },
@@ -105,155 +114,103 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const prospect = mapToProspect(payload.data);
-    const plaquetteId = payload.plaquette_url || org.plaquette_url;
-
-    if (!prospect.email) {
+    const credentials = await getValidCredentials(org.google_credentials as GoogleCredentials);
+    if (!credentials) {
       return NextResponse.json(
-        { error: 'Prospect has no email address' },
+        { error: 'Invalid Google credentials' },
         { status: 400 }
       );
     }
+    actions.push('Google credentials validated');
 
-    if (!plaquetteId) {
-      return NextResponse.json(
-        { error: 'No plaquette configured. Please configure it in Settings.' },
-        { status: 400 }
-      );
-    }
+    // Download plaquette from Google Drive
+    const plaquetteFile = await downloadFileFromDrive(credentials, org.plaquette_url);
+    actions.push('Plaquette downloaded');
 
-    // Get valid credentials for Sheet/Drive operations (always org-level)
-    const sheetCredentials = await getValidCredentials(org.google_credentials as GoogleCredentials);
-
-    // Update org credentials if refreshed
-    if (sheetCredentials !== org.google_credentials) {
-      await supabase
-        .from('organizations')
-        .update({ google_credentials: sheetCredentials })
-        .eq('id', org.id);
-    }
-
-    // Get email credentials (advisor's Gmail by email, or fallback to org)
-    const conseillerEmail = payload.conseiller_email || payload.data?.conseiller_email;
-    const credentialsResponse = await getEmailCredentialsByEmail(org.id, conseillerEmail);
-
-    // Handle invalid_grant - fallback to org credentials
-    let emailCredentialsResult = credentialsResponse.result;
-    if (credentialsResponse.error?.error === 'invalid_grant') {
-      logger.debug('⚠️ Token invalide, fallback sur organisation:', credentialsResponse.error.message);
-      const orgCredentials = await getEmailCredentialsByEmail(org.id);
-      emailCredentialsResult = orgCredentials.result;
-    }
-
-    if (!emailCredentialsResult) {
-      const errorMsg = credentialsResponse.error?.message || 'No email credentials available';
-      return NextResponse.json({ error: errorMsg }, { status: 400 });
-    }
-    const emailCredentials = emailCredentialsResult.credentials;
-    logger.debug('Using email credentials from:', emailCredentialsResult.source, emailCredentialsResult.userId || 'org');
-
-    // Download plaquette from Google Drive (using org credentials)
-    logger.debug('Downloading plaquette from Drive, fileId:', plaquetteId);
-    const plaquetteFile = await downloadFileFromDrive(sheetCredentials, plaquetteId);
-    logger.debug('Plaquette downloaded:', plaquetteFile.fileName, plaquetteFile.mimeType);
-
-    // Generate email with Claude using organization prompt config
-    const promptConfig = org.prompt_plaquette as PromptConfig | null;
-
-    // DEBUG: Log important information
-    logger.debug('[PLAQUETTE DEBUG] Organization:', org.id);
-    logger.debug('[PLAQUETTE DEBUG] Has prompt_plaquette:', !!org.prompt_plaquette);
-    logger.debug('[PLAQUETTE DEBUG] PromptConfig:', promptConfig);
-    logger.debug('[PLAQUETTE DEBUG] Prospect data:', {
-      prenom: prospect.prenom,
-      nom: prospect.nom,
-      email: prospect.email,
-      besoins: prospect.besoins?.substring(0, 100) || 'none'
-    });
-
-    const email = await generateEmailWithConfig(
-      promptConfig,
+    // Generate email content
+    const emailPrompt = org.prompt_plaquette || DEFAULT_PROMPTS.plaquette;
+    const emailContent = await generateEmailWithConfig(
+      emailPrompt,
       DEFAULT_PROMPTS.plaquette,
       {
-        prenom: prospect.prenom,
-        nom: prospect.nom,
+        nom: prospect.last_name,
+        prenom: prospect.first_name,
         email: prospect.email,
-        besoins: prospect.besoins,
+        besoins: prospect.notes,
+        qualification: prospect.qualification
       }
     );
+    actions.push('Email content generated');
 
-    // DEBUG: Log generated email
-    logger.debug('[PLAQUETTE DEBUG] Generated email:', {
-      subject: email.objet,
-      body_length: email.corps?.length || 0,
-      body_preview: email.corps?.substring(0, 200) || 'no body'
-    });
-
-    // Send email with attachment via Gmail (using advisor's Gmail or org fallback)
-    logger.debug('[PLAQUETTE DEBUG] Sending email with:', {
-      to: prospect.email,
-      subject: email.objet,
-      from: emailCredentialsResult.userEmail || conseillerEmail,
-      attachmentName: plaquetteFile.fileName,
-      has_body: !!email.corps,
-      body_length: email.corps?.length || 0
-    });
-
-    const result = await sendEmailWithBufferAttachment(emailCredentials, {
-      to: prospect.email,
-      subject: email.objet,
-      body: email.corps,
-      from: emailCredentialsResult.userEmail || conseillerEmail,
-      attachmentBuffer: plaquetteFile.data,
-      attachmentName: plaquetteFile.fileName,
-      attachmentMimeType: plaquetteFile.mimeType,
-    }, org.id, emailCredentialsResult.userId);
-
-    logger.debug('[PLAQUETTE DEBUG] Email sent result:', {
-      messageId: result.messageId,
-      success: !!result.messageId
-    });
-
-    // Update column W (Mail Plaquette Envoyé = Oui)
-    if (payload.row_number) {
-      await updateGoogleSheetCells(sheetCredentials, org.google_sheet_id, [
-        { range: `W${payload.row_number}`, value: 'Oui' },
-      ]);
+    // Get advisor email for sending
+    const advisorEmail = prospect.assigned_user?.email;
+    if (!advisorEmail) {
+      return NextResponse.json(
+        { error: 'Assigned advisor email not found' },
+        { status: 400 }
+      );
     }
 
-    // Log email sent
-    await supabase.from('email_logs').insert({
-      organization_id: org.id,
-      prospect_email: prospect.email,
-      prospect_name: `${prospect.prenom} ${prospect.nom}`.trim(),
-      email_type: 'plaquette',
-      subject: email.objet,
-      body: email.corps,
-      gmail_message_id: result.messageId,
-      has_attachment: true,
-      sent_at: new Date().toISOString(),
+    // Send email with plaquette attachment
+    const emailResult = await sendEmailWithBufferAttachment(
+      org.google_credentials,
+      {
+        from: advisorEmail,
+        to: prospect.email,
+        subject: emailContent.objet,
+        body: emailContent.corps,
+        attachmentBuffer: plaquetteFile.data,
+        attachmentName: plaquetteFile.fileName || 'plaquette.pdf',
+        attachmentMimeType: plaquetteFile.mimeType || 'application/pdf'
+      },
+      payload.organizationId
+    );
+
+    if (emailResult.messageId) {
+      actions.push('✅ Email plaquette envoyé');
+
+      // Update prospect to mark plaquette as sent
+      await supabase
+        .from('crm_prospects')
+        .update({
+          metadata: {
+            ...prospect.metadata,
+            mail_plaquette_sent: true,
+            mail_plaquette_sent_at: new Date().toISOString()
+          }
+        })
+        .eq('id', payload.prospectId);
+
+      actions.push('✅ Prospect updated - plaquette marked as sent');
+    } else {
+      actions.push(`❌ Erreur email`);
+      return NextResponse.json({
+        success: false,
+        error: 'Failed to send email',
+        actions
+      }, { status: 500 });
+    }
+
+    logger.debug('✅ Plaquette workflow completed:', {
+      prospectId: payload.prospectId,
+      actions
     });
 
     return NextResponse.json({
       success: true,
-      messageId: result.messageId,
-      email: {
-        to: prospect.email,
-        subject: email.objet,
-      },
-      emailSentFrom: emailCredentialsResult.source === 'user' ? conseillerEmail : 'organization',
+      actions,
+      message: 'Plaquette sent successfully'
     });
-  } catch (error) {
-    console.error('Plaquette webhook error:', error);
 
+  } catch (error) {
+    logger.error('Plaquette process error:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    actions.push(`❌ Erreur traitement: ${errorMessage}`);
 
-    return NextResponse.json(
-      { error: 'Failed to process plaquette email', details: errorMessage },
-      { status: 500 }
-    );
-  } catch (error) {
-    // Error handling would be here
+    return NextResponse.json({
+      success: false,
+      error: 'Failed to send plaquette',
+      actions
+    }, { status: 500 });
   }
-  */
 }

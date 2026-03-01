@@ -138,7 +138,6 @@ Colonnes:
 - id: UUID
 - name: VARCHAR
 - slug: VARCHAR
-- [REMOVED] data_mode et google_sheet_id (architecture CRM-only)
 - google_credentials: JSONB
 - logo_url: VARCHAR
 - primary_color: VARCHAR

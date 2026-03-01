@@ -1,14 +1,13 @@
 import { Suspense } from 'react';
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
-import { GoogleSheetsConfig } from '@/components/settings/GoogleSheetsConfig';
 import { PlaquetteConfig } from '@/components/settings/PlaquetteConfig';
 import { TeamManager } from '@/components/settings/TeamManager';
 import { PromptsEditor } from '@/components/settings/PromptsEditor';
 import { ThemeSelector } from '@/components/settings/ThemeSelector';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
-import { FileSpreadsheet, Users, Sparkles, Palette, Database, Settings, ShoppingCart, User, Phone, Mail } from 'lucide-react';
+import { Users, Sparkles, Palette, Database, Settings, ShoppingCart, User, Phone, Mail } from 'lucide-react';
 import Link from 'next/link';
 import { PasswordChangeForm } from '@/components/settings/PasswordChangeForm';
 import { EmailRecapConfig } from '@/components/settings/EmailRecapConfig';
@@ -41,15 +40,6 @@ async function getOrganizationData() {
   return { org, userRole: user.role };
 }
 
-function GoogleSheetsConfigSkeleton() {
-  return (
-    <div className="space-y-6 p-6 border rounded-xl">
-      <Skeleton className="h-8 w-48" />
-      <Skeleton className="h-20 w-full" />
-      <Skeleton className="h-10 w-full" />
-    </div>
-  );
-}
 
 export default async function SettingsPage() {
   const data = await getOrganizationData();
@@ -74,10 +64,6 @@ export default async function SettingsPage() {
           <TabsTrigger value="emails" className="gap-2">
             <Mail className="h-4 w-4" />
             <span className="hidden sm:inline">Emails</span>
-          </TabsTrigger>
-          <TabsTrigger value="sheets" className="gap-2">
-            <FileSpreadsheet className="h-4 w-4" />
-            <span className="hidden sm:inline">Sheets</span>
           </TabsTrigger>
           <TabsTrigger value="team" className="gap-2">
             <Users className="h-4 w-4" />
@@ -132,25 +118,11 @@ export default async function SettingsPage() {
                   </>
                 )}
               </div>
+              <PlaquetteConfig initialPlaquetteId={plaquetteId} />
             </div>
           </TabsContent>
           <TabsContent value="emails">
             <EmailRecapConfig />
-          </TabsContent>
-          <TabsContent value="sheets">
-            <div className="space-y-6">
-              <div className="p-6 border rounded-xl bg-gray-50">
-                <h3 className="text-lg font-semibold mb-2">Mode CRM Uniquement</h3>
-                <p className="text-gray-600 mb-4">
-                  Ultron fonctionne désormais exclusivement en mode CRM.
-                  Les Google Sheets ne sont plus supportées.
-                </p>
-                <p className="text-sm text-gray-500">
-                  Toutes les données sont maintenant gérées via le CRM intégré pour une meilleure performance et sécurité.
-                </p>
-              </div>
-              <PlaquetteConfig initialPlaquetteId={plaquetteId} />
-            </div>
           </TabsContent>
           <TabsContent value="team">
             <TeamManager />

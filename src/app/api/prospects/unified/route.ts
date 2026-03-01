@@ -64,60 +64,32 @@ export async function GET(request: NextRequest) {
       order: paginationParams.order
     };
 
-    // ✅ PAGINATION: Récupérer le count total (avec fallback pour services Sheet)
-    let prospects: any;
-    let totalCount: number;
+    // Récupérer les prospects avec pagination
+    const [prospects, totalCount] = await Promise.all([
+      service.getAll(filters),
+      service.getTotalCount({ stage, qualification, search })
+    ]);
 
-    if (service.getTotalCount) {
-      // Mode CRM: récupération optimisée en parallèle
-      [prospects, totalCount] = await Promise.all([
-        service.getAll(filters),
-        service.getTotalCount({ stage, qualification, search }) // Count sans pagination
-      ]);
-    } else {
-      // Fallback pour services sans getTotalCount (ex: Sheet)
-      prospects = await service.getAll(filters);
-      totalCount = Array.isArray(prospects) ? prospects.length : 0;
-    }
+    // Convertir au format frontend
+    const transformedProspects = prospects.map(transformToUnifiedFormat);
 
-    // ✅ TRANSFORMATION : Convertir au format unified frontend
-    let transformedProspects: any[] = [];
-    if (Array.isArray(prospects)) {
-      transformedProspects = prospects.map(transformToUnifiedFormat);
-    }
+    // Créer la réponse avec métadonnées de pagination
+    const paginationMeta = PaginationHelper.generateMeta(
+      totalCount,
+      paginationParams.page || 1,
+      paginationParams.limit || 20
+    );
 
-    // ✅ PAGINATION : Créer la réponse avec métadonnées complètes
-    if (Array.isArray(prospects)) {
-      const paginationMeta = PaginationHelper.generateMeta(
-        totalCount,
-        paginationParams.page || 1,
-        paginationParams.limit || 20
-      );
-
-      return NextResponse.json({
-        data: transformedProspects,
-        pagination: paginationMeta,
-        meta: {
-          dataMode: 'crm',
-          filters: { stage, qualification, search },
-          totalItems: totalCount,
-          currentPage: paginationMeta.page,
-          pageSize: paginationMeta.limit
-        }
-      });
-    }
-
-    // Si le service retourne déjà un format avec total/count (futur)
-    // On transforme les données même dans ce cas
-    if (prospects && typeof prospects === 'object' && 'data' in prospects && Array.isArray((prospects as any).data)) {
-      const prospectsWithData = prospects as { data: ProspectData[]; [key: string]: any };
-      return NextResponse.json({
-        ...prospectsWithData,
-        data: prospectsWithData.data.map(transformToUnifiedFormat)
-      });
-    }
-
-    return NextResponse.json(transformedProspects);
+    return NextResponse.json({
+      data: transformedProspects,
+      pagination: paginationMeta,
+      meta: {
+        filters: { stage, qualification, search },
+        totalItems: totalCount,
+        currentPage: paginationMeta.page,
+        pageSize: paginationMeta.limit
+      }
+    });
 
   } catch (error) {
     logger.error('GET /api/prospects/unified error:', error);
