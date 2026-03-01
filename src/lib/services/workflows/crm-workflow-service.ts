@@ -1,6 +1,6 @@
 import { createAdminClient } from '@/lib/supabase-admin';
 import { logger } from '@/lib/logger';
-import { qualifyProspect, generateEmailWithConfig, DEFAULT_PROMPTS, PromptConfig, ScoringConfig } from '@/lib/anthropic';
+import { qualifyProspect, generateEmailWithConfig, DEFAULT_PROMPTS, PromptConfig, ScoringConfig, reformulateProspectInterest } from '@/lib/anthropic';
 import { sendEmail, sendEmailWithBufferAttachment, getEmailCredentials, EmailCredentialsResult } from '@/lib/gmail';
 import { scheduleRappelEmail } from '@/lib/qstash';
 import { getValidCredentials, downloadFileFromDrive, GoogleCredentials } from '@/lib/google';
@@ -429,6 +429,18 @@ async function workflowRdvValide(
     // Get the Meet link from prospect metadata (set by pipeline when creating planning event)
     const meetLink = prospect.metadata?.meet_link as string | undefined;
 
+    // 🆕 Reformuler les intérêts du prospect avec l'IA pour un texte naturel
+    const interetsReformules = await reformulateProspectInterest({
+      besoins: prospect.notes,
+      notes: prospect.notes,
+      source: prospect.source,
+      profession: prospect.profession,
+      age: prospect.age || undefined,
+      patrimoine_estime: prospect.patrimoine_estime || undefined,
+      revenus_annuels: prospect.revenus_annuels || undefined,
+    });
+    actions.push(`Intérêts reformulés: "${interetsReformules}"`);
+
     const email = await generateEmailWithConfig(
       promptConfig,
       DEFAULT_PROMPTS.synthese,
@@ -437,7 +449,7 @@ async function workflowRdvValide(
         nom: prospect.last_name,
         email: prospect.email,
         qualification: prospect.qualification?.toUpperCase() || '',
-        besoins: prospect.notes,
+        besoins: interetsReformules, // 🆕 Utilise la reformulation IA au lieu des notes brutes
         notes_appel: prospect.notes,
         date_rdv: dateRdvFormatted,
       }

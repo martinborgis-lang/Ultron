@@ -781,3 +781,95 @@ export async function generateEmailWithGDPR(
   // Pas de footer GDPR automatique pour les échanges relationnels
   return await generateEmail(systemPrompt, userPrompt);
 }
+
+/**
+ * 🆕 Reformule les intérêts/besoins d'un prospect de manière naturelle
+ * Convertit du texte technique/brut en formulation professionnelle
+ */
+export async function reformulateProspectInterest(prospect: {
+  besoins?: string;
+  notes?: string;
+  source?: string;
+  profession?: string;
+  age?: number;
+  patrimoine_estime?: number;
+  revenus_annuels?: number;
+}): Promise<string> {
+  try {
+    // Si aucune information exploitable, retourner formulation générique
+    const infoDisponibles = [
+      prospect.besoins,
+      prospect.notes,
+      prospect.profession
+    ].filter(info => info && info.trim() && !info.includes('formulaire') && !info.includes('form_test'));
+
+    if (infoDisponibles.length === 0) {
+      return "la gestion et l'optimisation de votre patrimoine";
+    }
+
+    // Préparer le contexte pour l'IA
+    const contextPrompt = `Reformule de manière naturelle et professionnelle l'intérêt de ce prospect pour un email de conseiller en gestion de patrimoine.
+
+INFORMATIONS PROSPECT :
+- Besoins/Notes : ${prospect.besoins || 'Non renseigné'}
+- Profession : ${prospect.profession || 'Non renseigné'}
+- Âge approximatif : ${prospect.age || 'Non renseigné'}
+- Patrimoine estimé : ${prospect.patrimoine_estime ? `${prospect.patrimoine_estime}€` : 'Non renseigné'}
+- Revenus annuels : ${prospect.revenus_annuels ? `${prospect.revenus_annuels}€` : 'Non renseigné'}
+- Source : ${prospect.source || 'Non renseigné'}
+
+RÈGLES DE REFORMULATION :
+1. Éviter tout texte technique comme "formulaire", "form_test", "prospect créé via"
+2. Se concentrer sur les vrais besoins patrimoniaux
+3. Utiliser un vocabulaire professionnel CGP
+4. Rester naturel et fluide
+5. Format : une phrase courte commençant par "la" ou "le" ou "l'"
+6. Si information insuffisante, utiliser une formulation générique appropriée
+
+EXEMPLES BONS :
+- "la préparation de votre retraite et l'optimisation fiscale"
+- "la diversification de votre épargne et la constitution d'un patrimoine immobilier"
+- "l'optimisation de votre succession et la transmission de patrimoine"
+- "la sécurisation de vos revenus et le développement de votre épargne"
+
+EXEMPLES INTERDITS :
+- "Prospect créé via formulaire form_test"
+- "votre demande du 30/01/2026"
+- "les informations saisies dans le formulaire"
+
+Réponds UNIQUEMENT avec la reformulation, sans guillemets, sans explication.
+Si les informations sont insuffisantes ou trop techniques, réponds : "la gestion et l'optimisation de votre patrimoine"`;
+
+    const response = await anthropic.messages.create({
+      model: "claude-3-haiku-20240307", // Modèle plus rapide et moins cher
+      max_tokens: 100,
+      messages: [{
+        role: "user",
+        content: contextPrompt
+      }]
+    });
+
+    const reformulation = (response.content[0] as any).text.trim();
+
+    // Validation de sécurité - éviter les textes techniques
+    const textesTechniquesInterdits = [
+      'formulaire', 'form_test', 'prospect créé', 'via', 'am', 'pm', '2026', '2025', '2024',
+      'saisie', 'création', 'base de données'
+    ];
+
+    const contientTexteInterdit = textesTechniquesInterdits.some(terme =>
+      reformulation.toLowerCase().includes(terme.toLowerCase())
+    );
+
+    if (contientTexteInterdit || reformulation.length < 10) {
+      return "la gestion et l'optimisation de votre patrimoine";
+    }
+
+    return reformulation;
+
+  } catch (error) {
+    console.error('Erreur reformulation intérêts:', error);
+    // Fallback sécurisé
+    return "la gestion et l'optimisation de votre patrimoine";
+  }
+}
