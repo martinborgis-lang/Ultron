@@ -49,6 +49,41 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
+  // 🆕 CHECK PROFIL COMPLET : Vérifier si l'utilisateur connecté a un profil complet
+  if (user &&
+      user.email_confirmed_at &&
+      !request.nextUrl.pathname.startsWith('/complete-registration') &&
+      !request.nextUrl.pathname.startsWith('/api') &&
+      !request.nextUrl.pathname.startsWith('/auth') &&
+      !request.nextUrl.pathname.startsWith('/_next') &&
+      request.nextUrl.pathname !== '/' &&
+      request.nextUrl.pathname !== '/login' &&
+      request.nextUrl.pathname !== '/register'
+  ) {
+    // Vérifier si l'utilisateur a un profil dans la DB
+    try {
+      const { data: userProfile } = await supabase
+        .from('users')
+        .select('id, organization_id')
+        .eq('auth_id', user.id)
+        .single();
+
+      // Si pas de profil ou pas d'organisation, rediriger vers complete-registration
+      if (!userProfile || !userProfile.organization_id) {
+        const url = request.nextUrl.clone();
+        url.pathname = '/complete-registration';
+        console.log(`🔧 [Middleware] Redirection ${user.email} vers /complete-registration (profil incomplet)`);
+        return NextResponse.redirect(url);
+      }
+    } catch (error) {
+      // En cas d'erreur DB, rediriger aussi vers complete-registration
+      const url = request.nextUrl.clone();
+      url.pathname = '/complete-registration';
+      console.log(`🔧 [Middleware] Redirection ${user.email} vers /complete-registration (erreur DB)`);
+      return NextResponse.redirect(url);
+    }
+  }
+
   // Redirect logged in users away from auth pages
   if (
     user &&

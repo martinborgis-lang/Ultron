@@ -38,9 +38,13 @@ export async function GET() {
     }
 
     if (!currentUser?.organization_id) {
+      // Log pour debug
+      console.error(`[Team API] Utilisateur sans organisation: ${authUser.email} (${authUser.id})`);
+
       return NextResponse.json({
-        error: 'Organisation non trouvée pour cet utilisateur',
-        user_id: authUser.id
+        error: 'Votre compte n\'est pas rattaché à une organisation',
+        message: 'Il semble que votre inscription ne soit pas terminée. Veuillez vous déconnecter et vous reconnecter pour finaliser votre compte.',
+        action: 'INCOMPLETE_REGISTRATION'
       }, { status: 404 });
     }
 
@@ -95,7 +99,12 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (!currentUser?.organization_id) {
-      return NextResponse.json({ error: 'Organisation non trouvee' }, { status: 404 });
+      console.error(`[Team API POST] Utilisateur sans organisation: ${authUser.email} (${authUser.id})`);
+      return NextResponse.json({
+        error: 'Votre compte n\'est pas rattaché à une organisation',
+        message: 'Il semble que votre inscription ne soit pas terminée. Veuillez vous déconnecter et vous reconnecter pour finaliser votre compte.',
+        action: 'INCOMPLETE_REGISTRATION'
+      }, { status: 404 });
     }
 
     // Only admins can add team members
