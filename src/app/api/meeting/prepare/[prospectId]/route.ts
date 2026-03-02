@@ -12,21 +12,33 @@ export async function GET(
 ) {
   try {
     const { prospectId } = await params;
+    console.log('[meeting-prepare] 🟢 Début requête pour prospect:', prospectId);
 
     // Valider le token d'extension
     const authHeader = request.headers.get('Authorization');
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      console.log('[meeting-prepare] ❌ Pas de header Authorization');
       return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
     }
 
     const token = authHeader.replace('Bearer ', '');
-    const auth = await validateExtensionToken(token);
+    console.log('[meeting-prepare] 🔑 Token présent (longueur:', token.length, ')');
+
+    let auth;
+    try {
+      auth = await validateExtensionToken(token);
+    } catch (tokenError) {
+      console.error('[meeting-prepare] ❌ Erreur validation token:', tokenError);
+      return NextResponse.json({ error: 'Erreur validation token: ' + (tokenError as Error).message }, { status: 401 });
+    }
 
     if (!auth) {
+      console.log('[meeting-prepare] ❌ Token invalide');
       return NextResponse.json({ error: 'Token invalide' }, { status: 401 });
     }
 
     const userData = auth.dbUser;
+    console.log('[meeting-prepare] ✅ User authentifié:', userData.email);
 
     // Récupérer l'organisation
     const adminClient = createAdminClient();
@@ -67,11 +79,14 @@ async function getProspectCRM(prospectId: string, organizationId: string) {
     .single();
 
   if (prospectError || !prospectData) {
+    console.error('[meeting-prepare] ❌ Prospect non trouvé - prospectId:', prospectId, 'error:', prospectError);
     return NextResponse.json(
-      { error: 'Prospect non trouvé' },
+      { error: 'Prospect non trouvé', prospectId, details: prospectError?.message },
       { status: 404 }
     );
   }
+
+  console.log('[meeting-prepare] ✅ Prospect trouvé:', prospectData.first_name, prospectData.last_name);
 
   const prospect = {
     id: prospectData.id,

@@ -100,11 +100,14 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    if (!credentials) {
-      console.log('[Extension Calendar] ❌ Aucunes credentials Google disponibles');
+    if (!credentials?.refresh_token) {
+      console.log('[Extension Calendar] ❌ Aucunes credentials Google disponibles ou pas de refresh_token');
       return NextResponse.json(
-        { error: 'Google Calendar non configuré. Veuillez connecter Google dans les paramètres.' },
-        { status: 400, headers: corsHeaders() }
+        {
+          events: [], // Retourner un tableau vide, pas une erreur
+          warning: 'Google Calendar non connecté. Veuillez reconnecter Google dans les paramètres.'
+        },
+        { status: 200, headers: corsHeaders() } // 200 avec warning, pas 400
       );
     }
 
@@ -125,11 +128,35 @@ export async function GET(request: NextRequest) {
     try {
       allEvents = await getCalendarEvents(credentials, oneMonthAgo, oneMonthLater);
       console.log('[Extension Calendar] ✅ API Google Calendar OK, événements récupérés:', allEvents?.length || 0);
-    } catch (calendarError) {
+    } catch (calendarError: any) {
       console.error('[Extension Calendar] ❌ Erreur API Google Calendar:', calendarError);
+
+      // 🔴 FIX: Gérer spécifiquement invalid_grant
+      if (calendarError.message?.includes('invalid_grant') ||
+          calendarError.code === 'invalid_grant' ||
+          calendarError.message?.includes('Token has been expired')) {
+        console.error('[Extension Calendar] 🔴 invalid_grant - token expiré');
+
+        // Retourner un résultat vide avec un warning, PAS une erreur 500
+        return NextResponse.json(
+          {
+            events: [],
+            warning: 'Session Google expirée. Veuillez reconnecter Google dans les paramètres.',
+            action: 'reconnect_google'
+          },
+          { status: 200, headers: corsHeaders() } // Crucial : 200 pas 500
+        );
+      }
+
+      // Autres erreurs Google Calendar → aussi retourner 200 avec événements vides
+      console.error('[Extension Calendar] ❌ Autre erreur Google Calendar, fallback vers tableau vide');
       return NextResponse.json(
-        { error: 'Erreur Google Calendar: ' + (calendarError as Error).message },
-        { status: 500, headers: corsHeaders() }
+        {
+          events: [],
+          warning: 'Erreur Google Calendar: ' + (calendarError.message || 'Erreur inconnue'),
+          error: calendarError.message
+        },
+        { status: 200, headers: corsHeaders() } // 200 avec events vide
       );
     }
 

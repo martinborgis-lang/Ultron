@@ -1,4 +1,5 @@
 import { logger } from '@/lib/logger';
+import { getValidCredentials } from '@/lib/google';
 
 import { google } from 'googleapis';
 import type { GoogleCredentials, GoogleCalendarEvent, CreateCalendarEventParams } from '@/types/database';
@@ -39,7 +40,9 @@ export async function getCalendarEvents(
   timeMin: Date,
   timeMax: Date
 ) {
-  const calendar = getCalendarClient(credentials);
+  // 🔴 FIX: Refresh token automatiquement si nécessaire
+  const validCredentials = await getValidCredentials(credentials);
+  const calendar = getCalendarClient(validCredentials);
 
   const response = await calendar.events.list({
     calendarId: 'primary',

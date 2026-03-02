@@ -73,8 +73,19 @@ export async function GET(request: Request) {
     console.log('🔑 Tokens received:', {
       hasAccessToken: !!tokens.access_token,
       hasRefreshToken: !!tokens.refresh_token,
-      tokenLength: tokens.access_token?.length
+      tokenLength: tokens.access_token?.length,
+      refreshTokenLength: tokens.refresh_token?.length,
+      expiryDate: tokens.expiry_date ? new Date(tokens.expiry_date).toISOString() : 'NONE'
     });
+
+    // 🔴 FIX: Vérifier que le refresh_token est présent
+    if (!tokens.refresh_token) {
+      console.error('❌ ERREUR CRITIQUE: Pas de refresh_token reçu de Google!');
+      console.error('❌ Ceci arrive quand prompt=consent n\'est pas défini dans generateAuthUrl');
+      return NextResponse.redirect(
+        new URL('/settings?google=error&message=no_refresh_token', process.env.NEXT_PUBLIC_APP_URL)
+      );
+    }
 
     const type = stateData.type || 'organization';
     console.log(`🎯 OAuth type determined: "${type}"`);

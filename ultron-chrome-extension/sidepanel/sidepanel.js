@@ -338,8 +338,39 @@ function showMainContent() {
 }
 
 async function loadProspects() {
-  // Nouvelle approche: charger les événements Google Calendar au lieu des prospects statiques
-  await loadCalendarEvents();
+  console.log('Ultron [PROSPECTS]: === CHARGEMENT PROSPECTS AVEC FALLBACK ===');
+
+  try {
+    // ÉTAPE 1 : Essayer de charger depuis Google Calendar (ENRICHI)
+    console.log('Ultron [PROSPECTS]: Tentative chargement depuis Google Calendar...');
+    await loadCalendarEvents();
+
+    // Vérifier si des prospects ont été chargés
+    if (prospects && prospects.length > 0) {
+      console.log(`Ultron [PROSPECTS]: ✅ ${prospects.length} prospects chargés depuis Calendar`);
+      return;
+    }
+
+    // Si aucun prospect depuis Calendar, fallback vers API prospects
+    console.log('Ultron [PROSPECTS]: ⚠️ Aucun prospect depuis Calendar, fallback vers API prospects...');
+    throw new Error('Aucun événement Calendar - passage au fallback');
+
+  } catch (error) {
+    // ÉTAPE 2 : Fallback vers l'ancienne API prospects (TOUJOURS FONCTIONNEL)
+    console.warn('Ultron [PROSPECTS]: Erreur Calendar, fallback vers prospects CRM:', error.message);
+
+    try {
+      await loadProspectsLegacy();
+      console.log(`Ultron [PROSPECTS]: ✅ ${prospects.length} prospects chargés depuis CRM (fallback)`);
+    } catch (fallbackError) {
+      console.error('Ultron [PROSPECTS]: ❌ Échec fallback prospects CRM:', fallbackError.message);
+      // Même en cas d'échec total, ne pas planter l'extension
+      prospects = [];
+      prospectSelect.innerHTML = '<option value="">Erreur de chargement des prospects</option>';
+    }
+  }
+
+  console.log('Ultron [PROSPECTS]: === FIN CHARGEMENT PROSPECTS ===');
 }
 
 async function loadCalendarEvents() {
@@ -417,6 +448,19 @@ async function loadCalendarEvents() {
 
     const data = await response.json();
     const events = data.events || [];
+
+    // 🔴 FIX: Gérer les warnings (session expirée, etc.)
+    if (data.warning) {
+      console.warn('Ultron [CALENDAR]: ⚠️ Warning reçu:', data.warning);
+      if (data.action === 'reconnect_google') {
+        console.warn('Ultron [CALENDAR]: Session Google expirée, mais l\'extension peut continuer sans Calendar');
+      }
+
+      // Si aucun événement à cause d'un warning, déclencher le fallback
+      if (events.length === 0) {
+        throw new Error(`Calendar indisponible: ${data.warning}`);
+      }
+    }
 
     console.log('Ultron [CALENDAR]: ✅ Événements RDV reçus:', events.length);
     console.log('Ultron [CALENDAR]: Liste des événements:');
