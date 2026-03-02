@@ -43,7 +43,8 @@
       "Bash(timeout 30s bash -c 'until curl -s http://localhost:3001 > /dev/null; do sleep 1; done')",
       "Bash(timeout 300s npm run build)",
       "WebSearch",
-      "WebFetch(domain:reactbits.dev)"
+      "WebFetch(domain:reactbits.dev)",
+      "Bash(git reset HEAD .)"
     ],
     "deny": [],
     "ask": []
