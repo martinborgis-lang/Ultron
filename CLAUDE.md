@@ -42,6 +42,10 @@
 - **🆕 LinkedIn Agent** : Générateur IA de posts LinkedIn professionnels
 - **🆕 Agent Vocal IA** : Appels automatiques avec Vapi.ai et qualification IA
 - **🆕 Click-to-Call** : Système d'appels WebRTC intégré avec Twilio
+- **🆕 Calculateur Défiscalisation** : Simulations fiscales avancées
+- **🆕 Générateur de Lettres** : Templates lettres automatisées (rachat, etc.)
+- **🆕 Système GDPR** : Conformité protection données
+- **🆕 Système Sécurité** : Protection injections et monitoring avancé
 
 ---
 
@@ -76,20 +80,26 @@ Ultron utilise une architecture CRM complète basée sur Supabase :
 
 | Composant | Technologie |
 |-----------|-------------|
-| Framework | Next.js 14 (App Router) |
-| Langage | TypeScript |
-| Styling | Tailwind CSS + shadcn/ui |
+| Framework | Next.js 16.1.1 (App Router) |
+| Langage | TypeScript 5+ |
+| Runtime | React 19.2.3 |
+| Styling | Tailwind CSS 4 + shadcn/ui |
 | Database | Supabase (PostgreSQL) |
 | Auth | Supabase Auth |
 | AI | Anthropic Claude Sonnet 4 |
 | Email | Gmail API |
 | Scheduling | Upstash QStash |
+| Voice/Calls | Vapi.ai + Twilio WebRTC |
+| Transcription | Deepgram |
 | Drag & Drop | @dnd-kit/core |
 | Icons | Lucide React |
 | Charts | Recharts |
+| Animations | Framer Motion + GSAP |
+| 3D Graphics | Three.js + React Three Fiber |
+| PDF Generation | jsPDF + jsPDF-AutoTable |
 | Hosting | Vercel |
 | Real-time | Supabase Realtime |
-| PDF Generation | jsPDF / PDFKit |
+| Scroll | Lenis (smooth scroll) |
 
 ---
 
@@ -100,21 +110,28 @@ src/
 ├── app/
 │   ├── (auth)/
 │   │   ├── login/page.tsx
-│   │   └── register/page.tsx
+│   │   ├── register/page.tsx
+│   │   ├── complete-registration/page.tsx
+│   │   ├── forgot-password/page.tsx
+│   │   └── reset-password/page.tsx
 │   ├── (dashboard)/
 │   │   ├── dashboard/page.tsx
-│   │   ├── admin/page.tsx                  # 🆕 Dashboard Admin
+│   │   ├── admin/
+│   │   │   ├── page.tsx                    # 🆕 Dashboard Admin principal
+│   │   │   ├── prompts/page.tsx            # 🆕 Gestion prompts admin
+│   │   │   └── sync/page.tsx               # 🆕 Synchronisation données
 │   │   ├── prospects/
 │   │   │   ├── page.tsx
-│   │   │   └── [id]/page.tsx               # Vue 360° prospect
-│   │   ├── pipeline/page.tsx               # Kanban CRM
-│   │   ├── planning/page.tsx               # Tâches & événements
+│   │   │   └── [id]/page.tsx               # Vue 360° prospect détaillée
+│   │   ├── pipeline/page.tsx               # Kanban CRM avancé
+│   │   ├── planning/page.tsx               # Tâches & événements avec Google Cal
 │   │   ├── meetings/page.tsx               # 🆕 Gestion transcriptions RDV
 │   │   ├── assistant/page.tsx              # 🆕 IA Assistant conversationnel
 │   │   ├── leads-finder/page.tsx           # 🆕 Moteur recherche prospects
 │   │   ├── linkedin-agent/page.tsx         # 🆕 Générateur posts LinkedIn IA
 │   │   ├── voice/
 │   │   │   ├── ai-agent/page.tsx           # 🆕 Dashboard Agent IA automatique
+│   │   │   ├── calls/page.tsx              # 🆕 Historique appels
 │   │   │   └── form-test/page.tsx          # 🆕 Test formulaires webhooks
 │   │   ├── tasks/page.tsx                  # 🆕 Gestionnaire de tâches
 │   │   ├── import/page.tsx                 # 🆕 Import CSV prospects
@@ -122,7 +139,8 @@ src/
 │   │   ├── meeting/
 │   │   │   └── prepare/[prospectId]/page.tsx # 🆕 Préparation RDV IA
 │   │   ├── features/
-│   │   │   └── calculateur/page.tsx
+│   │   │   ├── calculateur/page.tsx
+│   │   │   └── defiscalisation/page.tsx    # 🆕 Calculateur défiscalisation
 │   │   └── settings/
 │   │       ├── page.tsx
 │   │       ├── prompts/page.tsx
@@ -131,6 +149,9 @@ src/
 │   │       ├── thresholds/page.tsx         # 🆕 Seuils admin
 │   │       ├── voice/page.tsx              # 🆕 Configuration Agent IA vocal
 │   │       └── team/page.tsx
+│   ├── (legal)/                            # 🆕 Pages légales
+│   │   ├── legal/page.tsx                  # Mentions légales
+│   │   └── privacy/page.tsx                # Politique de confidentialité
 │   ├── auth/
 │   │   ├── callback/page.tsx
 │   │   └── set-password/page.tsx
@@ -174,26 +195,50 @@ src/
 │   │   │   │   ├── execute-call/route.ts   # POST exécution appel programmé
 │   │   │   │   ├── call/route.ts           # GET/POST appels manuels
 │   │   │   │   ├── book-appointment/route.ts # POST prise RDV
-│   │   │   │   └── available-slots/route.ts # GET créneaux disponibles
+│   │   │   │   ├── available-slots/route.ts # GET créneaux disponibles
+│   │   │   │   └── stats/route.ts          # GET statistiques agent vocal
+│   │   │   ├── calls/                      # 🆕 APIs historique appels
+│   │   │   │   ├── route.ts                # GET/POST appels WebRTC
+│   │   │   │   └── stats/route.ts          # GET statistiques appels
 │   │   │   ├── click-to-call/
 │   │   │   │   ├── token/route.ts          # GET token Twilio WebRTC
 │   │   │   │   ├── call/route.ts           # POST initiation appel
+│   │   │   │   ├── hangup/route.ts         # POST fin appel avec outcome
 │   │   │   │   ├── twiml/route.ts          # GET configuration TwiML
+│   │   │   │   ├── twilio-webhook/route.ts # POST webhook événements Twilio
+│   │   │   │   ├── recording-webhook/route.ts # POST webhook enregistrements
 │   │   │   │   └── save-notes/route.ts     # POST sauvegarde notes appel
 │   │   │   ├── config/route.ts             # GET/POST configuration générale
-│   │   │   └── setup/route.ts              # POST configuration initiale
+│   │   │   ├── setup/route.ts              # POST configuration initiale
+│   │   │   ├── debug/route.ts              # 🆕 Debug et diagnostics
+│   │   │   ├── fix-status/route.ts         # 🆕 Correction statuts appels
+│   │   │   ├── migrate-scheduled/route.ts  # 🆕 Migration appels programmés
+│   │   │   ├── test-call/route.ts          # 🆕 Test appels
+│   │   │   ├── test-direct/route.ts        # 🆕 Test appels directs
+│   │   │   ├── test-execute/route.ts       # 🆕 Test exécution
+│   │   │   ├── test-format/route.ts        # 🆕 Test formats
+│   │   │   ├── test-fresh/route.ts         # 🆕 Test nouvelles fonctionnalités
+│   │   │   └── form/organization/route.ts  # 🆕 Configuration organisation
 │   │   ├── extension/                      # 🆕 APIs Extension Chrome
 │   │   │   ├── analyze/route.ts            # POST analyse prospect
 │   │   │   ├── analyze-realtime/route.ts   # POST analyse temps réel
 │   │   │   ├── prospects/route.ts          # GET prospects pour extension
 │   │   │   ├── search-prospect/route.ts    # POST recherche prospect
-│   │   │   └── prospect/[id]/route.ts      # GET détail prospect
+│   │   │   ├── prospect/[id]/route.ts      # GET détail prospect
+│   │   │   └── calendar-events/route.ts    # 🆕 GET événements calendrier
 │   │   ├── assistant/route.ts              # 🆕 POST IA Assistant chat
 │   │   ├── admin/                          # 🆕 APIs Dashboard Admin
 │   │   │   ├── stats/route.ts              # GET statistiques admin
 │   │   │   ├── charts/route.ts             # GET données graphiques
 │   │   │   ├── thresholds/route.ts         # GET/POST seuils config
-│   │   │   └── revenue-breakdown/route.ts  # GET répartition revenus
+│   │   │   ├── revenue-breakdown/route.ts  # GET répartition revenus
+│   │   │   ├── check-prompts/route.ts      # 🆕 Vérification prompts
+│   │   │   ├── init-prompts/route.ts       # 🆕 Initialisation prompts
+│   │   │   ├── clean-rdv-effectue/route.ts # 🆕 Nettoyage RDV effectués
+│   │   │   ├── force-stages/route.ts       # 🆕 Force synchronisation stages
+│   │   │   ├── migrate-stages-rdv/route.ts # 🆕 Migration stages RDV
+│   │   │   ├── sync-stages/route.ts        # 🆕 Synchronisation stages
+│   │   │   └── test-email-scheduling/route.ts # 🆕 Test programmation emails
 │   │   ├── products/                       # 🆕 APIs Gestion Produits
 │   │   │   ├── route.ts                    # GET/POST produits
 │   │   │   └── [id]/route.ts               # GET/PATCH/DELETE produit
@@ -222,14 +267,55 @@ src/
 │   │   │   ├── qualification/route.ts
 │   │   │   ├── rdv-valide/route.ts
 │   │   │   ├── plaquette/route.ts
-│   │   │   └── send-rappel/route.ts
+│   │   │   ├── send-rappel/route.ts
+│   │   │   └── send-scheduled-email/route.ts # 🆕 Envoi emails programmés
 │   │   ├── agents/                         # 🆕 APIs Agents automatisés
 │   │   │   ├── telegram/route.ts           # Webhook Telegram
 │   │   │   └── trigger/route.ts            # Déclenchement agents
 │   │   ├── organization/
+│   │   │   ├── email-settings/route.ts     # 🆕 Configuration emails
+│   │   │   ├── plaquette/route.ts          # 🆕 Gestion plaquettes
+│   │   │   └── scoring/route.ts            # 🆕 Configuration scoring
 │   │   ├── team/
+│   │   │   ├── route.ts                    # GET/POST équipe
+│   │   │   └── [id]/
+│   │   │       ├── route.ts                # GET/PATCH/DELETE membre
+│   │   │       └── gmail/
+│   │   │           ├── route.ts            # Configuration Gmail
+│   │   │           └── test/route.ts       # Test configuration Gmail
 │   │   ├── user/
-│   │   └── prompts/
+│   │   │   └── me/route.ts                 # GET profil utilisateur
+│   │   ├── prompts/
+│   │   │   ├── route.ts                    # GET/POST prompts
+│   │   │   └── test/route.ts               # 🆕 Test prompts
+│   │   ├── fiscal/                         # 🆕 APIs défiscalisation
+│   │   │   └── simulate/route.ts           # Simulation défiscalisation
+│   │   ├── gdpr/                           # 🆕 APIs conformité GDPR
+│   │   │   ├── delete/route.ts             # Suppression données
+│   │   │   ├── export/route.ts             # Export données
+│   │   │   └── rectify/route.ts            # Rectification données
+│   │   ├── letters/                        # 🆕 APIs génération lettres
+│   │   │   ├── generate/route.ts           # Génération lettres
+│   │   │   └── pdf/route.ts                # Export PDF lettres
+│   │   ├── sales/                          # 🆕 APIs gestion ventes
+│   │   │   ├── route.ts                    # CRUD ventes
+│   │   │   ├── calculate/route.ts          # Calculs commissions
+│   │   │   └── commissions/route.ts        # Gestion commissions
+│   │   ├── security/                       # 🆕 APIs sécurité
+│   │   │   ├── stats/route.ts              # Statistiques sécurité
+│   │   │   ├── test/
+│   │   │   │   ├── route.ts                # Tests sécurité
+│   │   │   │   └── attack/route.ts         # Tests d'attaque
+│   │   │   └── test-email-templates/route.ts
+│   │   ├── unsubscribe/                    # 🆕 APIs désabonnement
+│   │   │   ├── route.ts                    # Désabonnement
+│   │   │   └── verify/route.ts             # Vérification désabonnement
+│   │   ├── gmail/test/route.ts             # 🆕 Test Gmail
+│   │   ├── test-db/route.ts                # 🆕 Test base de données
+│   │   ├── pagination/test/route.ts        # 🆕 Test pagination
+│   │   ├── debug/plaquette/route.ts        # 🆕 Debug plaquettes
+│   │   ├── security-test/route.ts          # 🆕 Test sécurité global
+│   │   └── prompt-security-test/route.ts   # 🆕 Test sécurité prompts
 │   ├── layout.tsx
 │   └── page.tsx                            # 🆕 Landing page moderne
 ├── components/
@@ -279,14 +365,18 @@ src/
 │   ├── meeting/                            # 🆕 Composants Meetings
 │   │   └── MeetingPrepContent.tsx
 │   ├── voice/                              # 🆕 Composants Agent Vocal
-│   │   └── CallWidget.tsx                  # Widget appels WebRTC intégré
+│   │   ├── CallWidget.tsx                  # Widget appels WebRTC intégré
+│   │   └── CallHistoryContent.tsx          # 🆕 Historique des appels
 │   ├── prospects/
-│   │   └── ProspectsContent.tsx            # Utilise /api/prospects/unified
+│   │   ├── ProspectsContent.tsx            # Utilise /api/prospects/unified
+│   │   ├── AdvancedFilters.tsx             # 🆕 Filtres avancés prospects
+│   │   └── RDVHistorySection.tsx           # 🆕 Historique RDV
 │   ├── crm/
 │   │   ├── PipelineKanban.tsx              # Utilise /api/crm/* (à migrer)
 │   │   ├── ProspectForm.tsx
 │   │   ├── ProspectCard.tsx
 │   │   ├── DealProductSelector.tsx         # 🆕 Sélecteur produits
+│   │   ├── SaleClosureForm.tsx             # 🆕 Formulaire clôture vente
 │   │   ├── WaitingReasonModal.tsx
 │   │   ├── RdvNotesModal.tsx
 │   │   ├── ActivityTimeline.tsx
@@ -299,22 +389,36 @@ src/
 │   │   └── TaskForm.tsx
 │   ├── settings/
 │   │   ├── PromptsEditor.tsx
+│   │   ├── PromptEditor.tsx                # 🆕 Éditeur prompt individuel
 │   │   ├── ProductsManager.tsx             # 🆕 Gestionnaire produits
 │   │   ├── ScoringConfig.tsx               # 🆕 Configuration scoring
 │   │   ├── ThresholdConfigForm.tsx         # 🆕 Configuration seuils
-│   │   ├── GoogleSheetsConfig.tsx
+│   │   ├── EmailRecapConfig.tsx            # 🆕 Configuration récap emails
+│   │   ├── PasswordChangeForm.tsx          # 🆕 Changement mot de passe
 │   │   ├── PlaquetteConfig.tsx
 │   │   ├── TeamManager.tsx
 │   │   ├── GmailTestButton.tsx
 │   │   └── ThemeSelector.tsx
 │   ├── features/
-│   │   └── InterestCalculator.tsx
+│   │   ├── InterestCalculator.tsx
+│   │   └── FiscalCalculator.tsx            # 🆕 Calculateur défiscalisation
+│   ├── letters/                            # 🆕 Composants génération lettres
+│   │   ├── LetterGeneratorModal.tsx
+│   │   ├── RachatLetterForm.tsx
+│   │   └── StopPrelevementForm.tsx
+│   ├── debug/                              # 🆕 Composants debug/admin
+│   │   ├── AdminApiTest.tsx
+│   │   ├── AdminNavTest.tsx
+│   │   └── UserDebug.tsx
+│   ├── providers/                          # 🆕 Providers React
+│   │   └── ThemeProvider.tsx
 │   └── auth/
 ├── lib/
 │   ├── supabase/
 │   │   ├── client.ts
 │   │   ├── server.ts
-│   │   └── admin.ts
+│   │   ├── admin.ts
+│   │   └── middleware.ts               # 🆕 Middleware Supabase
 │   ├── supabase-admin.ts               # createAdminClient() bypass RLS
 │   ├── services/                       # ARCHITECTURE CRM
 │   │   ├── interfaces/
@@ -322,27 +426,66 @@ src/
 │   │   ├── crm/
 │   │   │   ├── prospect-service.ts     # CrmProspectService
 │   │   │   └── planning-service.ts     # CrmPlanningService
+│   │   ├── admin/
+│   │   │   └── admin-stats-service.ts  # 🆕 Service statistiques admin
+│   │   ├── workflows/                  # 🆕 Services workflows
+│   │   │   ├── index.ts
+│   │   │   └── crm-workflow-service.ts
+│   │   ├── commission-service.ts       # 🆕 Service commissions
+│   │   ├── scheduled-email-service.ts  # 🆕 Service emails programmés
+│   │   ├── transcription-service.ts    # 🆕 Service transcription
+│   │   ├── twilio-service.ts           # 🆕 Service Twilio WebRTC
+│   │   ├── vapi-service.ts             # 🆕 Service Vapi.ai Agent IA
 │   │   └── get-organization.ts         # getCurrentUserAndOrganization()
+│   ├── assistant/                      # 🆕 Services IA Assistant
+│   │   ├── result-formatter.ts
+│   │   ├── schema-context.ts
+│   │   ├── sql-generator.ts
+│   │   └── sql-validator.ts
+│   ├── validation/                     # 🆕 Services validation sécurité
+│   │   ├── email-rate-limiting.ts
+│   │   ├── email-security.ts
+│   │   ├── prompt-injection-protection.ts
+│   │   └── sql-injection-protection.ts
+│   ├── security/                       # 🆕 Middleware sécurité
+│   │   └── security-middleware.ts
+│   ├── pagination/                     # 🆕 Helpers pagination
+│   │   └── pagination-helper.ts
+│   ├── engines/                        # 🆕 Moteurs calcul fiscal
+│   │   ├── income-tax-engine.ts
+│   │   └── product-tax-engine.ts
+│   ├── gdpr/                           # 🆕 Services GDPR
+│   │   ├── email-footer.ts
+│   │   └── unsubscribe-token.ts
+│   ├── utils/                          # 🆕 Utilitaires
+│   │   └── replace-placeholders.ts
 │   ├── google.ts
+│   ├── google-calendar.ts              # 🆕 Intégration Google Calendar
 │   ├── gmail.ts
+│   ├── calendar.ts                     # 🆕 Service calendrier
 │   ├── anthropic.ts
+│   ├── deepgram.ts                     # 🆕 Service transcription Deepgram
 │   ├── qstash.ts
+│   ├── telegram.ts                     # 🆕 Service Telegram
 │   ├── cors.ts                         # 🆕 Configuration CORS extension
-│   ├── services/
-│   │   ├── vapi-service.ts             # 🆕 Service Vapi.ai pour Agent IA
-│   │   └── twilio-service.ts           # 🆕 Service Twilio pour WebRTC
+│   ├── extension-auth.ts               # 🆕 Auth extension Chrome
+│   ├── pdf-generator.ts                # 🆕 Générateur PDF
+│   ├── logger.ts                       # 🆕 Logger système
+│   ├── errors.ts                       # 🆕 Gestion erreurs
 │   └── utils.ts
 ├── hooks/
 ├── types/
-│   ├── index.ts
+│   ├── index.ts                        # Types généraux
 │   ├── crm.ts                          # Types CRM (CrmProspect, PipelineStage...)
 │   ├── products.ts                     # 🆕 Types produits et commissions
 │   ├── meeting.ts                      # 🆕 Types transcriptions et meetings
 │   ├── pipeline.ts                     # 🆕 Types pipeline bi-mode
-│   ├── admin.ts                        # 🆕 Types dashboard admin
-│   ├── leads.ts                        # 🆕 Types Lead Finder et scraping
 │   ├── voice.ts                        # 🆕 Types Agent IA vocal et WebRTC
-│   └── linkedin.ts                     # 🆕 Types LinkedIn agent
+│   ├── leads.ts                        # 🆕 Types Lead Finder et scraping
+│   ├── assistant.ts                    # 🆕 Types IA Assistant
+│   ├── database.ts                     # 🆕 Types base de données
+│   ├── email.ts                        # 🆕 Types système email
+│   └── fiscalite.ts                    # 🆕 Types calculs fiscaux
 └── middleware.ts
 ```
 
@@ -1297,9 +1440,150 @@ Widget d'appels WebRTC intégré directement dans l'interface :
 **Base de données voice :**
 - `voice_config` : Configuration agents IA par organisation
 - `phone_calls` : Historique appels avec transcriptions et résultats
+- `voice_calls` : Table WebRTC pour Click-to-Call avec Twilio
 - `voice_scripts` : Scripts conversation configurables
 - `voice_webhooks` : Webhooks formulaires déclenchant appels
 - `voice_daily_stats` : Statistiques quotidiennes performance
+
+### 🆕 Nouvelles Fonctionnalités Développées (Non Documentées)
+
+**🧮 Calculateur de Défiscalisation**
+**Localisation :** `/features/defiscalisation`, `/api/fiscal/*`
+
+Moteur avancé de calculs fiscaux et optimisation :
+
+**Fonctionnalités :**
+- **Simulations fiscales** : PER, loi Pinel, défiscalisation immobilière
+- **Optimisation automatique** : IA suggère meilleures stratégies
+- **Comparaisons scenarios** : Multiple stratégies en parallèle
+- **Export rapports** : PDF détaillés avec recommandations
+- **Mise à jour réglementaire** : Barèmes fiscaux actualisés
+
+**📄 Générateur de Lettres Automatisées**
+**Localisation :** `/letters`, `/api/letters/*`
+
+Système de génération de courriers professionnels :
+
+**Types de lettres :**
+- **Lettres de rachat** : Contrats d'assurance vie
+- **Arrêt prélèvements** : Résiliation automatique
+- **Courriers commerciaux** : Personnalisés par client
+- **Templates configurables** : Modifiables par organisation
+- **Génération PDF** : Export professionnel automatique
+
+**🔒 Système GDPR Avancé**
+**Localisation :** `/api/gdpr/*`, `/unsubscribe`
+
+Conformité complète protection des données :
+
+**Fonctionnalités GDPR :**
+- **Droit à l'oubli** : Suppression complète données client
+- **Export données** : Extraction format JSON/PDF
+- **Rectification** : Modification données personnelles
+- **Consentement** : Gestion opt-in/opt-out granulaire
+- **Audit trails** : Logs complets accès données
+
+**🛡️ Système de Sécurité Renforcé**
+**Localisation :** `/lib/security/*`, `/api/security/*`
+
+Protection multi-niveaux contre les attaques :
+
+**Protections implémentées :**
+- **Injection SQL** : Validation requêtes assistant IA
+- **Injection prompts** : Protection contre prompt hacking
+- **Rate limiting** : Limitation appels API par utilisateur
+- **Monitoring attaques** : Détection tentatives malveillantes
+- **Audit sécurité** : Tests automatisés vulnérabilités
+
+**📊 Pagination Avancée**
+**Localisation :** `/lib/pagination/*`, `/api/pagination/*`
+
+Système de pagination optimisé pour gros volumes :
+
+**Caractéristiques :**
+- **Performance** : Pagination cursor-based pour scalabilité
+- **UI components** : Contrôles pagination réutilisables
+- **Filtres avancés** : Compatible avec recherches complexes
+- **Infinite scroll** : Support chargement progressif
+- **Analytics** : Métriques utilisation pagination
+
+**🔧 Système de Debug et Monitoring**
+**Localisation :** `/components/debug/*`, `/api/debug/*`
+
+Outils avancés de développement et monitoring :
+
+**Outils debug :**
+- **User Debug** : Informations utilisateur temps réel
+- **API Tester** : Interface test endpoints admin
+- **Navigation Tester** : Vérification routes protégées
+- **Plaquette Debug** : Diagnostics génération PDF
+- **Performance Monitor** : Métriques temps réponse
+
+**📱 Pages Légales et Conformité**
+**Localisation :** `/(legal)/*`
+
+Pages conformité juridique :
+
+**Pages disponibles :**
+- **Mentions légales** : Informations société et contact
+- **Politique confidentialité** : Traitement données GDPR
+- **CGU/CGV** : Conditions générales service
+- **Cookies** : Politique utilisation cookies
+- **Accessibilité** : Conformité standards web
+
+### 🗃️ Tables de Base de Données Supplémentaires
+
+En plus du schéma principal documenté, le projet contient ces tables additionnelles :
+
+```sql
+-- Table appels WebRTC (Click-to-Call)
+CREATE TABLE voice_calls (
+    id UUID PRIMARY KEY,
+    organization_id UUID REFERENCES organizations(id),
+    user_id UUID REFERENCES users(id),
+    prospect_id UUID REFERENCES crm_prospects(id),
+    twilio_call_sid VARCHAR(100) UNIQUE,
+    phone_number VARCHAR(20) NOT NULL,
+    status VARCHAR(20) DEFAULT 'initiated',
+    outcome VARCHAR(50),
+    notes TEXT,
+    duration_seconds INTEGER,
+    cost_cents INTEGER DEFAULT 0,
+    recording_url VARCHAR(500),
+    created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- Récap emails système
+CREATE TABLE email_recap_settings (
+    organization_id UUID PRIMARY KEY REFERENCES organizations(id),
+    daily_recap_enabled BOOLEAN DEFAULT false,
+    weekly_recap_enabled BOOLEAN DEFAULT true,
+    monthly_recap_enabled BOOLEAN DEFAULT false,
+    recap_time TIME DEFAULT '09:00:00',
+    recipients TEXT[],
+    last_daily_sent TIMESTAMPTZ,
+    last_weekly_sent TIMESTAMPTZ,
+    last_monthly_sent TIMESTAMPTZ
+);
+
+-- Logs emails envoyés
+CREATE TABLE email_logs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    organization_id UUID REFERENCES organizations(id),
+    user_id UUID REFERENCES users(id),
+    prospect_id UUID REFERENCES crm_prospects(id),
+    email_type VARCHAR(50) NOT NULL,
+    recipient_email VARCHAR(255) NOT NULL,
+    subject TEXT,
+    status VARCHAR(20) DEFAULT 'sent',
+    provider_message_id VARCHAR(255),
+    sent_at TIMESTAMPTZ DEFAULT now(),
+    opened_at TIMESTAMPTZ,
+    clicked_at TIMESTAMPTZ,
+    bounced_at TIMESTAMPTZ,
+    error_message TEXT
+);
+```
 
 ---
 
