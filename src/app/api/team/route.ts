@@ -157,21 +157,39 @@ export async function POST(request: NextRequest) {
     );
 
     // Invite user by email - this sends an invitation email automatically
+    const redirectUrl = `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback`;
+    console.log(`[Team Invitation] Sending invitation to ${email} with redirect URL: ${redirectUrl}`);
+
     const { data: inviteData, error: inviteError } = await adminAuth.auth.admin.inviteUserByEmail(email, {
-      redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback`,
+      redirectTo: redirectUrl,
       data: {
         full_name,
         role,
+        organization_name: currentUser.organization_id, // Add context for invitation
       },
     });
 
     if (inviteError) {
-      console.error('Invite user error:', inviteError);
+      console.error('[Team Invitation] Error sending invitation:', {
+        email,
+        error: inviteError.message,
+        code: inviteError.code,
+        status: inviteError.status
+      });
       return NextResponse.json(
-        { error: 'Erreur lors de l\'envoi de l\'invitation: ' + inviteError.message },
+        {
+          error: 'Erreur lors de l\'envoi de l\'invitation: ' + inviteError.message,
+          details: inviteError.code ? `Code: ${inviteError.code}` : undefined
+        },
         { status: 500 }
       );
     }
+
+    console.log(`[Team Invitation] Successfully sent invitation to ${email}:`, {
+      user_id: inviteData.user?.id,
+      invited_at: inviteData.user?.invited_at,
+      redirect_url: redirectUrl
+    });
 
     if (!inviteData.user) {
       return NextResponse.json(
@@ -197,9 +215,16 @@ export async function POST(request: NextRequest) {
 
     if (userError) {
       // Cleanup: delete auth user if DB insert fails
+      console.error(`[Team Invitation] Error creating user in DB for ${email}:`, userError);
       await adminAuth.auth.admin.deleteUser(inviteData.user.id);
       throw userError;
     }
+
+    console.log(`[Team Invitation] Successfully created user in DB for ${email}:`, {
+      user_id: newUser.id,
+      organization_id: currentUser.organization_id,
+      role: newUser.role
+    });
 
     return NextResponse.json({
       success: true,

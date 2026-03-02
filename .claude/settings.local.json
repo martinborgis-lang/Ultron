@@ -44,7 +44,10 @@
       "Bash(timeout 300s npm run build)",
       "WebSearch",
       "WebFetch(domain:reactbits.dev)",
-      "Bash(git reset HEAD .)"
+      "Bash(git reset HEAD .)",
+      "Bash(git rm src/app/api/debug/add-demo-data/route.ts)",
+      "Bash(git rm -f src/app/api/debug/add-demo-data/route.ts)",
+      "Bash(echo $NEXT_PUBLIC_APP_URL)"
     ],
     "deny": [],
     "ask": []
