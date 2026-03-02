@@ -1,5 +1,5 @@
 import { logger } from '@/lib/logger';
-import { getValidCredentials } from '@/lib/google';
+import { getValidCredentials, type GoogleCredentials as GoogleLibCredentials } from '@/lib/google';
 
 import { google } from 'googleapis';
 import type { GoogleCredentials, GoogleCalendarEvent, CreateCalendarEventParams } from '@/types/database';
@@ -40,8 +40,22 @@ export async function getCalendarEvents(
   timeMin: Date,
   timeMax: Date
 ) {
-  // 🔴 FIX: Refresh token automatiquement si nécessaire
-  const validCredentials = await getValidCredentials(credentials);
+  // 🔴 FIX: Vérifier que refresh_token est présent avant de tenter le refresh
+  if (!credentials.refresh_token) {
+    throw new Error('Pas de refresh_token disponible - reconnexion Google requise');
+  }
+
+  // Convertir vers le type attendu par google.ts
+  const googleLibCredentials: GoogleLibCredentials = {
+    access_token: credentials.access_token,
+    refresh_token: credentials.refresh_token, // Maintenant garantit non-undefined
+    expiry_date: credentials.expiry_date || Date.now() + 3600000, // 1h par défaut
+    token_type: credentials.token_type || 'Bearer',
+    scope: credentials.scope || '',
+  };
+
+  // Refresh token automatiquement si nécessaire
+  const validCredentials = await getValidCredentials(googleLibCredentials);
   const calendar = getCalendarClient(validCredentials);
 
   const response = await calendar.events.list({
