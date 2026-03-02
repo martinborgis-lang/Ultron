@@ -491,70 +491,299 @@ src/
 
 ---
 
-## 🗄️ STRUCTURE BASE DE DONNÉES SUPABASE
+## 🗄️ STRUCTURE RÉELLE BASE DE DONNÉES SUPABASE
 
-> **Schema SQL Complet :** Toute la base de données est disponible dans [`/database/ultron-complete-schema.sql`](database/ultron-complete-schema.sql)
+> **Analyse Export Réel :** Structure basée sur l'export Supabase du projet en production
 
-### 📊 Vue d'ensemble Architecture Multi-Tenant
+### 📊 Vue d'ensemble Architecture Multi-Tenant (32+ Tables)
 
 ```
 🏢 ORGANIZATIONS (Multi-tenant)
 ├── 👥 USERS (Admins + Conseillers)
 ├── 🛍️ PRODUCTS & COMMISSIONS System
-├── 🎯 CRM Complete (Prospects + Pipeline)
+├── 🎯 CRM Complete (Prospects + Pipeline + Activities + Events + Tasks)
 ├── 📹 MEETINGS & Transcription IA
+├── 📧 EMAIL System (Templates + Logs + Scheduled)
+├── 🗣️ VOICE System (Calls + Config + Webhooks + Scripts)
+├── 🔍 LEAD FINDER (Credits + Searches + Results + Stats)
+├── 🔗 LINKEDIN Agent (Config + Posts)
 ├── 📊 ADMIN Analytics & Thresholds
-├── 🤖 AGENT Automation System
+├── 🤖 AGENT Automation (Ideas + Tasks + Runs)
+├── 🚨 PROMPTS System
 └── ⚙️ SYSTEM Configuration
 ```
 
-### Tables Principales
+### 🗃️ **TABLES RÉELLES IDENTIFIÉES (32 Tables)**
 
-**🏢 organizations** - Entreprises clientes (Multi-tenant)
+**🏢 Core Multi-Tenant :**
+- `organizations` - Organisations clientes
+- `users` - Utilisateurs (admin/conseillers)
+- `pipeline_stages` - Étapes pipeline configurables
+
+**🎯 CRM Complet :**
+- `crm_prospects` - Prospects avec qualification IA
+- `crm_activities` - Historique interactions
+- `crm_events` - Planning et événements
+- `crm_tasks` - Tâches CRM
+- `crm_email_templates` - Templates emails
+- `crm_saved_filters` - Filtres sauvegardés
+
+**🛍️ Produits & Commissions :**
+- `products` - Catalogue produits
+- `advisor_commissions` - Commissions conseillers
+- `deal_products` - Deals/ventes
+
+**📧 Système Email :**
+- `scheduled_emails` - Emails programmés
+- `email_logs` - Historique emails envoyés
+
+**🗣️ Système Voice :**
+- `voice_config` - Configuration agents vocaux
+- `voice_calls` - Appels WebRTC Twilio
+- `voice_scripts` - Scripts conversation
+- `voice_webhooks` - Webhooks formulaires
+- `phone_calls` - Appels Vapi.ai
+
+**🔍 Lead Finder :**
+- `lead_credits` - Crédits recherche
+- `lead_searches` - Historique recherches
+- `lead_results` - Prospects trouvés
+- `lead_stats` - Statistiques
+
+**🔗 LinkedIn Agent :**
+- `linkedin_config` - Configuration cabinet
+- `linkedin_posts` - Posts générés IA
+
+**📹 Meetings :**
+- `meeting_transcripts` - Transcriptions IA
+
+**📊 Analytics :**
+- `daily_stats` - Statistiques quotidiennes
+- `activity_logs` - Logs d'activité
+
+**🤖 Agent System :**
+- `agent_ideas` - Idées automatiques
+- `agent_tasks` - Tâches agents
+- `agent_runs` - Exécutions
+
+**🚨 Configuration :**
+- `prompts` - Prompts configurables
+
+### 📋 **STRUCTURE DÉTAILLÉE DES TABLES PRINCIPALES**
+
+**🎯 crm_prospects** - Prospects avec qualification IA avancée
+*Structure réelle (39 colonnes) :*
 ```sql
-CREATE TABLE organizations (
+CREATE TABLE crm_prospects (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  name VARCHAR NOT NULL,
-  slug VARCHAR NOT NULL UNIQUE,
+  organization_id UUID REFERENCES organizations(id),
 
-  -- Intégrations Google
-  google_credentials JSONB,
+  -- Identité complète
+  first_name VARCHAR(100),
+  last_name VARCHAR(100),
+  email VARCHAR(255),
+  phone VARCHAR(50),
+  company VARCHAR(255),
+  job_title VARCHAR(100),
+  address TEXT,
+  city VARCHAR(100),
+  postal_code VARCHAR(20),
+  country VARCHAR(100) DEFAULT 'France',
 
-  -- Branding & UI
-  logo_url VARCHAR,
-  primary_color VARCHAR DEFAULT '#6366f1',
+  -- Profil financier CGP
+  patrimoine_estime NUMERIC,
+  revenus_annuels NUMERIC,
+  situation_familiale VARCHAR(50),
+  nb_enfants INTEGER,
+  age INTEGER,
+  profession VARCHAR(100),
 
-  -- Abonnement
-  plan VARCHAR DEFAULT 'free' CHECK (plan IN ('free', 'starter', 'pro', 'enterprise')),
+  -- Pipeline management
+  stage_id UUID REFERENCES pipeline_stages(id),
+  stage_slug VARCHAR(50) DEFAULT 'nouveau',
+  deal_value NUMERIC,
+  close_probability INTEGER DEFAULT 50,
+  expected_close_date DATE,
 
-  -- Configuration IA Prompts
-  prompt_qualification JSONB,
-  prompt_synthese JSONB,
-  prompt_rappel JSONB,
-  prompt_plaquette JSONB,
+  -- Qualification IA ⭐
+  qualification VARCHAR(20) DEFAULT 'non_qualifie',
+  score_ia INTEGER,
+  analyse_ia TEXT,
+  derniere_qualification TIMESTAMPTZ,
 
-  -- Plaquette PDF
-  plaquette_id VARCHAR, -- Google Drive ID
+  -- Source & Attribution
+  source VARCHAR(100),
+  source_detail VARCHAR(255),
+  assigned_to UUID REFERENCES users(id),
+  tags TEXT[],
+  notes TEXT,
 
-  -- Configuration Scoring IA ⭐
-  scoring_config JSONB DEFAULT '{
-    "seuil_chaud": 70,
-    "seuil_tiede": 40,
-    "poids_revenus": 25,
-    "poids_analyse_ia": 50,
-    "poids_patrimoine": 25,
-    "seuil_revenus_max": 10000,
-    "seuil_revenus_min": 2500,
-    "seuil_patrimoine_max": 300000,
-    "seuil_patrimoine_min": 30000
-  }',
+  -- Statut final
+  lost_reason VARCHAR(255),
+  won_date TIMESTAMPTZ,
+  lost_date TIMESTAMPTZ,
+  last_activity_at TIMESTAMPTZ,
+
+  -- Emails automatiques (nouveaux)
+  mail_plaquette_sent BOOLEAN DEFAULT false,
+  mail_synthese_sent BOOLEAN DEFAULT false,
+  mail_rappel_sent BOOLEAN DEFAULT false,
 
   created_at TIMESTAMPTZ DEFAULT now(),
   updated_at TIMESTAMPTZ DEFAULT now()
 );
 ```
 
+**🗣️ voice_calls** - Appels WebRTC avec Twilio
+*Structure réelle (18 colonnes) :*
+```sql
+CREATE TABLE voice_calls (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID REFERENCES organizations(id),
+  user_id UUID REFERENCES users(id),
+  prospect_id UUID REFERENCES crm_prospects(id),
+
+  -- Identifiant Twilio
+  twilio_call_sid VARCHAR(100) UNIQUE,
+
+  -- Détails appel
+  phone_number VARCHAR(20) NOT NULL,
+  prospect_name VARCHAR(200),
+  direction VARCHAR(20) DEFAULT 'outbound',
+
+  -- Statut et timing
+  status VARCHAR(20) DEFAULT 'initiated',
+  started_at TIMESTAMPTZ,
+  ended_at TIMESTAMPTZ,
+  duration_seconds INTEGER,
+
+  -- Résultats
+  outcome VARCHAR(50),
+  notes TEXT,
+  next_action VARCHAR(100),
+
+  -- Enregistrement et coûts
+  recording_url VARCHAR(500),
+  cost_cents INTEGER DEFAULT 0,
+
+  metadata JSONB DEFAULT '{}',
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+```
+
+**📞 phone_calls** - Appels Vapi.ai automatiques
+*Structure réelle (20+ colonnes) :*
+```sql
+CREATE TABLE phone_calls (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID REFERENCES organizations(id),
+  prospect_id UUID REFERENCES crm_prospects(id),
+
+  -- Informations appel
+  to_number VARCHAR NOT NULL,
+  from_number VARCHAR,
+
+  -- Intégrations
+  vapi_call_id VARCHAR UNIQUE,
+  vapi_assistant_id VARCHAR,
+  twilio_call_sid VARCHAR UNIQUE,
+
+  -- Statut et timing
+  status VARCHAR DEFAULT 'queued',
+  outcome VARCHAR,
+  started_at TIMESTAMPTZ,
+  ended_at TIMESTAMPTZ,
+  duration_seconds INTEGER,
+
+  -- Programmation
+  scheduled_call_at TIMESTAMPTZ,
+
+  -- Transcription et analyse IA
+  transcript TEXT,
+  transcript_confidence NUMERIC,
+  ai_analysis JSONB,
+
+  -- Métadonnées
+  source VARCHAR DEFAULT 'manual',
+  processing_notes TEXT,
+  error_message TEXT,
+
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+```
+
+**📧 scheduled_emails** - Emails programmés avec délai
+*Structure réelle (12 colonnes) :*
+```sql
+CREATE TABLE scheduled_emails (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID REFERENCES organizations(id),
+  prospect_id UUID REFERENCES crm_prospects(id),
+  advisor_id UUID REFERENCES users(id),
+
+  -- Type et timing
+  email_type VARCHAR(50) NOT NULL,
+  scheduled_at TIMESTAMPTZ NOT NULL,
+  sent_at TIMESTAMPTZ,
+
+  -- Status
+  status VARCHAR(20) DEFAULT 'pending',
+
+  -- Contenu flexible
+  email_data JSONB NOT NULL,
+
+  -- Gestion erreurs
+  error_message TEXT,
+  retry_count INTEGER DEFAULT 0,
+  max_retries INTEGER DEFAULT 3,
+
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+```
+
+**🔍 lead_searches** - Historique recherches prospects
+*Structure réelle (11 colonnes) :*
+```sql
+CREATE TABLE lead_searches (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID REFERENCES organizations(id),
+  user_id UUID REFERENCES users(id),
+
+  search_type VARCHAR(20) NOT NULL,
+  profession VARCHAR(255) NOT NULL,
+  location VARCHAR(255),
+  postal_code VARCHAR(10),
+  leads_requested INTEGER NOT NULL,
+  leads_found INTEGER DEFAULT 0,
+  credits_consumed INTEGER DEFAULT 0,
+  status VARCHAR(20) DEFAULT 'pending',
+  api_source VARCHAR(50),
+
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+```
+
+**🤖 agent_runs** - Exécutions agents automatisés
+*Structure réelle (9 colonnes) :*
+```sql
+CREATE TABLE agent_runs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  task_id UUID,
+  agent VARCHAR(50),
+  status VARCHAR(50),
+  logs TEXT,
+  tokens_input INTEGER,
+  tokens_output INTEGER,
+  duration_seconds INTEGER,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+```
+
 **👥 users** - Utilisateurs (Admins + Conseillers)
+*Structure réelle (12+ colonnes) :*
 ```sql
 CREATE TABLE users (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
