@@ -165,7 +165,7 @@ export async function POST(request: NextRequest) {
       data: {
         full_name,
         role,
-        organization_name: currentUser.organization_id, // Add context for invitation
+        organization_id: currentUser.organization_id, // Add organization ID for invitation
       },
     });
 
