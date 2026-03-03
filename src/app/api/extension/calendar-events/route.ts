@@ -59,9 +59,23 @@ export async function GET(request: NextRequest) {
     console.log('[Extension Calendar] 🔍 Recherche credentials Google...');
     const adminClient = createAdminClient();
 
-    // First check user's individual Gmail credentials
-    let credentials: GoogleCredentials | null = (user as any).gmail_credentials;
-    console.log('[Extension Calendar] 👤 Credentials utilisateur:', !!credentials);
+    // Charger gmail_credentials directement depuis la table users
+    let credentials: GoogleCredentials | null = null;
+    try {
+      const { data: userWithCreds } = await adminClient
+        .from('users')
+        .select('gmail_credentials')
+        .eq('id', user.id)
+        .single();
+      credentials = userWithCreds?.gmail_credentials || null;
+      console.log('[Extension Calendar] 📧 Gmail credentials from user:', {
+        hasCredentials: !!credentials,
+        hasRefreshToken: !!credentials?.refresh_token,
+        expiryDate: credentials?.expiry_date ? new Date(credentials.expiry_date).toISOString() : 'NONE'
+      });
+    } catch (e) {
+      console.log('[Extension Calendar] ⚠️ Erreur chargement gmail_credentials:', e);
+    }
 
     // Fallback to organization credentials if user doesn't have individual ones
     if (!credentials) {
