@@ -28,15 +28,16 @@ export async function validateExtensionToken(token: string) {
     const headerJson = Buffer.from(headerBase64, 'base64').toString('utf-8');
     const header = JSON.parse(headerJson);
 
-    console.log('[Extension Auth] Token algorithm:', header.alg);
-
     let decoded: ExtensionTokenPayload;
 
     if (header.alg === 'HS256') {
       // Token custom ou Supabase HS256 - Valider avec jwt.verify
-      const secret = process.env.SUPABASE_JWT_SECRET || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+      const secret = process.env.SUPABASE_JWT_SECRET;
+      if (!secret) {
+        console.error('[Extension Auth] CRITICAL: SUPABASE_JWT_SECRET is not configured');
+        throw new Error('Server configuration error: JWT secret not available');
+      }
       decoded = jwt.verify(token, secret, { algorithms: ['HS256'] }) as ExtensionTokenPayload;
-      console.log('[Extension Auth] ✅ Token HS256 validé avec jwt.verify');
     } else {
       // Token ES256 ou autre - Essayer validation Supabase standard
       const { createClient } = await import('@supabase/supabase-js');
@@ -58,7 +59,6 @@ export async function validateExtensionToken(token: string) {
         iat: Math.floor(Date.now() / 1000),
         exp: Math.floor(Date.now() / 1000) + 3600,
       };
-      console.log('[Extension Auth] ✅ Token ES256 validé avec Supabase');
     }
 
     // Récupérer les infos utilisateur depuis la DB
