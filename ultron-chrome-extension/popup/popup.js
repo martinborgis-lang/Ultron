@@ -131,6 +131,57 @@ function showLoggedInUI() {
   loginSection.classList.add('hidden');
   loggedSection.classList.remove('hidden');
   userEmailSpan.textContent = userEmail;
+
+  // Ajouter bouton side panel si pas déjà présent
+  if (!document.getElementById('open-sidepanel-btn')) {
+    const sidePanelBtn = document.createElement('button');
+    sidePanelBtn.id = 'open-sidepanel-btn';
+    sidePanelBtn.className = 'open-sidepanel-btn';
+    sidePanelBtn.textContent = '📋 Ouvrir le panneau Ultron';
+    sidePanelBtn.style.cssText = `
+      width: 100%;
+      padding: 12px;
+      margin: 10px 0;
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    `;
+
+    sidePanelBtn.onmouseover = () => {
+      sidePanelBtn.style.transform = 'translateY(-1px)';
+      sidePanelBtn.style.boxShadow = '0 4px 12px rgba(99, 102, 241, 0.4)';
+    };
+    sidePanelBtn.onmouseout = () => {
+      sidePanelBtn.style.transform = 'translateY(0)';
+      sidePanelBtn.style.boxShadow = 'none';
+    };
+
+    sidePanelBtn.onclick = async () => {
+      console.log('[popup] 🔥 Bouton side panel cliqué');
+      try {
+        // Ouvrir le side panel
+        await chrome.sidePanel.open({ windowId: (await chrome.windows.getCurrent()).id });
+        console.log('[popup] ✅ Side panel ouvert avec succès');
+
+        // Optionnel : ne pas fermer le popup automatiquement
+        // Laisser l'utilisateur décider
+      } catch (error) {
+        console.error('[popup] ❌ Erreur ouverture side panel:', error);
+        alert('Impossible d\'ouvrir le panneau. Vérifiez que l\'extension est activée.');
+      }
+    };
+
+    // Insérer le bouton dans loggedSection après les éléments existants
+    loggedSection.appendChild(sidePanelBtn);
+  }
 }
 
 function showLoginUI() {
@@ -218,6 +269,18 @@ async function loadCalendarEvents() {
     const events = data.events || [];
 
     console.log('Ultron [POPUP]: ✅ Événements RDV reçus:', events.length);
+
+    // Si warning (ex: session Google expirée) ou 0 événements, fallback vers CRM
+    if (data.warning) {
+      console.warn('Ultron [POPUP]: ⚠️ Warning API:', data.warning);
+    }
+
+    if (events.length === 0) {
+      console.log('Ultron [POPUP]: 0 événements Calendar, fallback vers prospects CRM...');
+      await loadProspectsLegacy();
+      return;
+    }
+
     console.log('Ultron [POPUP]: Liste des événements:');
     events.forEach((e, i) => {
       const status = e.isPast ? 'PASSÉ' : 'FUTUR';
@@ -426,6 +489,8 @@ async function openProspectInSidePanel(prospectId, prospectName, meetLink) {
     const tabs = await chrome.tabs.query({ url: 'https://meet.google.com/*' });
     console.log('[POPUP] Onglets Meet trouvés:', tabs.length);
 
+    let sidePanelOpened = false;
+
     if (tabs.length > 0) {
       // 3a. Si un onglet Meet existe, l'activer et ouvrir le side panel dessus
       const meetTab = tabs[0];
@@ -434,47 +499,52 @@ async function openProspectInSidePanel(prospectId, prospectName, meetLink) {
       await chrome.tabs.update(meetTab.id, { active: true });
       await chrome.windows.update(meetTab.windowId, { focused: true });
 
-      // Ouvrir le side panel sur cet onglet
       try {
         await chrome.sidePanel.open({ tabId: meetTab.id });
         console.log('[POPUP] ✅ Side panel ouvert sur onglet Meet existant');
+        sidePanelOpened = true;
       } catch (e) {
-        console.log('[POPUP] Side panel déjà ouvert ou erreur:', e.message);
+        console.log('[POPUP] Side panel erreur:', e.message);
       }
     } else if (meetLink && meetLink !== '') {
       // 3b. Si pas d'onglet Meet mais on a un lien, ouvrir le Meet
       console.log('[POPUP] Création nouvel onglet Meet avec:', meetLink);
       const newTab = await chrome.tabs.create({ url: meetLink });
       console.log('[POPUP] ✅ Nouvel onglet Meet créé:', newTab.id);
+      sidePanelOpened = true; // Le side panel s'ouvrira auto via background.js onUpdated
 
-      // Attendre un peu que l'onglet se charge, puis ouvrir le side panel
-      setTimeout(async () => {
-        try {
-          await chrome.sidePanel.open({ tabId: newTab.id });
-          console.log('[POPUP] ✅ Side panel ouvert sur nouvel onglet Meet');
-        } catch (e) {
-          console.log('[POPUP] Side panel auto-ouvert ou erreur:', e.message);
-        }
-      }, 1500); // Attendre 1.5s que Meet se charge
     } else {
-      // 3c. Pas de Meet disponible - essayer d'ouvrir le side panel sur l'onglet actif
+      // 3c. Pas de Meet - essayer d'ouvrir sur l'onglet actif
       console.log('[POPUP] ⚠️ Pas de lien Meet, ouverture side panel sur onglet actif');
       const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
       if (activeTab) {
         try {
           await chrome.sidePanel.open({ tabId: activeTab.id });
           console.log('[POPUP] ✅ Side panel ouvert sur onglet actif');
+          sidePanelOpened = true;
         } catch (e) {
           console.log('[POPUP] Erreur ouverture side panel:', e.message);
-          // Fallback: notifier qu'il faut ouvrir Google Meet
-          alert('Pour utiliser toutes les fonctionnalités, veuillez ouvrir Google Meet.');
         }
       }
     }
 
-    console.log('[POPUP] Fermeture du popup');
-    // 4. Fermer le popup
-    window.close();
+    // Ne fermer le popup QUE si le side panel a été ouvert avec succès
+    if (sidePanelOpened) {
+      console.log('[POPUP] Fermeture du popup (side panel ouvert)');
+      window.close();
+    } else {
+      console.log('[POPUP] ⚠️ Side panel non ouvert, popup reste affiché');
+      // Feedback visuel à l'utilisateur
+      const btn = document.querySelector('.prep-btn:focus, .prep-btn:active');
+      if (btn) {
+        btn.textContent = '⚠️ Ouvrez Meet';
+        btn.style.background = '#f59e0b';
+        setTimeout(() => {
+          btn.textContent = 'Ouvrir';
+          btn.style.background = '';
+        }, 3000);
+      }
+    }
 
   } catch (error) {
     console.error('[POPUP] Erreur openProspectInSidePanel:', error);
@@ -482,6 +552,5 @@ async function openProspectInSidePanel(prospectId, prospectName, meetLink) {
     if (meetLink) {
       chrome.tabs.create({ url: meetLink });
     }
-    window.close();
   }
 }
