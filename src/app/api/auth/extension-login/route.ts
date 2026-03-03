@@ -72,7 +72,14 @@ export async function POST(request: NextRequest) {
           exp: Math.floor(Date.now() / 1000) + (24 * 60 * 60), // 24h
         };
 
-        const secret = process.env.SUPABASE_JWT_SECRET || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+        const secret = process.env.SUPABASE_JWT_SECRET;
+        if (!secret) {
+          console.error('[Extension Login] CRITICAL: SUPABASE_JWT_SECRET is not configured');
+          return NextResponse.json(
+            { error: 'Erreur de configuration serveur - contactez l\'administrateur' },
+            { status: 500, headers: corsHeaders() }
+          );
+        }
         finalToken = jwt.sign(payload, secret, { algorithm: 'HS256' });
 
         console.log('[Extension Login] ✅ Token HS256 custom créé pour l\'extension');
