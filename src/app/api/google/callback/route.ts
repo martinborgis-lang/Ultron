@@ -130,7 +130,7 @@ export async function GET(request: Request) {
       console.log('🏢 Saving organization credentials to org:', stateData.organization_id);
 
       // Store organization credentials (Sheets + Drive)
-      const { data: updateResult, error: updateError } = await supabase
+      const { data: updateResult, error: updateError } = await adminClient
         .from('organizations')
         .update({
           google_credentials: tokens,
