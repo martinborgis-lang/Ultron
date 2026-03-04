@@ -1,17 +1,29 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect } from 'react';
+import dynamic from 'next/dynamic';
+import { useEffect, useRef } from 'react';
 import { DashboardMockup } from '@/components/landing/DashboardMockup';
 import { PipelineMockup } from '@/components/landing/PipelineMockup';
 import { ProspectsMockup } from '@/components/landing/ProspectsMockup';
 import { ExtensionMockup } from '@/components/landing/ExtensionMockup';
 import { AssistantMockup } from '@/components/landing/AssistantMockup';
+import FeatureScene from '@/components/landing/FeatureScene';
+import AnimatedSection from '@/components/landing/AnimatedSection';
+import styles from '@/styles/landing.module.css';
+
+// Lazy-load heavy mockups (below the fold)
+const AdminDashboardMockup = dynamic(() => import('@/components/landing/AdminDashboardMockup'), { ssr: false });
+const ClickToCallMockup = dynamic(() => import('@/components/landing/ClickToCallMockup'), { ssr: false });
+const LeadFinderMockup = dynamic(() => import('@/components/landing/LeadFinderMockup'), { ssr: false });
+const LinkedInAgentMockup = dynamic(() => import('@/components/landing/LinkedInAgentMockup'), { ssr: false });
+const VoiceAIAgentMockup = dynamic(() => import('@/components/landing/VoiceAIAgentMockup'), { ssr: false });
 
 export default function LandingPage() {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
   useEffect(() => {
-    // Particle animation
-    const canvas = document.getElementById('hero-canvas') as HTMLCanvasElement;
+    const canvas = canvasRef.current;
     if (!canvas) return;
 
     const ctx = canvas.getContext('2d');
@@ -19,8 +31,11 @@ export default function LandingPage() {
 
     let width = 0;
     let height = 0;
-    let particles: Array<{x: number; y: number; vx: number; vy: number; size: number}> = [];
+    let particles: Array<{ x: number; y: number; vx: number; vy: number; size: number }> = [];
     let animationId: number;
+
+    const isMobile = window.innerWidth < 768;
+    const particleCount = isMobile ? 35 : 80;
 
     const resize = () => {
       width = canvas.width = window.innerWidth;
@@ -29,13 +44,13 @@ export default function LandingPage() {
 
     const initParticles = () => {
       particles = [];
-      for (let i = 0; i < 80; i++) {
+      for (let i = 0; i < particleCount; i++) {
         particles.push({
           x: Math.random() * width,
           y: Math.random() * height,
           vx: (Math.random() - 0.5) * 0.4,
           vy: (Math.random() - 0.5) * 0.4,
-          size: Math.random() * 2 + 1
+          size: Math.random() * 2 + 1,
         });
       }
     };
@@ -49,7 +64,6 @@ export default function LandingPage() {
         if (p.x < 0 || p.x > width) p.vx *= -1;
         if (p.y < 0 || p.y > height) p.vy *= -1;
 
-        // Particules avec gradient radial pour plus de visibilité
         const gradient = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size * 3);
         gradient.addColorStop(0, 'rgba(59, 130, 246, 0.8)');
         gradient.addColorStop(0.5, 'rgba(6, 182, 212, 0.4)');
@@ -60,7 +74,6 @@ export default function LandingPage() {
         ctx.arc(p.x, p.y, p.size * 3, 0, Math.PI * 2);
         ctx.fill();
 
-        // Centre plus brillant
         ctx.fillStyle = 'rgba(59, 130, 246, 0.9)';
         ctx.beginPath();
         ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
@@ -69,7 +82,6 @@ export default function LandingPage() {
         for (let j = i + 1; j < particles.length; j++) {
           const p2 = particles[j];
           const dist = Math.hypot(p.x - p2.x, p.y - p2.y);
-
           if (dist < 150) {
             const opacity = 0.3 * (1 - dist / 150);
             ctx.strokeStyle = `rgba(59, 130, 246, ${opacity})`;
@@ -85,693 +97,112 @@ export default function LandingPage() {
       animationId = requestAnimationFrame(animate);
     };
 
-    // Initialize canvas
     window.addEventListener('resize', resize);
     resize();
     initParticles();
     animate();
 
-    // 3D Tilt effect
-    const card = document.getElementById('tilt-card');
-    const heroSection = document.getElementById('hero');
-    let tiltListenersAdded = false;
-
-    const handleMouseMove = (e: MouseEvent) => {
-      if (card && window.innerWidth > 1024) {
-        const rect = heroSection?.getBoundingClientRect();
-        if (rect) {
-          const xAxis = (rect.width / 2 - (e.clientX - rect.left)) / 40;
-          const yAxis = (rect.height / 2 - (e.clientY - rect.top)) / 40;
-          card.style.transform = `rotateY(${xAxis}deg) rotateX(${yAxis}deg)`;
-        }
-      }
-    };
-
-    const handleMouseLeave = () => {
-      if (card) {
-        card.style.transition = 'transform 0.5s ease';
-        card.style.transform = 'rotateY(0deg) rotateX(0deg)';
-      }
-    };
-
-    const handleMouseEnter = () => {
-      if (card) {
-        card.style.transition = 'none';
-      }
-    };
-
-    if (window.innerWidth > 1024 && card && heroSection) {
-      heroSection.addEventListener('mousemove', handleMouseMove);
-      heroSection.addEventListener('mouseleave', handleMouseLeave);
-      heroSection.addEventListener('mouseenter', handleMouseEnter);
-      tiltListenersAdded = true;
-    }
-
-    // Enhanced scroll reveal with 3D animations
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting) {
-          entry.target.classList.add('active');
-        }
-      });
-    }, { threshold: 0.1 });
-
-    document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
-
-    // Parallax and 3D scroll effects
-    const handleScroll = () => {
-      const scrolled = window.pageYOffset;
-      const parallax = scrolled * 0.5;
-      const rotation = scrolled * 0.05;
-
-      // Hero parallax
-      const heroCanvas = document.getElementById('hero-canvas');
-      if (heroCanvas) {
-        heroCanvas.style.transform = `translateY(${parallax}px) rotateZ(${rotation * 0.1}deg)`;
-      }
-
-      // Feature cards 3D transform
-      document.querySelectorAll('.feature-card').forEach((card, index) => {
-        const rect = card.getBoundingClientRect();
-        const isVisible = rect.top < window.innerHeight && rect.bottom > 0;
-
-        if (isVisible) {
-          const progress = 1 - (rect.top / window.innerHeight);
-          const translateY = (progress - 0.5) * 20;
-          const rotateX = (progress - 0.5) * 10;
-          const rotateY = Math.sin(scrolled * 0.001 + index) * 5;
-
-          (card as HTMLElement).style.transform = `
-            translateY(${translateY}px)
-            rotateX(${rotateX}deg)
-            rotateY(${rotateY}deg)
-            translateZ(0)
-          `;
-        }
-      });
-
-      // Browser mockups floating effect
-      document.querySelectorAll('.browser-mockup').forEach((mockup, index) => {
-        const rect = mockup.getBoundingClientRect();
-        const isVisible = rect.top < window.innerHeight && rect.bottom > 0;
-
-        if (isVisible) {
-          const progress = 1 - (rect.top / window.innerHeight);
-          const float = Math.sin(Date.now() * 0.001 + index * 2) * 10;
-          const tilt = (progress - 0.5) * 15;
-
-          (mockup as HTMLElement).style.transform = `
-            translateY(${float}px)
-            rotateY(${tilt}deg)
-            translateZ(0)
-          `;
-        }
-      });
-
-      // Stats animation on scroll
-      document.querySelectorAll('.stat-item').forEach((stat, index) => {
-        const rect = stat.getBoundingClientRect();
-        const isVisible = rect.top < window.innerHeight && rect.bottom > 0;
-
-        if (isVisible) {
-          const progress = 1 - (rect.top / window.innerHeight);
-          const scale = 0.8 + (progress * 0.2);
-          const rotateZ = Math.sin(scrolled * 0.002 + index) * 3;
-
-          (stat as HTMLElement).style.transform = `
-            scale(${scale})
-            rotateZ(${rotateZ}deg)
-            translateZ(0)
-          `;
-        }
-      });
-    };
-
-    window.addEventListener('scroll', handleScroll);
-    handleScroll(); // Initial call
-
-    // Cleanup function
     return () => {
       window.removeEventListener('resize', resize);
-      window.removeEventListener('scroll', handleScroll);
-      if (animationId) {
-        cancelAnimationFrame(animationId);
-      }
-      if (tiltListenersAdded && heroSection) {
-        heroSection.removeEventListener('mousemove', handleMouseMove);
-        heroSection.removeEventListener('mouseleave', handleMouseLeave);
-        heroSection.removeEventListener('mouseenter', handleMouseEnter);
-      }
-      observer.disconnect();
+      if (animationId) cancelAnimationFrame(animationId);
     };
   }, []);
 
   return (
-    <>
-      <style jsx global>{`
-        :root {
-          --bg-deep: #0a0f1c;
-          --bg-card: rgba(15, 23, 42, 0.8);
-          --bg-card-solid: #0f172a;
-          --primary: #3b82f6;
-          --primary-dark: #2563eb;
-          --secondary: #1e40af;
-          --accent: #06b6d4;
-          --text-white: #f1f5f9;
-          --text-gray: #94a3b8;
-          --text-muted: #64748b;
-          --border: rgba(255, 255, 255, 0.08);
-          --border-light: rgba(255, 255, 255, 0.12);
-          --glow: 0 0 60px rgba(59, 130, 246, 0.15);
-          --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        html { scroll-behavior: smooth; }
-        body {
-          font-family: 'Manrope', -apple-system, BlinkMacSystemFont, sans-serif;
-          background: linear-gradient(135deg, var(--bg-deep) 0%, #0d1421 25%, #111827 50%, #0f172a 75%, var(--bg-deep) 100%);
-          color: var(--text-white);
-          overflow-x: hidden;
-          line-height: 1.6;
-        }
-        .landing-container { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
-        .text-gradient {
-          background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
-          -webkit-background-clip: text;
-          -webkit-text-fill-color: transparent;
-        }
-        .btn {
-          display: inline-flex; align-items: center; gap: 8px;
-          padding: 11px 24px; font-weight: 500; font-size: 0.9rem;
-          border-radius: 8px; transition: var(--transition);
-          text-decoration: none; border: 1px solid transparent; cursor: pointer;
-        }
-        .btn-primary {
-          background: var(--primary); color: white;
-          box-shadow: 0 4px 14px rgba(59, 130, 246, 0.35);
-        }
-        .btn-primary:hover {
-          background: var(--primary-dark); transform: translateY(-2px);
-          box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
-        }
-        .btn-glass {
-          background: rgba(255, 255, 255, 0.03);
-          border: 1px solid var(--border); color: var(--text-gray);
-        }
-        .btn-glass:hover {
-          background: rgba(255, 255, 255, 0.06);
-          border-color: var(--border-light); color: var(--text-white);
-        }
-        .landing-header {
-          position: fixed; top: 0; width: 100%; z-index: 1000;
-          padding: 16px 0; background: rgba(5, 10, 20, 0.85);
-          backdrop-filter: blur(20px); border-bottom: 1px solid var(--border);
-        }
-        .nav-inner { display: flex; justify-content: space-between; align-items: center; }
-        .logo {
-          font-weight: 700; font-size: 1.25rem; display: flex;
-          align-items: center; gap: 10px; color: var(--text-white); text-decoration: none;
-        }
-        .logo-icon {
-          width: 32px; height: 32px;
-          background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
-          border-radius: 8px; display: flex; align-items: center; justify-content: center;
-        }
-        .nav-menu { display: flex; gap: 32px; }
-        .nav-link {
-          color: var(--text-muted); font-size: 0.875rem;
-          text-decoration: none; transition: var(--transition); font-weight: 500;
-        }
-        .nav-link:hover { color: var(--text-white); }
-        .nav-cta { display: flex; align-items: center; gap: 12px; }
-        #hero {
-          position: relative; min-height: 100vh; display: flex;
-          align-items: center; padding: 120px 0 80px; overflow: hidden;
-        }
-        #hero::before {
-          content: '';
-          position: absolute;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          background: radial-gradient(circle at 30% 40%, rgba(59, 130, 246, 0.05) 0%, transparent 50%),
-                      radial-gradient(circle at 70% 80%, rgba(6, 182, 212, 0.03) 0%, transparent 50%);
-          pointer-events: none;
-          z-index: 1;
-        }
-        #hero-canvas {
-          position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; opacity: 0.8;
-        }
-        .hero-grid {
-          display: grid; grid-template-columns: 1fr 1.3fr; gap: 50px;
-          align-items: center; position: relative; z-index: 2;
-        }
-        .hero-badge {
-          display: inline-flex; align-items: center; gap: 8px;
-          background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.2);
-          padding: 6px 14px; border-radius: 20px; font-size: 0.8rem;
-          color: var(--primary); font-weight: 500; margin-bottom: 24px;
-        }
-        .hero-content h1 {
-          font-size: 2.75rem; line-height: 1.15; margin-bottom: 20px;
-          font-weight: 700; letter-spacing: -0.03em;
-        }
-        .hero-content p {
-          font-size: 1rem; color: var(--text-gray); margin-bottom: 32px;
-          max-width: 460px; line-height: 1.7;
-        }
-        .hero-buttons { display: flex; gap: 12px; }
-        .hero-visual { position: relative; perspective: 1500px; }
-        .browser-mockup {
-          background: var(--bg-card-solid); border: 1px solid var(--border);
-          border-radius: 12px; overflow: hidden;
-          box-shadow: 0 40px 80px -20px rgba(0, 0, 0, 0.6), var(--glow);
-          transform-style: preserve-3d; transition: transform 0.1s ease-out;
-        }
-        .browser-header {
-          background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
-          padding: 12px 16px; display: flex; align-items: center; gap: 8px;
-          border-bottom: 1px solid var(--border);
-        }
-        .browser-dots { display: flex; gap: 6px; }
-        .browser-dot { width: 10px; height: 10px; border-radius: 50%; }
-        .dot-red { background: #ef4444; }
-        .dot-yellow { background: #f59e0b; }
-        .dot-green { background: #22c55e; }
-        .browser-url {
-          flex: 1; margin-left: 12px; background: rgba(0, 0, 0, 0.3);
-          border-radius: 6px; padding: 6px 12px; font-size: 0.75rem;
-          color: var(--text-muted); display: flex; align-items: center; gap: 6px;
-        }
-        .browser-content {
-          overflow: hidden;
-          height: 400px;
-          background: #111827;
-        }
-        #hero .browser-content > div {
-          transform: scaleX(0.85) scaleY(0.9);
-          transform-origin: center center;
-          position: relative;
-          left: 50%;
-          top: calc(50% + 85px);
-          margin-left: -50%;
-          margin-top: -50%;
-        }
-        .browser-content img {
-          width: 100%; height: auto; display: block; transition: transform 8s ease-in-out;
-        }
-        .browser-mockup:hover .browser-content img { transform: translateY(-15%); }
-        .browser-content > div {
-          height: 120%;
-          transform: scale(1);
-          transform-origin: top center;
-          width: 100%;
-          margin: 0;
-          position: relative;
-          top: -10px;
-          left: -10px;
-        }
-        .float-badge {
-          position: absolute; top: -15px; right: -15px;
-          background: rgba(5, 10, 20, 0.95); border: 1px solid var(--border);
-          padding: 10px 16px; border-radius: 10px;
-          box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-          display: flex; align-items: center; gap: 10px;
-          animation: float 5s ease-in-out infinite; z-index: 10;
-          min-width: 140px; white-space: nowrap;
-        }
-        @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
-        .float-badge-icon {
-          width: 36px; height: 36px; background: rgba(59, 130, 246, 0.15);
-          border-radius: 8px; display: flex; align-items: center; justify-content: center;
-          color: var(--primary);
-        }
-        .float-badge-text { font-size: 0.7rem; color: var(--text-muted); }
-        .float-badge-value { font-size: 1rem; font-weight: 600; color: var(--text-white); }
-        #stats {
-          border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
-          padding: 50px 0; background: rgba(255, 255, 255, 0.01);
-        }
-        .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 40px; text-align: center; }
-        .stat-item {
-          transform-style: preserve-3d;
-          transition: var(--transition);
-        }
-        .stat-item h4 {
-          font-size: 2.25rem; font-weight: 700; margin-bottom: 6px;
-          background: linear-gradient(135deg, var(--text-white) 0%, var(--primary) 100%);
-          -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-        }
-        .stat-item span {
-          color: var(--text-muted); font-size: 0.8rem;
-          text-transform: uppercase; letter-spacing: 0.5px; font-weight: 500;
-        }
-        #features { padding: 100px 0; }
-        .section-header { text-align: center; max-width: 600px; margin: 0 auto 80px; }
-        .section-tag {
-          display: inline-flex; align-items: center; gap: 6px;
-          padding: 6px 12px; background: rgba(59, 130, 246, 0.1);
-          border: 1px solid rgba(59, 130, 246, 0.15); border-radius: 20px;
-          font-size: 0.75rem; color: var(--primary); font-weight: 500; margin-bottom: 16px;
-        }
-        .section-header h2 { font-size: 2.25rem; font-weight: 700; margin-bottom: 12px; }
-        .section-header p { color: var(--text-gray); font-size: 1rem; }
-        .feature-block {
-          display: grid; grid-template-columns: 1fr 1.2fr; gap: 60px;
-          align-items: center; margin-bottom: 100px;
-        }
-        .feature-block:last-child { margin-bottom: 0; }
-        .feature-block.reverse { grid-template-columns: 1.2fr 1fr; }
-        .feature-block.reverse .feature-text { order: 2; }
-        .feature-block.reverse .feature-visual { order: 1; }
-        .feature-block.vertical {
-          grid-template-columns: 1fr;
-          gap: 40px;
-          max-width: 900px;
-          margin-left: auto;
-          margin-right: auto;
-        }
-        .feature-block.vertical .feature-text {
-          text-align: center;
-          max-width: 600px;
-          margin: 0 auto;
-        }
-        .feature-block.vertical .feature-list {
-          display: inline-flex;
-          flex-wrap: wrap;
-          justify-content: center;
-          gap: 8px 24px;
-        }
-        .feature-block.vertical .feature-icon {
-          margin: 0 auto 20px;
-        }
-        .feature-block.vertical .feature-visual {
-          display: flex;
-          justify-content: center;
-          width: 100%;
-        }
-        .feature-block.vertical .feature-browser {
-          width: 100%;
-          max-width: 800px;
-        }
-        .feature-block.vertical .feature-browser .browser-content > div {
-          left: 0;
-          width: 100%;
-          transform: scale(0.85);
-          transform-origin: top center;
-        }
-        .feature-icon {
-          width: 50px; height: 50px;
-          background: linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(6, 182, 212, 0.15));
-          border: 1px solid rgba(59, 130, 246, 0.2); border-radius: 12px;
-          display: flex; align-items: center; justify-content: center;
-          color: var(--primary); font-size: 1.25rem; margin-bottom: 20px;
-        }
-        .feature-text h3 { font-size: 1.5rem; font-weight: 600; margin-bottom: 12px; }
-        .feature-text p { color: var(--text-gray); font-size: 0.95rem; margin-bottom: 20px; line-height: 1.7; }
-        .feature-list { list-style: none; }
-        .feature-list li {
-          display: flex; align-items: center; gap: 10px;
-          color: var(--text-gray); font-size: 0.9rem; margin-bottom: 10px;
-        }
-        .check-icon { color: var(--accent); width: 14px; height: 14px; }
-        .feature-browser {
-          background: var(--bg-card-solid); border: 1px solid var(--border);
-          border-radius: 12px; overflow: hidden;
-          box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); transition: var(--transition);
-        }
-        .feature-browser:hover {
-          transform: translateY(-5px);
-          box-shadow: 0 30px 60px -12px rgba(0, 0, 0, 0.6), var(--glow);
-        }
-        .feature-browser .browser-content {
-          height: 350px;
-          background: #111827;
-        }
-        .feature-browser .browser-content > div {
-          height: 115%;
-          transform: scale(0.85);
-          transform-origin: top center;
-          width: 110%;
-          margin: 0;
-          position: relative;
-          top: 2px;
-          left: -30px;
-        }
-        .feature-block.reverse .feature-browser .browser-content > div {
-          top: -5px;
-          left: 0;
-        }
-        .feature-browser .browser-content img { transition: transform 6s ease-in-out; }
-        .feature-browser:hover .browser-content img { transform: translateY(-10%); }
-        #features-cards { padding: 0 0 100px; }
-        .features-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
-        .feature-card {
-          background: var(--bg-card); border: 1px solid var(--border);
-          border-radius: 16px; padding: 32px 28px;
-          transition: var(--transition);
-          transform-style: preserve-3d;
-          perspective: 1000px;
-        }
-        .feature-card:hover {
-          transform: translateY(-5px); border-color: rgba(59, 130, 246, 0.3);
-          box-shadow: var(--glow);
-        }
-        .feature-card-icon {
-          width: 48px; height: 48px;
-          background: linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(6, 182, 212, 0.15));
-          border: 1px solid rgba(59, 130, 246, 0.2); border-radius: 12px;
-          display: flex; align-items: center; justify-content: center;
-          color: var(--primary); margin-bottom: 20px;
-        }
-        .feature-card h4 { font-size: 1.1rem; font-weight: 600; margin-bottom: 10px; }
-        .feature-card p { color: var(--text-gray); font-size: 0.875rem; line-height: 1.6; }
-        #cta { padding: 100px 0; }
-        .cta-box {
-          background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
-          border: 1px solid var(--border); border-radius: 20px;
-          padding: 70px 40px; text-align: center; position: relative; overflow: hidden;
-        }
-        .cta-box::before {
-          content: ''; position: absolute; top: 0; left: 50%;
-          transform: translateX(-50%); width: 60%; height: 1px;
-          background: linear-gradient(90deg, transparent, var(--primary), transparent);
-        }
-        .cta-box h2 { font-size: 2rem; font-weight: 700; margin-bottom: 12px; }
-        .cta-box p { color: var(--text-gray); font-size: 1rem; max-width: 500px; margin: 0 auto 28px; }
-        .landing-footer { padding: 50px 0 30px; border-top: 1px solid var(--border); }
-        .footer-grid {
-          display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 60px; margin-bottom: 40px;
-        }
-        .footer-brand .logo { margin-bottom: 12px; }
-        .footer-brand p { color: var(--text-muted); font-size: 0.85rem; max-width: 280px; }
-        .footer-column h4 { font-size: 0.85rem; font-weight: 600; margin-bottom: 16px; }
-        .footer-column ul { list-style: none; }
-        .footer-column li { margin-bottom: 10px; }
-        .footer-column a {
-          color: var(--text-muted); text-decoration: none; font-size: 0.85rem;
-          transition: var(--transition);
-        }
-        .footer-column a:hover { color: var(--primary); }
-        .footer-bottom {
-          padding-top: 24px; border-top: 1px solid var(--border);
-          display: flex; justify-content: space-between; align-items: center;
-        }
-        .footer-bottom p { color: var(--text-muted); font-size: 0.8rem; }
-        .footer-socials { display: flex; gap: 12px; }
-        .footer-socials a {
-          width: 36px; height: 36px; background: var(--bg-card-solid);
-          border: 1px solid var(--border); border-radius: 8px;
-          display: flex; align-items: center; justify-content: center;
-          color: var(--text-muted); text-decoration: none; transition: var(--transition);
-        }
-        .footer-socials a:hover { background: var(--primary); color: white; border-color: var(--primary); }
-        .reveal { opacity: 0; transform: translateY(30px); transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1); }
-        .reveal.active { opacity: 1; transform: translateY(0); }
-        @media (max-width: 1024px) {
-          .hero-grid { grid-template-columns: 1fr; gap: 50px; }
-          .hero-content { text-align: center; }
-          .hero-content p { margin: 0 auto 32px; }
-          .hero-buttons { justify-content: center; }
-          .feature-block, .feature-block.reverse { grid-template-columns: 1fr; gap: 40px; }
-          .feature-block.reverse .feature-text, .feature-block.reverse .feature-visual { order: unset; }
-          .features-grid { grid-template-columns: 1fr; }
-          .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 30px; }
-          .footer-grid { grid-template-columns: 1fr; }
-        }
-        @media (max-width: 768px) {
-          .nav-menu { display: none; }
-          .hero-content h1 { font-size: 2rem; line-height: 1.1; }
-          .hero-content p { font-size: 0.95rem; }
-          .section-header h2 { font-size: 1.75rem; }
-          .stat-item h4 { font-size: 1.75rem; }
-          .footer-bottom { flex-direction: column; gap: 16px; text-align: center; }
+    <div className={styles.landingPage}>
+      <link
+        href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet"
+      />
 
-          /* Mobile mockups optimizations */
-          .browser-content { height: 280px; }
-          .browser-content > div {
-            height: 120%;
-            transform: scale(0.6);
-            top: -5px;
-            left: -10px;
-          }
-
-          .feature-browser .browser-content { height: 220px; }
-          .feature-browser .browser-content > div {
-            height: 115%;
-            transform: scale(0.55);
-            top: -3px;
-            left: -8px;
-          }
-
-          /* Hero mockup mobile specific */
-          #hero .browser-content { height: 300px; }
-          #hero .browser-content > div {
-            transform: scaleX(0.7) scaleY(0.75);
-            top: calc(50% + 40px);
-            left: 50%;
-            margin-left: -50%;
-            margin-top: -50%;
-          }
-
-          /* Mobile navigation improvements */
-          .landing-container { padding: 0 20px; }
-          .nav-inner { padding: 12px 0; }
-          .nav-cta { gap: 8px; }
-          .btn { padding: 8px 16px; font-size: 0.875rem; }
-
-          /* Mobile stats grid */
-          .stats-grid { grid-template-columns: 1fr 1fr; gap: 20px; }
-
-          /* Mobile hero adjustments */
-          .hero-buttons { flex-direction: column; gap: 12px; width: 100%; }
-          .hero-buttons .btn { width: 100%; justify-content: center; }
-
-          /* Mobile feature cards */
-          .features-grid { gap: 16px; }
-          .feature-card { padding: 24px 20px; }
-
-          /* Mobile CTA */
-          .cta-box { padding: 50px 24px; margin: 0 20px; }
-
-          /* Mobile float badge */
-          .float-badge {
-            position: relative;
-            top: auto;
-            right: auto;
-            margin: 0 auto 16px auto;
-            transform: none;
-            animation: none;
-            justify-content: center;
-            max-width: fit-content;
-          }
-        }
-
-        @media (max-width: 480px) {
-          .hero-content h1 { font-size: 1.75rem; }
-          .stats-grid { grid-template-columns: 1fr; }
-          .stat-item { text-align: center; }
-
-          /* Very small screens - stack everything */
-          .browser-content { height: 250px; }
-          .feature-browser .browser-content { height: 200px; }
-
-          #hero .browser-content > div {
-            transform: scaleX(0.6) scaleY(0.65);
-          }
-
-          .landing-container { padding: 0 16px; }
-          .cta-box { padding: 40px 20px; }
-        }
-
-        @keyframes pointAppear {
-          0% { r: 0; opacity: 0; }
-          50% { r: 4; opacity: 1; }
-          100% { r: 3; opacity: 1; }
-        }
-      `}</style>
-
-      <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
-
-      <header className="landing-header">
-        <div className="landing-container nav-inner">
-          <Link href="/" className="logo">
-            <div className="logo-icon">
+      {/* =================== HEADER =================== */}
+      <header className={styles.header}>
+        <div className={`${styles.container} ${styles.navInner}`}>
+          <Link href="/" className={styles.logo}>
+            <div className={styles.logoIcon}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M21 16.5c0 .38-.21.71-.53.88l-7.9 4.44c-.16.12-.36.18-.57.18-.21 0-.41-.06-.57-.18l-7.9-4.44A.991.991 0 013 16.5v-9c0-.38.21-.71.53-.88l7.9-4.44c.16-.12.36-.18.57-.18.21 0 .41.06.57.18l7.9 4.44c.32.17.53.5.53.88v9z"/>
+                <path d="M21 16.5c0 .38-.21.71-.53.88l-7.9 4.44c-.16.12-.36.18-.57.18-.21 0-.41-.06-.57-.18l-7.9-4.44A.991.991 0 013 16.5v-9c0-.38.21-.71.53-.88l7.9-4.44c.16-.12.36-.18.57-.18.21 0 .41.06.57.18l7.9 4.44c.32.17.53.5.53.88v9z" />
               </svg>
             </div>
             ULTRON
           </Link>
-          <nav className="nav-menu">
-            <a href="#features" className="nav-link">Fonctionnalités</a>
-            <a href="#stats" className="nav-link">Résultats</a>
-            <a href="#cta" className="nav-link">Contact</a>
+          <nav className={styles.navMenu}>
+            <a href="#features" className={styles.navLink}>Fonctionnalités</a>
+            <Link href="/features/crm" className={styles.navLink}>CRM</Link>
+            <Link href="/features/ai-assistant" className={styles.navLink}>IA</Link>
+            <Link href="/blog" className={styles.navLink}>Blog</Link>
           </nav>
-          <div className="nav-cta">
-            <Link href="/login" className="btn btn-glass">Connexion</Link>
-            <Link href="/register" className="btn btn-primary">Essai Gratuit</Link>
+          <div className={styles.navCta}>
+            <Link href="/login" className={styles.btnGlass}>Connexion</Link>
+            <Link href="/register" className={styles.btnPrimary}>Essai Gratuit</Link>
           </div>
         </div>
       </header>
 
       <main>
-        <section id="hero">
-          <canvas id="hero-canvas"></canvas>
-          <div className="landing-container hero-grid">
-            <div className="hero-content reveal">
-              <div className="hero-badge">
+        {/* =================== HERO =================== */}
+        <section className={styles.hero}>
+          <canvas ref={canvasRef} className={styles.heroCanvas} />
+          <div className={`${styles.container} ${styles.heroGrid}`}>
+            <div className={styles.heroContent}>
+              <div className={styles.heroBadge}>
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M12 2L9.19 8.63L2 9.24l5.46 4.73L5.82 21L12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2z"/>
+                  <path d="M12 2L9.19 8.63L2 9.24l5.46 4.73L5.82 21L12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2z" />
                 </svg>
-                Nouveau : Génération de lettres avec IA
+                Nouveau : Agent Vocal IA + Click-to-Call
               </div>
-              <h1>L&apos;Intelligence Artificielle<br/><span className="text-gradient">au service du Patrimoine.</span></h1>
-              <p>Automatisez votre prospection, qualifiez vos leads en temps réel et multipliez vos conversions. Conçu pour les CGP.</p>
-              <div className="hero-buttons">
-                <Link href="/register" className="btn btn-primary">
+              <h1>
+                L&apos;Intelligence Artificielle
+                <br />
+                <span className={styles.textGradient}>au service du Patrimoine.</span>
+              </h1>
+              <p>
+                Automatisez votre prospection, qualifiez vos leads en temps réel et multipliez vos conversions.
+                La plateforme tout-en-un conçue pour les CGP.
+              </p>
+              <div className={styles.heroButtons}>
+                <Link href="/register" className={styles.btnPrimary}>
                   Commencer maintenant
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M5 12h14M12 5l7 7-7 7"/>
+                    <path d="M5 12h14M12 5l7 7-7 7" />
                   </svg>
                 </Link>
-                <a href="#features" className="btn btn-glass">
+                <a href="#features" className={styles.btnGlass}>
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M8 5v14l11-7z"/>
+                    <path d="M8 5v14l11-7z" />
                   </svg>
-                  Voir la démo
+                  Découvrir les fonctionnalités
                 </a>
               </div>
             </div>
 
-            <div className="hero-visual reveal">
-              <div className="browser-mockup" id="tilt-card">
-                <div className="float-badge">
-                  <div className="float-badge-icon">
+            <div className={styles.heroVisual}>
+              <div className={styles.browserMockup}>
+                <div className={styles.floatBadge}>
+                  <div className={styles.floatBadgeIcon}>
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M12 2a2 2 0 012 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 017 7h1a1 1 0 011 1v3a1 1 0 01-1 1h-1v1a2 2 0 01-2 2H5a2 2 0 01-2-2v-1H2a1 1 0 01-1-1v-3a1 1 0 011-1h1a7 7 0 017-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 012-2z"/>
+                      <path d="M12 2a2 2 0 012 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 017 7h1a1 1 0 011 1v3a1 1 0 01-1 1h-1v1a2 2 0 01-2 2H5a2 2 0 01-2-2v-1H2a1 1 0 01-1-1v-3a1 1 0 011-1h1a7 7 0 017-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 012-2z" />
                     </svg>
                   </div>
                   <div>
-                    <div className="float-badge-text">Score IA</div>
-                    <div className="float-badge-value">98/100</div>
+                    <div className={styles.floatBadgeText}>Score IA</div>
+                    <div className={styles.floatBadgeValue}>98/100</div>
                   </div>
                 </div>
-                <div className="browser-header">
-                  <div className="browser-dots">
-                    <div className="browser-dot dot-red"></div>
-                    <div className="browser-dot dot-yellow"></div>
-                    <div className="browser-dot dot-green"></div>
+                <div className={styles.browserHeader}>
+                  <div className={styles.browserDots}>
+                    <div className={`${styles.browserDot} ${styles.dotRed}`} />
+                    <div className={`${styles.browserDot} ${styles.dotYellow}`} />
+                    <div className={`${styles.browserDot} ${styles.dotGreen}`} />
                   </div>
-                  <div className="browser-url">
-                    <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" style={{color: 'var(--accent)'}}>
-                      <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2z"/>
+                  <div className={styles.browserUrl}>
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" style={{ color: 'var(--accent)' }}>
+                      <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2z" />
                     </svg>
-                    ultron-ai.pro/dashboard
+                    ultron-app.com/dashboard
                   </div>
                 </div>
-                <div className="browser-content">
+                <div className={styles.browserContent}>
                   <DashboardMockup />
                 </div>
               </div>
@@ -779,357 +210,386 @@ export default function LandingPage() {
           </div>
         </section>
 
-        <section id="stats">
-          <div className="landing-container">
-            <div className="stats-grid reveal">
-              <div className="stat-item"><h4>+40%</h4><span>Taux de conversion</span></div>
-              <div className="stat-item"><h4>98%</h4><span>Précision IA</span></div>
-              <div className="stat-item"><h4>2h</h4><span>Gagnées par jour</span></div>
-              <div className="stat-item"><h4>24/7</h4><span>Disponibilité</span></div>
-            </div>
+        {/* =================== STATS =================== */}
+        <section className={styles.stats}>
+          <div className={styles.container}>
+            <AnimatedSection className={styles.statsGrid} staggerChildren staggerDelay={0.15}>
+              <div className={styles.statItem}><h4>+40%</h4><span>Taux de conversion</span></div>
+              <div className={styles.statItem}><h4>98%</h4><span>Précision IA</span></div>
+              <div className={styles.statItem}><h4>2h</h4><span>Gagnées par jour</span></div>
+              <div className={styles.statItem}><h4>24/7</h4><span>Disponibilité</span></div>
+            </AnimatedSection>
           </div>
         </section>
 
-        <section id="features">
-          <div className="landing-container">
-            <div className="section-header reveal">
-              <span className="section-tag">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M4 4h7v7H4V4zm9 0h7v7h-7V4zm-9 9h7v7H4v-7zm9 0h7v7h-7v-7z"/>
-                </svg>
-                Fonctionnalités
-              </span>
-              <h2>Tout ce dont vous avez besoin</h2>
-              <p>Des outils puissants pour gérer vos prospects de A à Z, propulsés par l&apos;intelligence artificielle.</p>
-            </div>
-
-            <div className="feature-block reveal">
-              <div className="feature-text">
-                <div className="feature-icon">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/>
+        {/* =================== FEATURE SCENES =================== */}
+        <section id="features" className={styles.featuresSection}>
+          <div className={styles.container}>
+            <AnimatedSection>
+              <div className={styles.sectionHeader}>
+                <span className={styles.sectionTag}>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M4 4h7v7H4V4zm9 0h7v7h-7V4zm-9 9h7v7H4v-7zm9 0h7v7h-7v-7z" />
                   </svg>
-                </div>
-                <h3>Dashboard en temps réel</h3>
-                <p>Visualisez instantanément vos KPIs : prospects chauds, tièdes, froids, emails envoyés et évolution sur 30 jours.</p>
-                <ul className="feature-list">
-                  <li><svg className="check-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>Statistiques en temps réel</li>
-                  <li><svg className="check-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>Graphiques d&apos;évolution</li>
-                  <li><svg className="check-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>Activité récente</li>
-                  <li><svg className="check-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>Alertes intelligentes</li>
-                </ul>
+                  10 modules intégrés
+                </span>
+                <h2>Tout ce dont votre cabinet a besoin</h2>
+                <p>Des outils puissants pour gérer vos prospects de A à Z, propulsés par l&apos;intelligence artificielle.</p>
               </div>
-              <div className="feature-visual">
-                <div className="feature-browser">
-                  <div className="browser-header">
-                    <div className="browser-dots">
-                      <div className="browser-dot dot-red"></div>
-                      <div className="browser-dot dot-yellow"></div>
-                      <div className="browser-dot dot-green"></div>
-                    </div>
-                    <div className="browser-url">
-                      <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" style={{color: 'var(--accent)'}}>
-                        <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2z"/>
-                      </svg>
-                      ultron-ai.pro/dashboard
-                    </div>
-                  </div>
-                  <div className="browser-content">
-                    <DashboardMockup />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="feature-block vertical reveal">
-              <div className="feature-text">
-                <div className="feature-icon">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <rect x="3" y="3" width="7" height="18" rx="1"/><rect x="14" y="3" width="7" height="18" rx="1"/>
-                  </svg>
-                </div>
-                <h3>Pipeline CRM visuel</h3>
-                <p>Gérez vos prospects dans un Kanban intuitif. Drag & drop pour changer de stage, actions automatiques incluses.</p>
-                <ul className="feature-list">
-                  <li><svg className="check-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>Vue Kanban drag & drop</li>
-                  <li><svg className="check-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>Badges de qualification IA</li>
-                  <li><svg className="check-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>Actions automatiques</li>
-                  <li><svg className="check-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>Filtres et recherche</li>
-                </ul>
-              </div>
-              <div className="feature-visual">
-                <div className="feature-browser">
-                  <div className="browser-header">
-                    <div className="browser-dots">
-                      <div className="browser-dot dot-red"></div>
-                      <div className="browser-dot dot-yellow"></div>
-                      <div className="browser-dot dot-green"></div>
-                    </div>
-                    <div className="browser-url">
-                      <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" style={{color: 'var(--accent)'}}>
-                        <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2z"/>
-                      </svg>
-                      ultron-ai.pro/pipeline
-                    </div>
-                  </div>
-                  <div className="browser-content">
-                    <PipelineMockup />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="feature-block reveal">
-              <div className="feature-text">
-                <div className="feature-icon">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-                    <circle cx="8.5" cy="7" r="4"/>
-                    <path d="M20 8v6M23 11h-6"/>
-                  </svg>
-                </div>
-                <h3>Gestion complète des prospects</h3>
-                <p>Base de données centralisée avec recherche avancée, filtres intelligents et qualification IA automatique.</p>
-                <ul className="feature-list">
-                  <li><svg className="check-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>Recherche et filtres avancés</li>
-                  <li><svg className="check-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>Scoring IA en temps réel</li>
-                  <li><svg className="check-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>Actions rapides intégrées</li>
-                  <li><svg className="check-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>Export et suivi complet</li>
-                </ul>
-              </div>
-              <div className="feature-visual">
-                <div className="feature-browser">
-                  <div className="browser-header">
-                    <div className="browser-dots">
-                      <div className="browser-dot dot-red"></div>
-                      <div className="browser-dot dot-yellow"></div>
-                      <div className="browser-dot dot-green"></div>
-                    </div>
-                    <div className="browser-url">
-                      <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" style={{color: 'var(--accent)'}}>
-                        <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2z"/>
-                      </svg>
-                      ultron-ai.pro/prospects
-                    </div>
-                  </div>
-                  <div className="browser-content">
-                    <ProspectsMockup />
-                  </div>
-                </div>
-              </div>
-            </div>
+            </AnimatedSection>
           </div>
+
+          {/* Scene 1: Dashboard CRM */}
+          <FeatureScene
+            title="Dashboard temps réel"
+            subtitle="Vue d'ensemble instantanée"
+            description="Visualisez vos KPIs en un coup d'œil : prospects chauds, tièdes, froids, emails envoyés et évolution sur 30 jours. Tout est mis à jour en temps réel."
+            features={[
+              'Statistiques et graphiques d\'évolution',
+              'Activité récente par conseiller',
+              'Alertes intelligentes sur seuils critiques',
+              'Export automatique des rapports',
+            ]}
+            mockup={<DashboardMockup />}
+            badge="CRM"
+            accentColor="#3b82f6"
+            index={0}
+          />
+
+          <div className={styles.sceneDivider} />
+
+          {/* Scene 2: Pipeline Kanban */}
+          <FeatureScene
+            title="Pipeline CRM visuel"
+            subtitle="Kanban intelligent avec drag & drop"
+            description="Gérez vos prospects dans un pipeline intuitif. Changez de stage en un glisser-déposer, avec actions automatiques déclenchées à chaque transition."
+            features={[
+              'Vue Kanban drag & drop fluide',
+              'Badges de qualification IA (CHAUD/TIÈDE/FROID)',
+              'Actions automatiques par stage (emails, rappels)',
+              'Gestion de produits et commissions intégrée',
+            ]}
+            mockup={<PipelineMockup />}
+            reversed
+            badge="Pipeline"
+            accentColor="#22c55e"
+            index={1}
+          />
+
+          <div className={styles.sceneDivider} />
+
+          {/* Scene 3: Admin Dashboard */}
+          <FeatureScene
+            title="Dashboard Admin"
+            subtitle="Pilotez la performance de votre équipe"
+            description="Tableau de bord complet pour les dirigeants de cabinet. Suivez le CA, les conversions, la performance par conseiller et identifiez les axes d'amélioration."
+            features={[
+              '4 KPIs clés avec tendances en temps réel',
+              'Classement performance des conseillers',
+              'Funnel de conversion par étape du pipeline',
+              'Alertes proactives sur seuils configurables',
+            ]}
+            mockup={<AdminDashboardMockup />}
+            badge="Admin"
+            accentColor="#f59e0b"
+            index={2}
+          />
+
+          <div className={styles.sceneDivider} />
+
+          {/* Scene 4: Assistant IA */}
+          <FeatureScene
+            title="Assistant IA conversationnel"
+            subtitle="Interrogez vos données en langage naturel"
+            description="Posez vos questions en français : 'Combien de prospects chauds ce mois-ci ?' L'IA traduit, interroge votre base et vous répond avec des tableaux et graphiques."
+            features={[
+              'Requêtes en français naturel → SQL sécurisé',
+              'Tableaux de résultats interactifs',
+              'Analyses prédictives et insights métier',
+              'Historique des conversations sauvegardé',
+            ]}
+            mockup={<AssistantMockup />}
+            reversed
+            badge="Intelligence Artificielle"
+            accentColor="#8b5cf6"
+            index={3}
+          />
+
+          <div className={styles.sceneDivider} />
+
+          {/* Scene 5: Click-to-Call */}
+          <FeatureScene
+            title="Click-to-Call WebRTC"
+            subtitle="Appelez vos prospects directement depuis le CRM"
+            description="Widget d'appel intégré alimenté par Twilio. Lancez un appel en un clic, prenez des notes en temps réel et classifiez le résultat — tout sans quitter Ultron."
+            features={[
+              'Appels WebRTC natifs dans le navigateur',
+              'Timer en direct, mute et contrôles intégrés',
+              'Notes d\'appel et classification automatique',
+              'Historique complet avec durées et résultats',
+            ]}
+            mockup={<ClickToCallMockup />}
+            badge="Téléphonie"
+            accentColor="#06b6d4"
+            index={4}
+          />
+
+          <div className={styles.sceneDivider} />
+
+          {/* Scene 6: Lead Finder */}
+          <FeatureScene
+            title="Moteur de recherche prospects"
+            subtitle="Trouvez vos futurs clients en quelques clics"
+            description="Recherchez des commerçants, professions libérales ou dirigeants d'entreprises. Données enrichies depuis Google Maps et Pappers, import direct vers votre CRM."
+            features={[
+              '3 catégories : commerçants, professions libérales, dirigeants',
+              'Données enrichies : téléphone, email, adresse, SIREN',
+              'Score de qualité et validation automatique',
+              'Import en un clic vers votre pipeline CRM',
+            ]}
+            mockup={<LeadFinderMockup />}
+            reversed
+            badge="Prospection"
+            accentColor="#10b981"
+            index={5}
+          />
+
+          <div className={styles.sceneDivider} />
+
+          {/* Scene 7: LinkedIn Agent */}
+          <FeatureScene
+            title="Générateur de posts LinkedIn"
+            subtitle="Créez du contenu expert en 30 secondes"
+            description="L'IA génère des posts LinkedIn professionnels basés sur l'actualité financière et le profil de votre cabinet. 8 thèmes au choix, ton personnalisable."
+            features={[
+              '8 thèmes spécialisés CGP (marchés, fiscalité, retraite...)',
+              'Configuration complète de l\'identité cabinet',
+              'Preview style LinkedIn avant publication',
+              'Historique et réutilisation des posts générés',
+            ]}
+            mockup={<LinkedInAgentMockup />}
+            badge="Marketing"
+            accentColor="#0077b5"
+            index={6}
+          />
+
+          <div className={styles.sceneDivider} />
+
+          {/* Scene 8: Agent Vocal IA */}
+          <FeatureScene
+            title="Agent Vocal IA"
+            subtitle="Qualification automatique par téléphone"
+            description="L'IA appelle vos prospects automatiquement, les qualifie en conversation naturelle et programme des RDV dans votre agenda. Alimenté par Vapi.ai."
+            features={[
+              'Appels automatiques sur formulaires web entrants',
+              'Qualification CHAUD/TIÈDE/FROID en temps réel',
+              'Transcription complète et analyse IA',
+              'Prise de RDV automatique avec confirmation',
+            ]}
+            mockup={<VoiceAIAgentMockup />}
+            reversed
+            badge="Agent IA"
+            accentColor="#ef4444"
+            index={7}
+          />
+
+          <div className={styles.sceneDivider} />
+
+          {/* Scene 9: Extension Chrome */}
+          <FeatureScene
+            title="Extension Chrome intelligente"
+            subtitle="Votre copilote pendant les appels Google Meet"
+            description="Enregistrez vos RDV Google Meet et obtenez une transcription PDF complète avec analyse IA en temps réel. Questions suggérées et réponses aux objections incluses."
+            features={[
+              'Transcription automatique Google Meet',
+              'Questions suggérées en temps réel pendant l\'appel',
+              'Réponses aux objections détectées par l\'IA',
+              'Export PDF complet du compte-rendu',
+            ]}
+            mockup={<ExtensionMockup />}
+            badge="Extension"
+            accentColor="#f97316"
+            index={8}
+          />
+
+          <div className={styles.sceneDivider} />
+
+          {/* Scene 10: Prospects / CRM complet */}
+          <FeatureScene
+            title="Gestion 360° des prospects"
+            subtitle="Base de données centralisée et enrichie"
+            description="Recherche avancée, filtres intelligents, scoring IA automatique. Chaque fiche prospect regroupe toutes les interactions, appels, emails et documents."
+            features={[
+              'Filtres avancés multi-critères avec sauvegarde',
+              'Scoring IA en temps réel avec justification',
+              'Vue chronologique de toutes les interactions',
+              'Import CSV et enrichissement automatique',
+            ]}
+            mockup={<ProspectsMockup />}
+            reversed
+            badge="CRM"
+            accentColor="#6366f1"
+            index={9}
+          />
         </section>
 
-        {/* Extension Chrome Section */}
-        <section id="extension-chrome" style={{ padding: '100px 0' }}>
-          <div className="landing-container">
-            <div className="feature-block reveal">
-              <div className="feature-text">
-                <div className="feature-icon">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.94-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/>
+        {/* =================== ADDITIONAL FEATURES CARDS =================== */}
+        <section className={styles.featureCardsSection}>
+          <div className={styles.container}>
+            <AnimatedSection>
+              <div className={styles.sectionHeader}>
+                <span className={styles.sectionTag}>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
                   </svg>
-                </div>
-                <h3>Extension Chrome intelligente</h3>
-                <p>Enregistrez vos RDV Google Meet et obtenez une transcription PDF complète avec analyse IA en temps réel. Questions suggérées et réponses aux objections incluses.</p>
-                <ul className="feature-list">
-                  <li><svg className="check-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>Transcription automatique Google Meet</li>
-                  <li><svg className="check-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>Export PDF complet</li>
-                  <li><svg className="check-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>Questions suggérées temps réel</li>
-                  <li><svg className="check-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>Réponses aux objections IA</li>
-                </ul>
+                  Et bien plus encore
+                </span>
+                <h2>Fonctionnalités complémentaires</h2>
+                <p>Chaque détail compte pour votre productivité.</p>
               </div>
-              <div className="feature-visual">
-                <div className="feature-browser">
-                  <div className="browser-header">
-                    <div className="browser-dots">
-                      <div className="browser-dot dot-red"></div>
-                      <div className="browser-dot dot-yellow"></div>
-                      <div className="browser-dot dot-green"></div>
-                    </div>
-                    <div className="browser-url">
-                      <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" style={{color: 'var(--accent)'}}>
-                        <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2z"/>
-                      </svg>
-                      Extension Chrome Ultron
-                    </div>
-                  </div>
-                  <div className="browser-content">
-                    <ExtensionMockup />
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
+            </AnimatedSection>
 
-        {/* Assistant IA Section */}
-        <section id="assistant-ia" style={{ padding: '100px 0' }}>
-          <div className="landing-container">
-            <div className="feature-block reverse reveal">
-              <div className="feature-text">
-                <div className="feature-icon">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M12 2a2 2 0 012 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 017 7h1a1 1 0 011 1v3a1 1 0 01-1 1h-1v1a2 2 0 01-2 2H5a2 2 0 01-2-2v-1H2a1 1 0 01-1-1v-3a1 1 0 011-1h1a7 7 0 017-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 012-2z"/>
-                  </svg>
-                </div>
-                <h3>Assistant IA conversationnel</h3>
-                <p>Interrogez votre base de données en langage naturel. Obtenez des statistiques sur mesure, des analyses détaillées et des insights métier instantanément.</p>
-                <ul className="feature-list">
-                  <li><svg className="check-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>Requêtes en français naturel</li>
-                  <li><svg className="check-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>Statistiques instantanées</li>
-                  <li><svg className="check-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>Analyses prédictives</li>
-                  <li><svg className="check-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>Export données automatique</li>
-                </ul>
-              </div>
-              <div className="feature-visual">
-                <div className="feature-browser">
-                  <div className="browser-header">
-                    <div className="browser-dots">
-                      <div className="browser-dot dot-red"></div>
-                      <div className="browser-dot dot-yellow"></div>
-                      <div className="browser-dot dot-green"></div>
-                    </div>
-                    <div className="browser-url">
-                      <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" style={{color: 'var(--accent)'}}>
-                        <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2z"/>
-                      </svg>
-                      ultron-ai.pro/assistant
-                    </div>
-                  </div>
-                  <div className="browser-content">
-                    <AssistantMockup />
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section id="features-cards">
-          <div className="landing-container">
-            <div className="features-grid reveal">
-              <div className="feature-card">
-                <div className="feature-card-icon">
+            <AnimatedSection className={styles.featuresGrid} staggerChildren staggerDelay={0.1}>
+              <div className={styles.featureCard}>
+                <div className={styles.featureCardIcon}>
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M12 2a2 2 0 012 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 017 7h1a1 1 0 011 1v3a1 1 0 01-1 1h-1v1a2 2 0 01-2 2H5a2 2 0 01-2-2v-1H2a1 1 0 01-1-1v-3a1 1 0 011-1h1a7 7 0 017-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 012-2z"/>
+                    <path d="M12 2a2 2 0 012 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 017 7h1a1 1 0 011 1v3a1 1 0 01-1 1h-1v1a2 2 0 01-2 2H5a2 2 0 01-2-2v-1H2a1 1 0 01-1-1v-3a1 1 0 011-1h1a7 7 0 017-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 012-2z" />
                   </svg>
                 </div>
                 <h4>Qualification IA</h4>
-                <p>L&apos;IA analyse chaque prospect et le qualifie automatiquement en CHAUD, TIÈDE ou FROID selon vos critères.</p>
+                <p>L&apos;IA analyse chaque prospect et le qualifie automatiquement en CHAUD, TIÈDE ou FROID selon vos critères personnalisés.</p>
               </div>
-              <div className="feature-card">
-                <div className="feature-card-icon">
+
+              <div className={styles.featureCard}>
+                <div className={styles.featureCardIcon}>
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
-                    <polyline points="22,6 12,13 2,6"/>
+                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+                    <polyline points="22,6 12,13 2,6" />
                   </svg>
                 </div>
                 <h4>Emails automatiques</h4>
-                <p>Confirmations de RDV, rappels 24h avant, envoi de plaquette... Tout est automatisé et personnalisé.</p>
+                <p>Confirmations de RDV, rappels 24h avant, envoi de plaquette... Tout est automatisé et personnalisé par conseiller.</p>
               </div>
-              <div className="feature-card">
-                <div className="feature-card-icon">
+
+              <div className={styles.featureCard}>
+                <div className={styles.featureCardIcon}>
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
-                    <polyline points="14 2 14 8 20 8"/>
+                    <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+                    <polyline points="14 2 14 8 20 8" />
                   </svg>
                 </div>
                 <h4>Génération de lettres</h4>
-                <p>Générez en 1 clic des lettres de rachat, transfert ou stop prélèvement avec l&apos;IA. Export PDF inclus.</p>
+                <p>Générez en 1 clic des lettres de rachat, transfert ou stop prélèvement avec l&apos;IA. Export PDF professionnel inclus.</p>
               </div>
-              <div className="feature-card">
-                <div className="feature-card-icon">
+
+              <div className={styles.featureCard}>
+                <div className={styles.featureCardIcon}>
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>
+                    <circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" />
                   </svg>
                 </div>
                 <h4>Suivi des commissions</h4>
-                <p>Suivez vos commissions par produit et conseiller. Tableau de bord financier complet.</p>
+                <p>Suivez vos commissions par produit et par conseiller. Calcul automatique avec tableau de bord financier complet.</p>
               </div>
-              <div className="feature-card">
-                <div className="feature-card-icon">
+
+              <div className={styles.featureCard}>
+                <div className={styles.featureCardIcon}>
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
-                    <line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/>
-                    <line x1="3" y1="10" x2="21" y2="10"/>
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                    <line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" />
+                    <line x1="3" y1="10" x2="21" y2="10" />
                   </svg>
                 </div>
                 <h4>Planning intégré</h4>
-                <p>Sync Google Calendar, rappels automatiques, vue agenda et tâches pour ne rien oublier.</p>
+                <p>Sync bidirectionnelle Google Calendar, rappels automatiques, vue agenda et tâches pour ne rien oublier.</p>
               </div>
-              <div className="feature-card">
-                <div className="feature-card-icon">
+
+              <div className={styles.featureCard}>
+                <div className={styles.featureCardIcon}>
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
                   </svg>
                 </div>
                 <h4>Sécurité RGPD</h4>
-                <p>Données hébergées en Europe, chiffrement, export et suppression sur demande. 100% conforme.</p>
+                <p>Données hébergées en Europe, chiffrement, droit à l&apos;oubli, export et suppression sur demande. 100% conforme.</p>
               </div>
-            </div>
+            </AnimatedSection>
           </div>
         </section>
 
-        <section id="cta">
-          <div className="landing-container reveal">
-            <div className="cta-box">
+        {/* =================== CTA =================== */}
+        <section className={styles.cta}>
+          <AnimatedSection className={styles.container}>
+            <div className={styles.ctaBox}>
               <h2>Prêt à transformer votre cabinet ?</h2>
-              <p>Rejoignez les CGP qui gagnent du temps chaque jour avec Ultron. Essai gratuit de 14 jours, sans engagement.</p>
-              <Link href="/register" className="btn btn-primary">
+              <p>
+                Rejoignez les CGP qui gagnent du temps chaque jour avec Ultron.
+                Essai gratuit de 14 jours, sans engagement.
+              </p>
+              <Link href="/register" className={styles.btnPrimary}>
                 Accéder à la plateforme
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M5 12h14M12 5l7 7-7 7"/>
+                  <path d="M5 12h14M12 5l7 7-7 7" />
                 </svg>
               </Link>
             </div>
-          </div>
+          </AnimatedSection>
         </section>
       </main>
 
-      <footer className="landing-footer">
-        <div className="landing-container">
-          <div className="footer-grid">
-            <div className="footer-brand">
-              <Link href="/" className="logo">
-                <div className="logo-icon">
+      {/* =================== FOOTER =================== */}
+      <footer className={styles.footer}>
+        <div className={styles.container}>
+          <div className={styles.footerGrid}>
+            <div className={styles.footerBrand}>
+              <Link href="/" className={styles.logo}>
+                <div className={styles.logoIcon}>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M21 16.5c0 .38-.21.71-.53.88l-7.9 4.44c-.16.12-.36.18-.57.18-.21 0-.41-.06-.57-.18l-7.9-4.44A.991.991 0 013 16.5v-9c0-.38.21-.71.53-.88l7.9-4.44c.16-.12.36-.18.57-.18.21 0 .41.06.57.18l7.9 4.44c.32.17.53.5.53.88v9z"/>
+                    <path d="M21 16.5c0 .38-.21.71-.53.88l-7.9 4.44c-.16.12-.36.18-.57.18-.21 0-.41-.06-.57-.18l-7.9-4.44A.991.991 0 013 16.5v-9c0-.38.21-.71.53-.88l7.9-4.44c.16-.12.36-.18.57-.18.21 0 .41.06.57.18l7.9 4.44c.32.17.53.5.53.88v9z" />
                   </svg>
                 </div>
                 ULTRON
               </Link>
               <p>Le CRM intelligent pour les Conseillers en Gestion de Patrimoine.</p>
             </div>
-            <div className="footer-column">
+            <div className={styles.footerColumn}>
               <h4>Produit</h4>
               <ul>
-                <li><a href="#features">Fonctionnalités</a></li>
-                <li><a href="#stats">Résultats</a></li>
-                <li><a href="#cta">Démo</a></li>
+                <li><Link href="/features/crm">CRM Pipeline</Link></li>
+                <li><Link href="/features/ai-assistant">Assistant IA</Link></li>
+                <li><Link href="/features/voice">Agent Vocal</Link></li>
+                <li><Link href="/features/lead-finder">Lead Finder</Link></li>
               </ul>
             </div>
-            <div className="footer-column">
+            <div className={styles.footerColumn}>
+              <h4>Ressources</h4>
+              <ul>
+                <li><Link href="/blog">Blog</Link></li>
+                <li><Link href="/features/extension">Extension Chrome</Link></li>
+                <li><Link href="/features/meetings">Transcription IA</Link></li>
+                <li><Link href="/features/linkedin-agent">LinkedIn Agent</Link></li>
+              </ul>
+            </div>
+            <div className={styles.footerColumn}>
               <h4>Légal</h4>
               <ul>
-                <li><Link href="/privacy">Politique de confidentialité</Link></li>
+                <li><Link href="/privacy">Confidentialité</Link></li>
                 <li><Link href="/legal">Mentions légales</Link></li>
               </ul>
             </div>
           </div>
-          <div className="footer-bottom">
-            <p>© 2026 Ultron CRM. Tous droits réservés.</p>
-            <div className="footer-socials">
+          <div className={styles.footerBottom}>
+            <p>&copy; 2026 Ultron CRM. Tous droits réservés.</p>
+            <div className={styles.footerSocials}>
               <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer" title="LinkedIn">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+                  <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
                 </svg>
               </a>
             </div>
           </div>
         </div>
       </footer>
-    </>
+    </div>
   );
 }

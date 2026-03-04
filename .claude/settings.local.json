@@ -51,7 +51,8 @@
       "Bash(timeout 30s bash -c 'until curl -s https://ultron-murex.vercel.app > /dev/null; do sleep 1; done')",
       "Bash(claude mcp add supabase --transport streamable-http -- \"https://mcp.supabase.com/mcp?project_ref=lfieylacuznqqhaobobt\")",
       "Bash(claude mcp add supabase --transport http -- \"https://mcp.supabase.com/mcp?project_ref=lfieylacuznqqhaobobt\")",
-      "Bash(claude mcp list)"
+      "Bash(claude mcp list)",
+      "Bash(git reset HEAD~1)"
     ],
     "deny": [],
     "ask": []
