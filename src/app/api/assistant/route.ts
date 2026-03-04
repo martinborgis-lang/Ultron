@@ -2,10 +2,10 @@ import { logger } from '@/lib/logger';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUserAndOrganization } from '@/lib/services/get-organization';
-import { createAdminClient } from '@/lib/supabase/admin';
 import { generateSQL, isGreetingOrNonQuery, getGreetingResponse } from '@/lib/assistant/sql-generator';
 import { validateQuery, ensureOrganizationFilter } from '@/lib/assistant/sql-validator';
 import { formatResponse, determineDataType } from '@/lib/assistant/result-formatter';
+import { mcpSupabaseService } from '@/lib/services/mcp-supabase-service';
 import type { AssistantRequest, AssistantResponse, ASSISTANT_ERROR_MESSAGES } from '@/types/assistant';
 
 export const dynamic = 'force-dynamic';
@@ -78,55 +78,34 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // 7. Execute query with parameterized organization_id
-    const supabase = createAdminClient();
+    // 7. Execute query with MCP Supabase Service (restricted by organization_id)
     let data: Record<string, unknown>[] = [];
 
     try {
-      // Replace $1 with actual organization ID for execution
-      // We use a raw query approach here
-      const { data: queryResult, error: queryError } = await supabase.rpc(
-        'execute_assistant_query',
-        {
-          query_text: sql,
-          org_id: organization.id,
-        }
-      );
+      const result = await mcpSupabaseService.executeQuery({
+        sql: sql,
+        organizationId: organization.id
+      });
 
-      if (queryError) {
-        // If RPC doesn't exist, fall back to direct query approach
-        logger.debug('RPC not available, using direct query approach');
-
-        // Parse the SQL and manually replace $1 with the organization ID
-        // This is safe because we've already validated the query
-        const executableSQL = sql.replace(/\$1/g, `'${organization.id}'`);
-
-        // Use raw SQL through a different approach
-        // Since Supabase doesn't have a direct raw query method for arbitrary SQL,
-        // we'll need to use a different approach based on the query structure
-
-        // For now, let's try to execute common patterns directly
-        const result = await executeQueryDirectly(supabase, sql, organization.id);
-        data = result;
-      } else {
-        data = queryResult || [];
-      }
-    } catch (error) {
-      console.error('Query execution error:', error);
-
-      // Try the direct query approach as fallback
-      try {
-        const result = await executeQueryDirectly(supabase, sql, organization.id);
-        data = result;
-      } catch (fallbackError) {
-        console.error('Fallback query also failed:', fallbackError);
+      if (result.error) {
+        logger.error('MCP query execution error:', result.error);
         return NextResponse.json<AssistantResponse>({
-          response:
-            "Une erreur s'est produite lors de la recherche. Veuillez reessayer avec une question plus simple.",
+          response: `Erreur d'exécution: ${result.error}`,
           query: sql,
           error: 'EXECUTION_ERROR',
         });
       }
+
+      data = result.data;
+      logger.debug(`MCP query executed successfully: ${result.rowCount} rows in ${result.executionTime}ms`);
+    } catch (error) {
+      console.error('MCP service error:', error);
+      return NextResponse.json<AssistantResponse>({
+        response:
+          "Une erreur s'est produite lors de la recherche. Veuillez reessayer avec une question plus simple.",
+        query: sql,
+        error: 'EXECUTION_ERROR',
+      });
     }
 
     // 8. Format response
@@ -152,114 +131,5 @@ export async function POST(request: NextRequest) {
   }
 }
 
-/**
- * Execute query directly using Supabase query builder
- * This is a fallback when RPC is not available
- */
-async function executeQueryDirectly(
-  supabase: ReturnType<typeof createAdminClient>,
-  sql: string,
-  organizationId: string
-): Promise<Record<string, unknown>[]> {
-  // Parse the SQL to determine which table and what filters to apply
-  const lowerSQL = sql.toLowerCase();
-
-  // Detect the main table
-  const fromMatch = sql.match(/from\s+([a-z_]+)/i);
-  const tableName = fromMatch ? fromMatch[1] : null;
-
-  if (!tableName) {
-    throw new Error('Could not determine table from query');
-  }
-
-  // Extract SELECT columns
-  const selectMatch = sql.match(/select\s+([\s\S]+?)\s+from/i);
-  let selectColumns = '*';
-  if (selectMatch) {
-    // Extract column names, handling aliases (col AS alias)
-    const rawSelect = selectMatch[1];
-    const columns = rawSelect.split(',').map(col => {
-      const trimmed = col.trim();
-      // If it has AS, extract the original column name
-      const asMatch = trimmed.match(/^([a-z_]+)\s+as\s+/i);
-      if (asMatch) {
-        return asMatch[1];
-      }
-      // Handle aggregate functions like COUNT(*)
-      if (trimmed.toLowerCase().startsWith('count(')) {
-        return trimmed;
-      }
-      return trimmed.split(/\s+/)[0]; // Get first word (column name)
-    });
-    selectColumns = columns.join(',');
-  }
-
-  logger.debug('Executing query on table:', tableName, 'with columns:', selectColumns);
-
-  // Build a basic query
-  let query = supabase.from(tableName).select(selectColumns).eq('organization_id', organizationId);
-
-  // Try to extract LIMIT
-  const limitMatch = sql.match(/limit\s+(\d+)/i);
-  const limit = limitMatch ? parseInt(limitMatch[1], 10) : 50;
-  query = query.limit(limit);
-
-  // Try to extract ORDER BY
-  const orderMatch = sql.match(/order\s+by\s+([a-z_]+)(?:\s+(asc|desc))?/i);
-  if (orderMatch) {
-    const orderColumn = orderMatch[1];
-    const isAscending = orderMatch[2]?.toLowerCase() === 'asc';
-    query = query.order(orderColumn, { ascending: isAscending, nullsFirst: false });
-  }
-
-  // Handle IS NOT NULL conditions
-  const notNullMatches = lowerSQL.matchAll(/([a-z_]+)\s+is\s+not\s+null/gi);
-  for (const match of notNullMatches) {
-    const column = match[1];
-    if (column !== 'organization_id') {
-      logger.debug('Adding NOT NULL filter for:', column);
-      query = query.not(column, 'is', null);
-    }
-  }
-
-  // Handle IS NULL conditions
-  const nullMatches = lowerSQL.matchAll(/([a-z_]+)\s+is\s+null(?!\s*\))/gi);
-  for (const match of nullMatches) {
-    const column = match[1];
-    // Skip if this was part of "IS NOT NULL"
-    if (!lowerSQL.includes(`${column} is not null`)) {
-      logger.debug('Adding IS NULL filter for:', column);
-      query = query.is(column, null);
-    }
-  }
-
-  // Try to extract simple WHERE conditions for qualification
-  if (lowerSQL.includes("qualification") && lowerSQL.includes("'chaud'")) {
-    query = query.eq('qualification', 'chaud');
-  } else if (lowerSQL.includes("qualification") && lowerSQL.includes("'tiede'")) {
-    query = query.eq('qualification', 'tiede');
-  } else if (lowerSQL.includes("qualification") && lowerSQL.includes("'froid'")) {
-    query = query.eq('qualification', 'froid');
-  } else if (lowerSQL.includes("qualification") && lowerSQL.includes("'non_qualifie'")) {
-    query = query.eq('qualification', 'non_qualifie');
-  }
-
-  // Handle greater than conditions for numeric fields
-  const gtMatches = lowerSQL.matchAll(/([a-z_]+)\s*>\s*(\d+)/gi);
-  for (const match of gtMatches) {
-    const column = match[1];
-    const value = parseInt(match[2], 10);
-    logger.debug('Adding > filter:', column, '>', value);
-    query = query.gt(column, value);
-  }
-
-  const { data, error } = await query;
-
-  if (error) {
-    console.error('Query execution error:', error);
-    throw error;
-  }
-
-  logger.debug('Query returned', data?.length || 0, 'results');
-  return (data as unknown as Record<string, unknown>[]) || [];
-}
+// Note: La fonction executeQueryDirectly a été remplacée par MCPSupabaseService
+// qui offre une sécurité et des fonctionnalités améliorées avec restriction automatique par organization_id
