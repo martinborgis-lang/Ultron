@@ -133,12 +133,49 @@ ${prospect.justification || 'Aucune'}
 
 Génère l'analyse JSON.`;
 
-    const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 1500,
-      system: systemPrompt,
-      messages: [{ role: 'user', content: userPrompt }],
-    });
+    let response;
+    try {
+      console.log('[analyze-prep] 🤖 Appel Anthropic en cours...');
+      response = await anthropic.messages.create({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1500,
+        system: systemPrompt,
+        messages: [{ role: 'user', content: userPrompt }],
+      });
+      console.log('[analyze-prep] ✅ Réponse Anthropic reçue, tokens utilisés:', response.usage?.input_tokens, '+', response.usage?.output_tokens);
+    } catch (aiError: unknown) {
+      console.error('[analyze-prep] ❌ Erreur appel Anthropic:', aiError);
+      const aiMessage = aiError instanceof Error ? aiError.message : 'Erreur API IA';
+      // Retourner une analyse par défaut plutôt qu'un 500
+      return NextResponse.json({
+        analysis: {
+          questionsSuggerees: [
+            'Quels sont vos objectifs patrimoniaux à 5 ans ?',
+            'Quelle est votre tolérance au risque ?',
+            'Avez-vous des projets importants à financer ?',
+            'Comment est structuré votre patrimoine actuel ?',
+            'Avez-vous déjà travaillé avec un conseiller ?',
+          ],
+          argumentsCles: [
+            'Analyse personnalisée de votre situation',
+            'Accompagnement sur mesure et suivi régulier',
+            'Optimisation fiscale adaptée à votre profil',
+          ],
+          pointsAttention: [
+            'Vérifier les informations financières communiquées',
+            'Évaluer la tolérance au risque réelle',
+            'Identifier les projets prioritaires',
+          ],
+          objectionsProba: [
+            'Besoin de réfléchir avant de s\'engager',
+            'Comparer avec d\'autres offres',
+            'Frais de gestion trop élevés',
+          ],
+          profilPsycho: `Analyse IA temporairement indisponible (${aiMessage}). Préparez le RDV en vous basant sur les notes existantes.`,
+        },
+        warning: 'Analyse IA indisponible, données par défaut fournies'
+      }, { headers: corsHeaders() });
+    }
 
     const content = response.content[0];
     if (content.type !== 'text') {
