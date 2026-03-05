@@ -10,7 +10,7 @@ import { ExtensionMockup } from '@/components/landing/ExtensionMockup';
 import { AssistantMockup } from '@/components/landing/AssistantMockup';
 import FeatureScene from '@/components/landing/FeatureScene';
 import AnimatedSection from '@/components/landing/AnimatedSection';
-import styles from '@/styles/landing.module.css';
+import '@/styles/landing.css';
 
 // Lazy-load heavy mockups (below the fold)
 const AdminDashboardMockup = dynamic(() => import('@/components/landing/AdminDashboardMockup'), { ssr: false });
@@ -109,43 +109,43 @@ export default function LandingPage() {
   }, []);
 
   return (
-    <div className={styles.landingPage}>
+    <div className="landingPage">
       <link
         href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700&display=swap"
         rel="stylesheet"
       />
 
       {/* =================== HEADER =================== */}
-      <header className={styles.header}>
-        <div className={`${styles.container} ${styles.navInner}`}>
-          <Link href="/" className={styles.logo}>
-            <div className={styles.logoIcon}>
+      <header className="header">
+        <div className="container navInner">
+          <Link href="/" className="logo">
+            <div className="logoIcon">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M21 16.5c0 .38-.21.71-.53.88l-7.9 4.44c-.16.12-.36.18-.57.18-.21 0-.41-.06-.57-.18l-7.9-4.44A.991.991 0 013 16.5v-9c0-.38.21-.71.53-.88l7.9-4.44c.16-.12.36-.18.57-.18.21 0 .41.06.57.18l7.9 4.44c.32.17.53.5.53.88v9z" />
               </svg>
             </div>
             ULTRON
           </Link>
-          <nav className={styles.navMenu}>
-            <a href="#features" className={styles.navLink}>Fonctionnalités</a>
-            <Link href="/features/crm" className={styles.navLink}>CRM</Link>
-            <Link href="/features/ai-assistant" className={styles.navLink}>IA</Link>
-            <Link href="/blog" className={styles.navLink}>Blog</Link>
+          <nav className="navMenu">
+            <a href="#features" className="navLink">Fonctionnalités</a>
+            <Link href="/features/crm" className="navLink">CRM</Link>
+            <Link href="/features/ai-assistant" className="navLink">IA</Link>
+            <Link href="/blog" className="navLink">Blog</Link>
           </nav>
-          <div className={styles.navCta}>
-            <Link href="/login" className={styles.btnGlass}>Connexion</Link>
-            <Link href="/register" className={styles.btnPrimary}>Essai Gratuit</Link>
+          <div className="navCta">
+            <Link href="/login" className="btnGlass">Connexion</Link>
+            <Link href="/register" className="btnPrimary">Essai Gratuit</Link>
           </div>
         </div>
       </header>
 
       <main>
         {/* =================== HERO =================== */}
-        <section className={styles.hero}>
-          <canvas ref={canvasRef} className={styles.heroCanvas} />
-          <div className={`${styles.container} ${styles.heroGrid}`}>
-            <div className={styles.heroContent}>
-              <div className={styles.heroBadge}>
+        <section className="hero">
+          <canvas ref={canvasRef} className="heroCanvas" />
+          <div className="container heroGrid">
+            <div className="heroContent">
+              <div className="heroBadge">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M12 2L9.19 8.63L2 9.24l5.46 4.73L5.82 21L12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2z" />
                 </svg>
@@ -154,20 +154,20 @@ export default function LandingPage() {
               <h1>
                 L&apos;Intelligence Artificielle
                 <br />
-                <span className={styles.textGradient}>au service du Patrimoine.</span>
+                <span className="textGradient">au service du Patrimoine.</span>
               </h1>
               <p>
                 Automatisez votre prospection, qualifiez vos leads en temps réel et multipliez vos conversions.
                 La plateforme tout-en-un conçue pour les CGP.
               </p>
-              <div className={styles.heroButtons}>
-                <Link href="/register" className={styles.btnPrimary}>
+              <div className="heroButtons">
+                <Link href="/register" className="btnPrimary">
                   Commencer maintenant
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M5 12h14M12 5l7 7-7 7" />
                   </svg>
                 </Link>
-                <a href="#features" className={styles.btnGlass}>
+                <a href="#features" className="btnGlass">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M8 5v14l11-7z" />
                   </svg>
@@ -176,33 +176,33 @@ export default function LandingPage() {
               </div>
             </div>
 
-            <div className={styles.heroVisual}>
-              <div className={styles.browserMockup}>
-                <div className={styles.floatBadge}>
-                  <div className={styles.floatBadgeIcon}>
+            <div className="heroVisual">
+              <div className="browserMockup">
+                <div className="floatBadge">
+                  <div className="floatBadgeIcon">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
                       <path d="M12 2a2 2 0 012 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 017 7h1a1 1 0 011 1v3a1 1 0 01-1 1h-1v1a2 2 0 01-2 2H5a2 2 0 01-2-2v-1H2a1 1 0 01-1-1v-3a1 1 0 011-1h1a7 7 0 017-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 012-2z" />
                     </svg>
                   </div>
                   <div>
-                    <div className={styles.floatBadgeText}>Score IA</div>
-                    <div className={styles.floatBadgeValue}>98/100</div>
+                    <div className="floatBadgeText">Score IA</div>
+                    <div className="floatBadgeValue">98/100</div>
                   </div>
                 </div>
-                <div className={styles.browserHeader}>
-                  <div className={styles.browserDots}>
-                    <div className={`${styles.browserDot} ${styles.dotRed}`} />
-                    <div className={`${styles.browserDot} ${styles.dotYellow}`} />
-                    <div className={`${styles.browserDot} ${styles.dotGreen}`} />
+                <div className="browserHeader">
+                  <div className="browserDots">
+                    <div className="browserDot dotRed" />
+                    <div className="browserDot dotYellow" />
+                    <div className="browserDot dotGreen" />
                   </div>
-                  <div className={styles.browserUrl}>
-                    <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" style={{ color: 'var(--accent)' }}>
+                  <div className="browserUrl">
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" style={{ color: 'var(--accent)' }">
                       <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2z" />
                     </svg>
                     ultron-app.com/dashboard
                   </div>
                 </div>
-                <div className={styles.browserContent}>
+                <div className="browserContent">
                   <DashboardMockup />
                 </div>
               </div>
@@ -211,23 +211,23 @@ export default function LandingPage() {
         </section>
 
         {/* =================== STATS =================== */}
-        <section className={styles.stats}>
-          <div className={styles.container}>
-            <AnimatedSection className={styles.statsGrid} staggerChildren staggerDelay={0.15}>
-              <div className={styles.statItem}><h4>+40%</h4><span>Taux de conversion</span></div>
-              <div className={styles.statItem}><h4>98%</h4><span>Précision IA</span></div>
-              <div className={styles.statItem}><h4>2h</h4><span>Gagnées par jour</span></div>
-              <div className={styles.statItem}><h4>24/7</h4><span>Disponibilité</span></div>
+        <section className="stats">
+          <div className="container">
+            <AnimatedSection className="statsGrid" staggerChildren staggerDelay={0.15">
+              <div className="statItem"><h4>+40%</h4><span>Taux de conversion</span></div>
+              <div className="statItem"><h4>98%</h4><span>Précision IA</span></div>
+              <div className="statItem"><h4>2h</h4><span>Gagnées par jour</span></div>
+              <div className="statItem"><h4>24/7</h4><span>Disponibilité</span></div>
             </AnimatedSection>
           </div>
         </section>
 
         {/* =================== FEATURE SCENES =================== */}
-        <section id="features" className={styles.featuresSection}>
-          <div className={styles.container}>
+        <section id="features" className="featuresSection">
+          <div className="container">
             <AnimatedSection>
-              <div className={styles.sectionHeader}>
-                <span className={styles.sectionTag}>
+              <div className="sectionHeader">
+                <span className="sectionTag">
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M4 4h7v7H4V4zm9 0h7v7h-7V4zm-9 9h7v7H4v-7zm9 0h7v7h-7v-7z" />
                   </svg>
@@ -256,7 +256,7 @@ export default function LandingPage() {
             index={0}
           />
 
-          <div className={styles.sceneDivider} />
+          <div className="sceneDivider" />
 
           {/* Scene 2: Pipeline Kanban */}
           <FeatureScene
@@ -276,7 +276,7 @@ export default function LandingPage() {
             index={1}
           />
 
-          <div className={styles.sceneDivider} />
+          <div className="sceneDivider" />
 
           {/* Scene 3: Admin Dashboard */}
           <FeatureScene
@@ -295,7 +295,7 @@ export default function LandingPage() {
             index={2}
           />
 
-          <div className={styles.sceneDivider} />
+          <div className="sceneDivider" />
 
           {/* Scene 4: Assistant IA */}
           <FeatureScene
@@ -315,7 +315,7 @@ export default function LandingPage() {
             index={3}
           />
 
-          <div className={styles.sceneDivider} />
+          <div className="sceneDivider" />
 
           {/* Scene 5: Click-to-Call */}
           <FeatureScene
@@ -334,7 +334,7 @@ export default function LandingPage() {
             index={4}
           />
 
-          <div className={styles.sceneDivider} />
+          <div className="sceneDivider" />
 
           {/* Scene 6: Lead Finder */}
           <FeatureScene
@@ -354,7 +354,7 @@ export default function LandingPage() {
             index={5}
           />
 
-          <div className={styles.sceneDivider} />
+          <div className="sceneDivider" />
 
           {/* Scene 7: LinkedIn Agent */}
           <FeatureScene
@@ -373,7 +373,7 @@ export default function LandingPage() {
             index={6}
           />
 
-          <div className={styles.sceneDivider} />
+          <div className="sceneDivider" />
 
           {/* Scene 8: Agent Vocal IA */}
           <FeatureScene
@@ -393,7 +393,7 @@ export default function LandingPage() {
             index={7}
           />
 
-          <div className={styles.sceneDivider} />
+          <div className="sceneDivider" />
 
           {/* Scene 9: Extension Chrome */}
           <FeatureScene
@@ -412,7 +412,7 @@ export default function LandingPage() {
             index={8}
           />
 
-          <div className={styles.sceneDivider} />
+          <div className="sceneDivider" />
 
           {/* Scene 10: Prospects / CRM complet */}
           <FeatureScene
@@ -434,11 +434,11 @@ export default function LandingPage() {
         </section>
 
         {/* =================== ADDITIONAL FEATURES CARDS =================== */}
-        <section className={styles.featureCardsSection}>
-          <div className={styles.container}>
+        <section className="featureCardsSection">
+          <div className="container">
             <AnimatedSection>
-              <div className={styles.sectionHeader}>
-                <span className={styles.sectionTag}>
+              <div className="sectionHeader">
+                <span className="sectionTag">
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
                   </svg>
@@ -449,9 +449,9 @@ export default function LandingPage() {
               </div>
             </AnimatedSection>
 
-            <AnimatedSection className={styles.featuresGrid} staggerChildren staggerDelay={0.1}>
-              <div className={styles.featureCard}>
-                <div className={styles.featureCardIcon}>
+            <AnimatedSection className="featuresGrid" staggerChildren staggerDelay={0.1">
+              <div className="featureCard">
+                <div className="featureCardIcon">
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M12 2a2 2 0 012 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 017 7h1a1 1 0 011 1v3a1 1 0 01-1 1h-1v1a2 2 0 01-2 2H5a2 2 0 01-2-2v-1H2a1 1 0 01-1-1v-3a1 1 0 011-1h1a7 7 0 017-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 012-2z" />
                   </svg>
@@ -460,8 +460,8 @@ export default function LandingPage() {
                 <p>L&apos;IA analyse chaque prospect et le qualifie automatiquement en CHAUD, TIÈDE ou FROID selon vos critères personnalisés.</p>
               </div>
 
-              <div className={styles.featureCard}>
-                <div className={styles.featureCardIcon}>
+              <div className="featureCard">
+                <div className="featureCardIcon">
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
                     <polyline points="22,6 12,13 2,6" />
@@ -471,8 +471,8 @@ export default function LandingPage() {
                 <p>Confirmations de RDV, rappels 24h avant, envoi de plaquette... Tout est automatisé et personnalisé par conseiller.</p>
               </div>
 
-              <div className={styles.featureCard}>
-                <div className={styles.featureCardIcon}>
+              <div className="featureCard">
+                <div className="featureCardIcon">
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
                     <polyline points="14 2 14 8 20 8" />
@@ -482,8 +482,8 @@ export default function LandingPage() {
                 <p>Générez en 1 clic des lettres de rachat, transfert ou stop prélèvement avec l&apos;IA. Export PDF professionnel inclus.</p>
               </div>
 
-              <div className={styles.featureCard}>
-                <div className={styles.featureCardIcon}>
+              <div className="featureCard">
+                <div className="featureCardIcon">
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" />
                   </svg>
@@ -492,8 +492,8 @@ export default function LandingPage() {
                 <p>Suivez vos commissions par produit et par conseiller. Calcul automatique avec tableau de bord financier complet.</p>
               </div>
 
-              <div className={styles.featureCard}>
-                <div className={styles.featureCardIcon}>
+              <div className="featureCard">
+                <div className="featureCardIcon">
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
                     <line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" />
@@ -504,8 +504,8 @@ export default function LandingPage() {
                 <p>Sync bidirectionnelle Google Calendar, rappels automatiques, vue agenda et tâches pour ne rien oublier.</p>
               </div>
 
-              <div className={styles.featureCard}>
-                <div className={styles.featureCardIcon}>
+              <div className="featureCard">
+                <div className="featureCardIcon">
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
                   </svg>
@@ -518,15 +518,15 @@ export default function LandingPage() {
         </section>
 
         {/* =================== CTA =================== */}
-        <section className={styles.cta}>
-          <AnimatedSection className={styles.container}>
-            <div className={styles.ctaBox}>
+        <section className="cta">
+          <AnimatedSection className="container">
+            <div className="ctaBox">
               <h2>Prêt à transformer votre cabinet ?</h2>
               <p>
                 Rejoignez les CGP qui gagnent du temps chaque jour avec Ultron.
                 Essai gratuit de 14 jours, sans engagement.
               </p>
-              <Link href="/register" className={styles.btnPrimary}>
+              <Link href="/register" className="btnPrimary">
                 Accéder à la plateforme
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M5 12h14M12 5l7 7-7 7" />
@@ -538,12 +538,12 @@ export default function LandingPage() {
       </main>
 
       {/* =================== FOOTER =================== */}
-      <footer className={styles.footer}>
-        <div className={styles.container}>
-          <div className={styles.footerGrid}>
-            <div className={styles.footerBrand}>
-              <Link href="/" className={styles.logo}>
-                <div className={styles.logoIcon}>
+      <footer className="footer">
+        <div className="container">
+          <div className="footerGrid">
+            <div className="footerBrand">
+              <Link href="/" className="logo">
+                <div className="logoIcon">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M21 16.5c0 .38-.21.71-.53.88l-7.9 4.44c-.16.12-.36.18-.57.18-.21 0-.41-.06-.57-.18l-7.9-4.44A.991.991 0 013 16.5v-9c0-.38.21-.71.53-.88l7.9-4.44c.16-.12.36-.18.57-.18.21 0 .41.06.57.18l7.9 4.44c.32.17.53.5.53.88v9z" />
                   </svg>
@@ -552,7 +552,7 @@ export default function LandingPage() {
               </Link>
               <p>Le CRM intelligent pour les Conseillers en Gestion de Patrimoine.</p>
             </div>
-            <div className={styles.footerColumn}>
+            <div className="footerColumn">
               <h4>Produit</h4>
               <ul>
                 <li><Link href="/features/crm">CRM Pipeline</Link></li>
@@ -561,7 +561,7 @@ export default function LandingPage() {
                 <li><Link href="/features/lead-finder">Lead Finder</Link></li>
               </ul>
             </div>
-            <div className={styles.footerColumn}>
+            <div className="footerColumn">
               <h4>Ressources</h4>
               <ul>
                 <li><Link href="/blog">Blog</Link></li>
@@ -570,7 +570,7 @@ export default function LandingPage() {
                 <li><Link href="/features/linkedin-agent">LinkedIn Agent</Link></li>
               </ul>
             </div>
-            <div className={styles.footerColumn}>
+            <div className="footerColumn">
               <h4>Légal</h4>
               <ul>
                 <li><Link href="/privacy">Confidentialité</Link></li>
@@ -578,9 +578,9 @@ export default function LandingPage() {
               </ul>
             </div>
           </div>
-          <div className={styles.footerBottom}>
+          <div className="footerBottom">
             <p>&copy; 2026 Ultron CRM. Tous droits réservés.</p>
-            <div className={styles.footerSocials}>
+            <div className="footerSocials">
               <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer" title="LinkedIn">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
