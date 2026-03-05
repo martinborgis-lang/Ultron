@@ -60,5 +60,27 @@ export default function sitemap(): MetadataRoute.Sitemap {
     },
   ];
 
-  return [...mainPages, ...featurePages, ...legalPages];
+  // Pages comparatives
+  const comparativePages: MetadataRoute.Sitemap = [
+    {
+      url: `${baseUrl}/alternatives-crm-cgp`,
+      lastModified: now,
+      changeFrequency: 'monthly',
+      priority: 0.8,
+    },
+    {
+      url: `${baseUrl}/ultron-vs-hubspot`,
+      lastModified: now,
+      changeFrequency: 'monthly',
+      priority: 0.8,
+    },
+    {
+      url: `${baseUrl}/ultron-vs-salesforce`,
+      lastModified: now,
+      changeFrequency: 'monthly',
+      priority: 0.8,
+    },
+  ];
+
+  return [...mainPages, ...featurePages, ...legalPages, ...comparativePages];
 }
