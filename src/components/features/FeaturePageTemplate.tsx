@@ -66,16 +66,16 @@ export default function FeaturePageTemplate({
 
       <main>
         {/* Hero */}
-        <section style={{ paddingTop: 140, paddingBottom: 80, position: 'relative', overflow: 'hidden' }">
+        <section style={{ paddingTop: 140, paddingBottom: 80, position: 'relative', overflow: 'hidden' }}>
           <div
             className="absolute inset-0 opacity-[0.04] pointer-events-none"
             style={{
               background: `radial-gradient(ellipse at 50% 30%, ${accentColor}, transparent 70%)`,
             }}
           />
-          <div className="container" style={{ position: 'relative', zIndex: 1 }">
+          <div className="container" style={{ position: 'relative', zIndex: 1 }}>
             <AnimatedSection>
-              <div style={{ textAlign: 'center', maxWidth: 700, margin: '0 auto 48px' }">
+              <div style={{ textAlign: 'center', maxWidth: 700, margin: '0 auto 48px' }}>
                 <span
                   style={{
                     display: 'inline-block',
@@ -91,25 +91,25 @@ export default function FeaturePageTemplate({
                 >
                   {badge}
                 </span>
-                <h1 style={{ fontSize: '2.75rem', fontWeight: 700, lineHeight: 1.15, marginBottom: 16, letterSpacing: '-0.03em' }">
+                <h1 style={{ fontSize: '2.75rem', fontWeight: 700, lineHeight: 1.15, marginBottom: 16, letterSpacing: '-0.03em' }}>
                   {title}
                 </h1>
-                <p style={{ fontSize: '1.15rem', color: accentColor, fontWeight: 500, marginBottom: 12 }">
+                <p style={{ fontSize: '1.15rem', color: accentColor, fontWeight: 500, marginBottom: 12 }}>
                   {subtitle}
                 </p>
-                <p style={{ fontSize: '1rem', color: 'var(--text-gray)', lineHeight: 1.7, maxWidth: 560, margin: '0 auto' }">
+                <p style={{ fontSize: '1rem', color: 'var(--text-gray)', lineHeight: 1.7, maxWidth: 560, margin: '0 auto' }}>
                   {description}
                 </p>
               </div>
             </AnimatedSection>
 
             <AnimatedSection animation="scaleIn" delay={0.2}>
-              <div style={{ maxWidth: 800, margin: '0 auto', position: 'relative' }">
+              <div style={{ maxWidth: 800, margin: '0 auto', position: 'relative' }}>
                 <div
                   className="absolute -inset-6 rounded-2xl opacity-15 blur-3xl pointer-events-none"
                   style={{ backgroundColor: accentColor }}
                 />
-                <div style={{ position: 'relative' }">
+                <div style={{ position: 'relative' }}>
                   {mockup}
                 </div>
               </div>
@@ -119,17 +119,17 @@ export default function FeaturePageTemplate({
 
         {/* Feature Sections */}
         {sections.map((section, i) => (
-          <section key={i} style={{ padding: '60px 0' }">
+          <section key={i} style={{ padding: '60px 0' }}>
             <div className="container">
-              <AnimatedSection animation={i % 2 === 0 ? 'slideLeft' : 'slideRight'">
-                <div style={{ maxWidth: 700, margin: i % 2 === 0 ? '0' : '0 0 0 auto', textAlign: i % 2 === 0 ? 'left' : 'right' }">
-                  <h3 style={{ fontSize: '1.75rem', fontWeight: 600, marginBottom: 12 }">
+              <AnimatedSection animation={i % 2 === 0 ? 'slideLeft' : 'slideRight'}>
+                <div style={{ maxWidth: 700, margin: i % 2 === 0 ? '0' : '0 0 0 auto', textAlign: i % 2 === 0 ? 'left' : 'right' }}>
+                  <h3 style={{ fontSize: '1.75rem', fontWeight: 600, marginBottom: 12 }}>
                     {section.title}
                   </h3>
-                  <p style={{ color: 'var(--text-gray)', marginBottom: 20, lineHeight: 1.7 }">
+                  <p style={{ color: 'var(--text-gray)', marginBottom: 20, lineHeight: 1.7 }}>
                     {section.description}
                   </p>
-                  <ul style={{ listStyle: 'none', padding: 0 }">
+                  <ul style={{ listStyle: 'none', padding: 0 }}>
                     {section.points.map((point, j) => (
                       <li
                         key={j}
@@ -144,7 +144,7 @@ export default function FeaturePageTemplate({
                         }}
                       >
                         {i % 2 === 0 && (
-                          <span style={{ color: accentColor, flexShrink: 0, marginTop: 4 }">
+                          <span style={{ color: accentColor, flexShrink: 0, marginTop: 4 }}>
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
                               <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
                             </svg>
@@ -152,7 +152,7 @@ export default function FeaturePageTemplate({
                         )}
                         <span>{point}</span>
                         {i % 2 !== 0 && (
-                          <span style={{ color: accentColor, flexShrink: 0, marginTop: 4 }">
+                          <span style={{ color: accentColor, flexShrink: 0, marginTop: 4 }}>
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
                               <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
                             </svg>
@@ -189,9 +189,9 @@ export default function FeaturePageTemplate({
         <div className="container">
           <div className="footerBottom">
             <p>&copy; 2026 Ultron CRM. Tous droits réservés.</p>
-            <div style={{ display: 'flex', gap: 16 }">
-              <Link href="/privacy" style={{ color: 'var(--text-muted)', fontSize: '0.8rem', textDecoration: 'none' }">Confidentialité</Link>
-              <Link href="/legal" style={{ color: 'var(--text-muted)', fontSize: '0.8rem', textDecoration: 'none' }">Mentions légales</Link>
+            <div style={{ display: 'flex', gap: 16 }}>
+              <Link href="/privacy" style={{ color: 'var(--text-muted)', fontSize: '0.8rem', textDecoration: 'none' }}>Confidentialité</Link>
+              <Link href="/legal" style={{ color: 'var(--text-muted)', fontSize: '0.8rem', textDecoration: 'none' }}>Mentions légales</Link>
             </div>
           </div>
         </div>
