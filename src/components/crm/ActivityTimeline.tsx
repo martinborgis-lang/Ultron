@@ -74,7 +74,7 @@ const containerVariants = {
   visible: {
     opacity: 1,
     transition: {
-      staggerChildren: 0.08,
+      staggerChildren: typeof window !== 'undefined' && window.innerWidth < 768 ? 0 : 0.08, // Pas de stagger sur mobile
     },
   },
 };
@@ -92,11 +92,10 @@ const itemVariants = {
 };
 
 const formVariants = {
-  hidden: { opacity: 0, height: 0, marginBottom: 0 },
+  hidden: { opacity: 0, scaleY: 0, transformOrigin: 'top' },
   visible: {
     opacity: 1,
-    height: 'auto',
-    marginBottom: 16,
+    scaleY: 1,
     transition: {
       duration: 0.3,
       ease: [0.4, 0, 0.2, 1] as const,
@@ -104,8 +103,7 @@ const formVariants = {
   },
   exit: {
     opacity: 0,
-    height: 0,
-    marginBottom: 0,
+    scaleY: 0,
     transition: {
       duration: 0.2,
     },
@@ -228,9 +226,10 @@ export function ActivityTimeline({ activities, prospectId, onActivityAdded }: Ac
 
                 {['call', 'meeting'].includes(newActivity.type) && (
                   <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: 'auto' }}
+                    initial={{ opacity: 0, scaleY: 0 }}
+                    animate={{ opacity: 1, scaleY: 1 }}
                     className="flex gap-2"
+                    style={{ transformOrigin: 'top' }}
                   >
                     <Select
                       value={newActivity.outcome}
@@ -350,8 +349,8 @@ export function ActivityTimeline({ activities, prospectId, onActivityAdded }: Ac
                       </div>
                       {activity.outcome && (
                         <motion.span
-                          initial={{ scale: 0.8 }}
-                          animate={{ scale: 1 }}
+                          initial={{ opacity: 0, y: 5 }}
+                          animate={{ opacity: 1, y: 0 }}
                           className={cn(
                             'text-xs px-2 py-0.5 rounded-full font-medium flex-shrink-0',
                             activity.outcome === 'positive' && 'bg-green-500/20 text-green-400 border border-green-500/30',

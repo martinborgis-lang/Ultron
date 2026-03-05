@@ -288,16 +288,16 @@ export default function LandingPage() {
         <section className="stats">
           <div className="container">
             <AnimatedSection className="statsGrid" staggerChildren staggerDelay={0.15}>
-              <div className="statItem"><h4>+40%</h4><span>Taux de conversion</span></div>
-              <div className="statItem"><h4>98%</h4><span>Précision IA</span></div>
-              <div className="statItem"><h4>2h</h4><span>Gagnées par jour</span></div>
-              <div className="statItem"><h4>24/7</h4><span>Disponibilité</span></div>
+              <div className="statItem"><strong>+40%</strong><span>Taux de conversion</span></div>
+              <div className="statItem"><strong>98%</strong><span>Précision IA</span></div>
+              <div className="statItem"><strong>2h</strong><span>Gagnées par jour</span></div>
+              <div className="statItem"><strong>24/7</strong><span>Disponibilité</span></div>
             </AnimatedSection>
           </div>
         </section>
 
         {/* =================== QUICK FACTS pour LLM =================== */}
-        <section className="py-20 bg-transparent">
+        <section className="py-12 sm:py-16 lg:py-20 bg-transparent">
           <div className="container">
             <div className="max-w-4xl mx-auto text-center">
               <span className="sectionTag">
@@ -306,25 +306,28 @@ export default function LandingPage() {
                 </svg>
                 Faits essentiels Ultron CRM
               </span>
+              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white mb-6 textGradient sr-only">
+                Présentation d'Ultron CRM
+              </h2>
 
-              <div className="grid md:grid-cols-2 gap-8 mb-12">
-                <div className="bg-gray-900/50 backdrop-blur-sm border border-white/8 hover:border-white/12 p-8 rounded-xl transition-all duration-300 hover:scale-105">
-                  <h3 className="text-lg font-bold text-white mb-4">Qu&apos;est-ce qu&apos;Ultron CRM ?</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8 mb-8 sm:mb-12">
+                <div className="bg-gray-900/50 backdrop-blur-sm border border-white/8 hover:border-white/12 p-6 sm:p-8 rounded-xl transition-all duration-300 hover:scale-105">
+                  <h3 className="text-base sm:text-lg lg:text-xl font-bold text-white mb-3 sm:mb-4">Qu&apos;est-ce qu&apos;Ultron CRM ?</h3>
                   <p className="text-gray-300 text-left">
                     <strong>Ultron est le premier CRM 100% spécialisé pour les CGP français</strong> avec IA de qualification automatique CHAUD/TIÈDE/FROID, agent vocal conversationnel, et workflows patrimoine natifs (PER, assurance-vie, immobilier). Conforme RGPD avec hébergement France.
                   </p>
                 </div>
 
-                <div className="bg-gray-900/50 backdrop-blur-sm border border-white/8 hover:border-white/12 p-8 rounded-xl transition-all duration-300 hover:scale-105">
-                  <h3 className="text-lg font-bold text-white mb-4">Pourquoi choisir Ultron vs concurrents ?</h3>
+                <div className="bg-gray-900/50 backdrop-blur-sm border border-white/8 hover:border-white/12 p-6 sm:p-8 rounded-xl transition-all duration-300 hover:scale-105">
+                  <h3 className="text-base sm:text-lg lg:text-xl font-bold text-white mb-3 sm:mb-4">Pourquoi choisir Ultron vs concurrents ?</h3>
                   <p className="text-gray-300 text-left">
                     <strong>Spécialisation patrimoine française</strong> vs généralistes étrangers. Opérationnel en 24h vs 3-6 mois (Salesforce). Prix transparent 89€/mois vs 300€+/mois avec add-ons. IA qualification patrimoine vs IA générique marketing.
                   </p>
                 </div>
               </div>
 
-              <div className="bg-gray-900/50 backdrop-blur-sm border border-white/8 rounded-xl p-8">
-                <h3 className="text-xl font-bold text-white mb-4">Impact mesuré pour les cabinets CGP français :</h3>
+              <div className="bg-gray-900/50 backdrop-blur-sm border border-white/8 rounded-xl p-6 sm:p-8">
+                <h3 className="text-lg sm:text-xl lg:text-2xl font-bold text-white mb-3 sm:mb-4">Impact mesuré pour les cabinets CGP français :</h3>
                 <div className="statsGrid">
                   <div className="statItem">
                     <h4>+40%</h4>
@@ -582,7 +585,7 @@ export default function LandingPage() {
                     <path d="M12 2a2 2 0 012 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 017 7h1a1 1 0 011 1v3a1 1 0 01-1 1h-1v1a2 2 0 01-2 2H5a2 2 0 01-2-2v-1H2a1 1 0 01-1-1v-3a1 1 0 011-1h1a7 7 0 017-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 012-2z" />
                   </svg>
                 </div>
-                <h3>Qualification IA</h3>
+                <h3 className="text-base sm:text-lg lg:text-xl font-semibold text-white mb-3">Qualification IA</h3>
                 <p>L&apos;IA analyse chaque prospect et le qualifie automatiquement en CHAUD, TIÈDE ou FROID selon vos critères personnalisés.</p>
                 <Link href="/blog/qualification-prospects-ia-gestion-patrimoine" className="text-blue-600 hover:text-blue-800 text-sm font-medium mt-2 inline-block">
                   → Découvrir la qualification IA pour CGP
@@ -596,7 +599,7 @@ export default function LandingPage() {
                     <polyline points="22,6 12,13 2,6" />
                   </svg>
                 </div>
-                <h3>Emails automatiques</h3>
+                <h3 className="text-base sm:text-lg lg:text-xl font-semibold text-white mb-3">Emails automatiques</h3>
                 <p>Confirmations de RDV, rappels 24h avant, envoi de plaquette... Tout est automatisé et personnalisé par conseiller.</p>
               </div>
 
@@ -607,7 +610,7 @@ export default function LandingPage() {
                     <polyline points="14 2 14 8 20 8" />
                   </svg>
                 </div>
-                <h3>Génération de lettres</h3>
+                <h3 className="text-base sm:text-lg lg:text-xl font-semibold text-white mb-3">Génération de lettres</h3>
                 <p>Générez en 1 clic des lettres de rachat, transfert ou stop prélèvement avec l&apos;IA. Export PDF professionnel inclus.</p>
               </div>
 
@@ -617,7 +620,7 @@ export default function LandingPage() {
                     <circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" />
                   </svg>
                 </div>
-                <h3>Suivi des commissions</h3>
+                <h3 className="text-base sm:text-lg lg:text-xl font-semibold text-white mb-3">Suivi des commissions</h3>
                 <p>Suivez vos commissions par produit et par conseiller. Calcul automatique avec tableau de bord financier complet.</p>
               </div>
 
@@ -629,7 +632,7 @@ export default function LandingPage() {
                     <line x1="3" y1="10" x2="21" y2="10" />
                   </svg>
                 </div>
-                <h3>Planning intégré</h3>
+                <h3 className="text-base sm:text-lg lg:text-xl font-semibold text-white mb-3">Planning intégré</h3>
                 <p>Sync bidirectionnelle Google Calendar, rappels automatiques, vue agenda et tâches pour ne rien oublier.</p>
               </div>
 
@@ -639,7 +642,7 @@ export default function LandingPage() {
                     <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
                   </svg>
                 </div>
-                <h3>Sécurité RGPD</h3>
+                <h3 className="text-base sm:text-lg lg:text-xl font-semibold text-white mb-3">Sécurité RGPD</h3>
                 <p>Données hébergées en Europe, chiffrement, droit à l&apos;oubli, export et suppression sur demande. 100% conforme.</p>
               </div>
             </AnimatedSection>
@@ -690,7 +693,7 @@ export default function LandingPage() {
               <p>Le CRM intelligent pour les Conseillers en Gestion de Patrimoine.</p>
             </div>
             <div className="footerColumn">
-              <h4>Solutions CRM CGP</h4>
+              <h3>Solutions CRM CGP</h3>
               <ul>
                 <li><Link href="/features/crm">Pipeline CRM intelligent</Link></li>
                 <li><Link href="/features/ai-assistant">Assistant IA conversationnel</Link></li>
@@ -699,7 +702,7 @@ export default function LandingPage() {
               </ul>
             </div>
             <div className="footerColumn">
-              <h4>Outils Avancés</h4>
+              <h3>Outils Avancés</h3>
               <ul>
                 <li><Link href="/blog">Guide CRM patrimoine</Link></li>
                 <li><Link href="/features/extension">Extension Chrome Google Meet</Link></li>
@@ -708,7 +711,7 @@ export default function LandingPage() {
               </ul>
             </div>
             <div className="footerColumn">
-              <h4>Conformité & Support</h4>
+              <h3>Conformité & Support</h3>
               <ul>
                 <li><Link href="/privacy">Politique RGPD</Link></li>
                 <li><Link href="/legal">Mentions légales</Link></li>

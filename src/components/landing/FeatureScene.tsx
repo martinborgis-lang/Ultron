@@ -117,7 +117,7 @@ export default function FeatureScene({
   return (
     <section
       ref={sectionRef}
-      className="relative py-20 md:py-32 px-4 sm:px-6 overflow-hidden"
+      className="relative py-12 sm:py-16 lg:py-20 md:py-32 px-4 sm:px-6 overflow-hidden"
     >
       {/* Subtle gradient background */}
       <div
@@ -130,7 +130,7 @@ export default function FeatureScene({
       <div
         className={`max-w-7xl mx-auto flex flex-col ${
           reversed ? 'lg:flex-row-reverse' : 'lg:flex-row'
-        } items-center gap-12 lg:gap-20`}
+        } items-center gap-8 sm:gap-12 lg:gap-20`}
       >
         {/* Text Content */}
         <div ref={textRef} className="flex-1 max-w-xl">
@@ -178,14 +178,19 @@ export default function FeatureScene({
         </div>
 
         {/* Mockup */}
-        <div ref={mockupRef} className="flex-1 w-full max-w-2xl">
-          <div className="relative">
+        <div ref={mockupRef} className="flex-1 w-full">
+          <div className="relative overflow-hidden">
             {/* Glow effect behind mockup */}
             <div
-              className="absolute -inset-4 rounded-2xl opacity-20 blur-3xl pointer-events-none"
+              className="absolute -inset-2 sm:-inset-4 rounded-xl sm:rounded-2xl opacity-20 blur-2xl sm:blur-3xl pointer-events-none"
               style={{ backgroundColor: accentColor }}
             />
-            <div className="relative">{mockup}</div>
+            {/* Mockup container avec responsive */}
+            <div className="relative w-full max-w-sm sm:max-w-lg lg:max-w-2xl mx-auto">
+              <div className="transform scale-75 sm:scale-90 lg:scale-100 origin-center">
+                {mockup}
+              </div>
+            </div>
           </div>
         </div>
       </div>
