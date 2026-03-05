@@ -196,7 +196,7 @@ export default function LandingPage() {
                     <div className="browserDot dotGreen" />
                   </div>
                   <div className="browserUrl">
-                    <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" style={{ color: 'var(--accent)' }">
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" style={{ color: 'var(--accent)' }}>
                       <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2z" />
                     </svg>
                     ultron-app.com/dashboard
@@ -213,7 +213,7 @@ export default function LandingPage() {
         {/* =================== STATS =================== */}
         <section className="stats">
           <div className="container">
-            <AnimatedSection className="statsGrid" staggerChildren staggerDelay={0.15">
+            <AnimatedSection className="statsGrid" staggerChildren staggerDelay={0.15}>
               <div className="statItem"><h4>+40%</h4><span>Taux de conversion</span></div>
               <div className="statItem"><h4>98%</h4><span>Précision IA</span></div>
               <div className="statItem"><h4>2h</h4><span>Gagnées par jour</span></div>
@@ -449,7 +449,7 @@ export default function LandingPage() {
               </div>
             </AnimatedSection>
 
-            <AnimatedSection className="featuresGrid" staggerChildren staggerDelay={0.1">
+            <AnimatedSection className="featuresGrid" staggerChildren staggerDelay={0.1}>
               <div className="featureCard">
                 <div className="featureCardIcon">
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">

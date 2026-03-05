@@ -54,7 +54,8 @@
       "Bash(claude mcp list)",
       "Bash(git reset HEAD~1)",
       "Bash(npx next build --help)",
-      "Bash(npx next build --webpack)"
+      "Bash(npx next build --webpack)",
+      "Bash(timeout 30s npm run build)"
     ],
     "deny": [],
     "ask": []

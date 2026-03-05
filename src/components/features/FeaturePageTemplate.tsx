@@ -42,7 +42,7 @@ export default function FeaturePageTemplate({
 
       {/* Nav */}
       <header className="header">
-        <div className="`${container} ${navInner}`">
+        <div className="container navInner">
           <Link href="/" className="logo">
             <div className="logoIcon">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
@@ -73,7 +73,7 @@ export default function FeaturePageTemplate({
               background: `radial-gradient(ellipse at 50% 30%, ${accentColor}, transparent 70%)`,
             }}
           />
-          <div className="container} style={{ position: 'relative', zIndex: 1 }">
+          <div className="container" style={{ position: 'relative', zIndex: 1 }">
             <AnimatedSection>
               <div style={{ textAlign: 'center', maxWidth: 700, margin: '0 auto 48px' }">
                 <span
@@ -103,7 +103,7 @@ export default function FeaturePageTemplate({
               </div>
             </AnimatedSection>
 
-            <AnimatedSection animation="scaleIn" delay={0.2">
+            <AnimatedSection animation="scaleIn" delay={0.2}>
               <div style={{ maxWidth: 800, margin: '0 auto', position: 'relative' }">
                 <div
                   className="absolute -inset-6 rounded-2xl opacity-15 blur-3xl pointer-events-none"
