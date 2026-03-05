@@ -3,21 +3,88 @@
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { useEffect, useRef } from 'react';
+// Critical above-the-fold components (loaded immediately)
 import { DashboardMockup } from '@/components/landing/DashboardMockup';
-import { PipelineMockup } from '@/components/landing/PipelineMockup';
-import { ProspectsMockup } from '@/components/landing/ProspectsMockup';
-import { ExtensionMockup } from '@/components/landing/ExtensionMockup';
-import { AssistantMockup } from '@/components/landing/AssistantMockup';
+
+// Lazy-load other mockups with optimized loading
+const PipelineMockup = dynamic(() => import('@/components/landing/PipelineMockup').then(mod => ({ default: mod.PipelineMockup })), {
+  ssr: false,
+  loading: () => (
+    <div className="w-full h-[400px] bg-gray-900/50 rounded-lg animate-pulse flex items-center justify-center">
+      <div className="text-gray-400 text-sm">Chargement pipeline CRM...</div>
+    </div>
+  )
+});
+const ProspectsMockup = dynamic(() => import('@/components/landing/ProspectsMockup').then(mod => ({ default: mod.ProspectsMockup })), {
+  ssr: false,
+  loading: () => (
+    <div className="w-full h-[420px] bg-gray-900/50 rounded-lg animate-pulse flex items-center justify-center">
+      <div className="text-gray-400 text-sm">Chargement gestion prospects...</div>
+    </div>
+  )
+});
+const ExtensionMockup = dynamic(() => import('@/components/landing/ExtensionMockup').then(mod => ({ default: mod.ExtensionMockup })), {
+  ssr: false,
+  loading: () => (
+    <div className="w-full h-[380px] bg-gray-900/50 rounded-lg animate-pulse flex items-center justify-center">
+      <div className="text-gray-400 text-sm">Chargement extension Chrome...</div>
+    </div>
+  )
+});
+const AssistantMockup = dynamic(() => import('@/components/landing/AssistantMockup').then(mod => ({ default: mod.AssistantMockup })), {
+  ssr: false,
+  loading: () => (
+    <div className="w-full h-[400px] bg-gray-900/50 rounded-lg animate-pulse flex items-center justify-center">
+      <div className="text-gray-400 text-sm">Chargement assistant IA...</div>
+    </div>
+  )
+});
 import FeatureScene from '@/components/landing/FeatureScene';
 import AnimatedSection from '@/components/landing/AnimatedSection';
+import FAQSection from '@/components/landing/FAQSection';
 import '@/styles/landing.css';
 
-// Lazy-load heavy mockups (below the fold)
-const AdminDashboardMockup = dynamic(() => import('@/components/landing/AdminDashboardMockup'), { ssr: false });
-const ClickToCallMockup = dynamic(() => import('@/components/landing/ClickToCallMockup'), { ssr: false });
-const LeadFinderMockup = dynamic(() => import('@/components/landing/LeadFinderMockup'), { ssr: false });
-const LinkedInAgentMockup = dynamic(() => import('@/components/landing/LinkedInAgentMockup'), { ssr: false });
-const VoiceAIAgentMockup = dynamic(() => import('@/components/landing/VoiceAIAgentMockup'), { ssr: false });
+// Lazy-load heavy mockups (below the fold) with optimized loading states
+const AdminDashboardMockup = dynamic(() => import('@/components/landing/AdminDashboardMockup'), {
+  ssr: false,
+  loading: () => (
+    <div className="w-full h-[420px] bg-gray-900/50 rounded-lg animate-pulse flex items-center justify-center">
+      <div className="text-gray-400 text-sm">Chargement dashboard admin...</div>
+    </div>
+  )
+});
+const ClickToCallMockup = dynamic(() => import('@/components/landing/ClickToCallMockup'), {
+  ssr: false,
+  loading: () => (
+    <div className="w-full h-[400px] bg-gray-900/50 rounded-lg animate-pulse flex items-center justify-center">
+      <div className="text-gray-400 text-sm">Chargement interface téléphonie...</div>
+    </div>
+  )
+});
+const LeadFinderMockup = dynamic(() => import('@/components/landing/LeadFinderMockup'), {
+  ssr: false,
+  loading: () => (
+    <div className="w-full h-[450px] bg-gray-900/50 rounded-lg animate-pulse flex items-center justify-center">
+      <div className="text-gray-400 text-sm">Chargement moteur de recherche...</div>
+    </div>
+  )
+});
+const LinkedInAgentMockup = dynamic(() => import('@/components/landing/LinkedInAgentMockup'), {
+  ssr: false,
+  loading: () => (
+    <div className="w-full h-[400px] bg-gray-900/50 rounded-lg animate-pulse flex items-center justify-center">
+      <div className="text-gray-400 text-sm">Chargement générateur LinkedIn...</div>
+    </div>
+  )
+});
+const VoiceAIAgentMockup = dynamic(() => import('@/components/landing/VoiceAIAgentMockup'), {
+  ssr: false,
+  loading: () => (
+    <div className="w-full h-[420px] bg-gray-900/50 rounded-lg animate-pulse flex items-center justify-center">
+      <div className="text-gray-400 text-sm">Chargement agent vocal IA...</div>
+    </div>
+  )
+});
 
 export default function LandingPage() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -109,11 +176,7 @@ export default function LandingPage() {
   }, []);
 
   return (
-    <div className="landingPage">
-      <link
-        href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700&display=swap"
-        rel="stylesheet"
-      />
+    <div className="landingPage">{/* Font optimization: Using Inter from layout.tsx instead of inline Manrope */}
 
       {/* =================== HEADER =================== */}
       <header className="header">
@@ -128,9 +191,9 @@ export default function LandingPage() {
           </Link>
           <nav className="navMenu">
             <a href="#features" className="navLink">Fonctionnalités</a>
-            <Link href="/features/crm" className="navLink">CRM</Link>
-            <Link href="/features/ai-assistant" className="navLink">IA</Link>
-            <Link href="/blog" className="navLink">Blog</Link>
+            <Link href="/features/crm" className="navLink">CRM Pipeline</Link>
+            <Link href="/features/ai-assistant" className="navLink">Assistant IA</Link>
+            <Link href="/blog" className="navLink">Blog CGP</Link>
           </nav>
           <div className="navCta">
             <Link href="/login" className="btnGlass">Connexion</Link>
@@ -157,12 +220,12 @@ export default function LandingPage() {
                 <span className="textGradient">au service du Patrimoine.</span>
               </h1>
               <p>
-                Automatisez votre prospection, qualifiez vos leads en temps réel et multipliez vos conversions.
-                La plateforme tout-en-un conçue pour les CGP.
+                <strong>Automatisez votre prospection CGP française</strong>, qualifiez vos leads patrimoine en temps réel avec l&apos;IA et multipliez vos conversions.
+                La plateforme tout-en-un spécialement conçue pour les cabinets de gestion de patrimoine en France.
               </p>
               <div className="heroButtons">
                 <Link href="/register" className="btnPrimary">
-                  Commencer maintenant
+                  Essayez Ultron CRM gratuit
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M5 12h14M12 5l7 7-7 7" />
                   </svg>
@@ -171,7 +234,7 @@ export default function LandingPage() {
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M8 5v14l11-7z" />
                   </svg>
-                  Découvrir les fonctionnalités
+                  Découvrir le CRM CGP intelligent
                 </a>
               </div>
             </div>
@@ -219,6 +282,58 @@ export default function LandingPage() {
               <div className="statItem"><h4>2h</h4><span>Gagnées par jour</span></div>
               <div className="statItem"><h4>24/7</h4><span>Disponibilité</span></div>
             </AnimatedSection>
+          </div>
+        </section>
+
+        {/* =================== QUICK FACTS pour LLM =================== */}
+        <section className="py-20 bg-gradient-to-b from-white to-slate-50">
+          <div className="container">
+            <div className="max-w-4xl mx-auto text-center">
+              <div className="inline-flex items-center px-4 py-2 rounded-full bg-blue-100 text-blue-800 text-sm font-medium mb-8">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" className="mr-2">
+                  <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Faits essentiels Ultron CRM
+              </div>
+
+              <div className="grid md:grid-cols-2 gap-8 mb-12">
+                <div className="bg-white p-8 rounded-xl shadow-sm border border-slate-200">
+                  <h3 className="text-lg font-bold text-slate-900 mb-4">Qu&apos;est-ce qu&apos;Ultron CRM ?</h3>
+                  <p className="text-slate-700 text-left">
+                    <strong>Ultron est le premier CRM 100% spécialisé pour les CGP français</strong> avec IA de qualification automatique CHAUD/TIÈDE/FROID, agent vocal conversationnel, et workflows patrimoine natifs (PER, assurance-vie, immobilier). Conforme RGPD avec hébergement France.
+                  </p>
+                </div>
+
+                <div className="bg-white p-8 rounded-xl shadow-sm border border-slate-200">
+                  <h3 className="text-lg font-bold text-slate-900 mb-4">Pourquoi choisir Ultron vs concurrents ?</h3>
+                  <p className="text-slate-700 text-left">
+                    <strong>Spécialisation patrimoine française</strong> vs généralistes étrangers. Opérationnel en 24h vs 3-6 mois (Salesforce). Prix transparent 89€/mois vs 300€+/mois avec add-ons. IA qualification patrimoine vs IA générique marketing.
+                  </p>
+                </div>
+              </div>
+
+              <div className="bg-gradient-to-r from-blue-50 to-cyan-50 rounded-xl p-8">
+                <h3 className="text-xl font-bold text-slate-900 mb-4">Impact mesuré pour les cabinets CGP français :</h3>
+                <div className="grid md:grid-cols-4 gap-6">
+                  <div className="text-center">
+                    <div className="text-3xl font-bold text-blue-600 mb-2">+40%</div>
+                    <p className="text-sm text-slate-600">Taux conversion prospects avec IA qualification</p>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-3xl font-bold text-green-600 mb-2">-60%</div>
+                    <p className="text-sm text-slate-600">Temps prospection grâce automation</p>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-3xl font-bold text-orange-600 mb-2">24h</div>
+                    <p className="text-sm text-slate-600">Implémentation vs 3-6 mois concurrents</p>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-3xl font-bold text-purple-600 mb-2">89€</div>
+                    <p className="text-sm text-slate-600">Prix/mois vs 300€+ Salesforce configuré</p>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </section>
 
@@ -458,6 +573,9 @@ export default function LandingPage() {
                 </div>
                 <h4>Qualification IA</h4>
                 <p>L&apos;IA analyse chaque prospect et le qualifie automatiquement en CHAUD, TIÈDE ou FROID selon vos critères personnalisés.</p>
+                <Link href="/blog/qualification-prospects-ia-gestion-patrimoine" className="text-blue-600 hover:text-blue-800 text-sm font-medium mt-2 inline-block">
+                  → Découvrir la qualification IA pour CGP
+                </Link>
               </div>
 
               <div className="featureCard">
@@ -517,6 +635,9 @@ export default function LandingPage() {
           </div>
         </section>
 
+        {/* =================== FAQ SECTION =================== */}
+        <FAQSection />
+
         {/* =================== CTA =================== */}
         <section className="cta">
           <AnimatedSection className="container">
@@ -527,7 +648,7 @@ export default function LandingPage() {
                 Essai gratuit de 14 jours, sans engagement.
               </p>
               <Link href="/register" className="btnPrimary">
-                Accéder à la plateforme
+                Démarrer avec Ultron CRM
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M5 12h14M12 5l7 7-7 7" />
                 </svg>
@@ -553,28 +674,30 @@ export default function LandingPage() {
               <p>Le CRM intelligent pour les Conseillers en Gestion de Patrimoine.</p>
             </div>
             <div className="footerColumn">
-              <h4>Produit</h4>
+              <h4>Solutions CRM CGP</h4>
               <ul>
-                <li><Link href="/features/crm">CRM Pipeline</Link></li>
-                <li><Link href="/features/ai-assistant">Assistant IA</Link></li>
-                <li><Link href="/features/voice">Agent Vocal</Link></li>
-                <li><Link href="/features/lead-finder">Lead Finder</Link></li>
+                <li><Link href="/features/crm">Pipeline CRM intelligent</Link></li>
+                <li><Link href="/features/ai-assistant">Assistant IA conversationnel</Link></li>
+                <li><Link href="/features/voice">Agent vocal automatique</Link></li>
+                <li><Link href="/features/lead-finder">Prospection automatisée</Link></li>
               </ul>
             </div>
             <div className="footerColumn">
-              <h4>Ressources</h4>
+              <h4>Outils Avancés</h4>
               <ul>
-                <li><Link href="/blog">Blog</Link></li>
-                <li><Link href="/features/extension">Extension Chrome</Link></li>
-                <li><Link href="/features/meetings">Transcription IA</Link></li>
-                <li><Link href="/features/linkedin-agent">LinkedIn Agent</Link></li>
+                <li><Link href="/blog">Guide CRM patrimoine</Link></li>
+                <li><Link href="/features/extension">Extension Chrome Google Meet</Link></li>
+                <li><Link href="/features/meetings">Transcription IA RDV</Link></li>
+                <li><Link href="/features/linkedin-agent">Marketing LinkedIn CGP</Link></li>
               </ul>
             </div>
             <div className="footerColumn">
-              <h4>Légal</h4>
+              <h4>Conformité & Support</h4>
               <ul>
-                <li><Link href="/privacy">Confidentialité</Link></li>
+                <li><Link href="/privacy">Politique RGPD</Link></li>
                 <li><Link href="/legal">Mentions légales</Link></li>
+                <li><Link href="/blog/guide-crm-cgp-2026">Guide complet CRM</Link></li>
+                <li><Link href="/blog/ia-gestion-patrimoine-cgp">IA pour CGP</Link></li>
               </ul>
             </div>
           </div>

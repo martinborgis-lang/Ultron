@@ -59,7 +59,15 @@
       "Bash(TURBOPACK=0 npm run build)",
       "Read(//c/Users/marti/.claude/**)",
       "Bash(bash)",
-      "WebFetch(domain:ultron-ai.pro)"
+      "WebFetch(domain:ultron-ai.pro)",
+      "Read(//c/users/marti/ultron/src/app/**)",
+      "Bash(mkdir -p \"C:\\Users\\marti\\ultron\\src\\components\\seo\")",
+      "Bash(cat \"/c/users/marti/ultron/src/app/(public)/features/layout.tsx\")",
+      "Bash(cat \"/c/users/marti/ultron/src/app/(public)/features/crm/page.tsx\")",
+      "Read(//c/users/marti/ultron/src/components/**)",
+      "Bash(cat \"/c/users/marti/ultron/src/components/features/FeaturePageTemplate.tsx\")",
+      "Bash(timeout 30s npm run dev)",
+      "Bash(npx tsx test-seo-helpers.ts)"
     ],
     "deny": [],
     "ask": []

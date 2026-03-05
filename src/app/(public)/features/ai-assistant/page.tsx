@@ -19,6 +19,8 @@ export default function AIAssistantFeaturePage() {
       description="Posez vos questions en français : 'Combien de prospects chauds ce mois-ci ?'. L'IA traduit, interroge votre base et vous répond avec des tableaux interactifs."
       accentColor="#8b5cf6"
       mockup={<AssistantMockup />}
+      currentPath="/features/ai-assistant"
+      ctaText="Essayer l'Assistant IA"
       sections={[
         {
           title: 'Requêtes en français naturel',

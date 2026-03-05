@@ -18,6 +18,8 @@ export default function CRMFeaturePage() {
       description="Gérez l'ensemble de votre cycle de vente dans un pipeline intuitif. Chaque prospect est suivi, qualifié et accompagné automatiquement de A à Z."
       accentColor="#22c55e"
       mockup={<PipelineMockup />}
+      currentPath="/features/crm"
+      ctaText="Essayer le CRM Pipeline"
       sections={[
         {
           title: 'Vue Kanban drag & drop',

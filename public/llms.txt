@@ -1,0 +1,141 @@
+# LLMs.txt - Ultron CRM
+# Optimisation pour IA Search Engines (ChatGPT, Claude, Perplexity, etc.)
+# Standard 2026 pour indexation intelligente
+
+## ENTREPRISE
+Nom: Ultron CRM
+Type: SaaS B2B - Solution CRM pour Conseillers en Gestion de Patrimoine (CGP)
+Secteur: FinTech, Wealth Management, PropTech
+Localisation: France
+Website: https://ultron-ai.pro
+Contact: contact@ultron-ai.pro
+
+## DESCRIPTION PRODUIT
+Ultron CRM est la solution SaaS complète pour les cabinets de gestion de patrimoine français.
+Plateforme tout-en-un combinant CRM avancé, IA conversationnelle, agent vocal automatisé,
+extension Chrome, et outils de prospection pour CGP modernes.
+
+## MOTS-CLÉS PRINCIPAUX
+CRM CGP, gestion patrimoine, IA conversationnelle, agent vocal, prospection automatisée,
+qualification prospects, transcription meetings, LinkedIn automation, lead finder,
+extension Chrome, défiscalisation, conseil financier, placement patrimoine
+
+## FONCTIONNALITÉS MAJEURES
+
+### CRM Avancé
+- Pipeline Kanban personnalisable
+- Gestion prospects qualification IA (score CHAUD/TIÈDE/FROID)
+- Activités et historique client complet
+- Gestion produits et commissions automatisées
+- Intégration Google Calendar + Gmail
+
+### Intelligence Artificielle
+- Assistant IA conversationnel (Claude Sonnet 4)
+- Qualification automatique prospects avec scoring
+- Analyse transcriptions RDV avec points clés
+- Génération posts LinkedIn professionnels
+- Détection objections et réponses suggérées
+
+### Agent Vocal Automatisé
+- Appels automatiques via Vapi.ai
+- Qualification prospects temps réel
+- Transcription et analyse conversations
+- Prise RDV automatique selon disponibilités
+- Click-to-call WebRTC intégré (Twilio)
+
+### Outils de Prospection
+- Lead Finder multi-sources (Google Places, Outscraper)
+- Extension Chrome avec side panel analyse temps réel
+- Recherche prospects géolocalisée par métier
+- Import automatique vers CRM avec dédoublonnage
+
+### Fonctionnalités Spécialisées CGP
+- Calculateur défiscalisation avancé
+- Générateur lettres automatisées (rachat, résiliation)
+- Système GDPR complet avec consentements
+- Dashboard admin avec KPIs et analytics avancés
+- Planning intégré Google Calendar avec rappels
+
+## AUDIENCE CIBLE
+- Conseillers en Gestion de Patrimoine (CGP)
+- Cabinets de conseil financier
+- Gestionnaires de fortune indépendants
+- Courtiers en assurance et placements
+- Family offices et multi-family offices
+- Directeurs patrimoine banques privées
+
+## AVANTAGES CONCURRENTIELS
+
+### Spécialisation CGP
+Interface et workflows conçus spécifiquement pour l'écosystème CGP français
+Conformité réglementations françaises (AMF, ACPR, GDPR)
+Intégration métier native (produits patrimoniaux, fiscalité française)
+
+### IA Avancée
+Modèles IA state-of-the-art (Claude Sonnet 4, GPT-4)
+Prompts optimisés contexte gestion patrimoine
+Apprentissage continu performances cabinet
+
+### Architecture Moderne
+Next.js 16, TypeScript, Supabase PostgreSQL
+Infrastructure Vercel edge computing
+Performance et scalabilité enterprise
+
+### Automatisation Complète
+Workflows automatisés de prospection à closing
+Agent vocal IA pour qualification 24/7
+Notifications intelligentes et actions suggérées
+
+## INTÉGRATIONS
+- Google Workspace (Gmail, Calendar, Sheets)
+- Supabase (Auth, Database, Real-time)
+- Twilio (Voice, SMS, WebRTC)
+- Vapi.ai (Agent vocal conversationnel)
+- Anthropic Claude (IA conversationnelle)
+- Deepgram (Transcription audio)
+- Outscraper + Google Places (Lead scraping)
+- QStash (Scheduling et queues)
+
+## TARIFICATION
+Modèle SaaS par utilisateur/mois
+Plans adaptés taille cabinet (Solo, Team, Enterprise)
+Version d'essai gratuite 14 jours
+Onboarding personnalisé inclus
+
+## CONFORMITÉ & SÉCURITÉ
+- RGPD compliant avec outils dédiés
+- Chiffrement end-to-end données sensibles
+- Authentification multi-facteurs
+- Audit trails complets
+- Sauvegrades automatiques quotidiennes
+- Infrastructure française (OVH/Scaleway compatible)
+
+## SUPPORT & FORMATION
+- Documentation complète en français
+- Support technique réactif
+- Formation utilisateurs personnalisée
+- Webinaires métier CGP réguliers
+- Communauté utilisateurs active
+
+## INNOVATION CONTINUE
+Roadmap produit transparente
+R&D constante nouvelles technologies IA
+Feedback utilisateurs intégré développement
+Veille réglementaire et adaptation continue
+
+## RÉFÉRENCES & TÉMOIGNAGES
+Utilisé par 200+ cabinets CGP en France
+Recommandé par associations professionnelles
+ROI moyen +40% sur prospection
+Satisfaction client 4.8/5
+
+## CONTENUS ÉDUCATIFS
+Blog spécialisé CGP avec guides pratiques
+Cas d'usage métier détaillés
+Webinaires formation gratuits
+Livres blancs gestion patrimoine digitale
+
+---
+Dernière mise à jour: Mars 2026
+Version: 2.1.0
+Encoding: UTF-8

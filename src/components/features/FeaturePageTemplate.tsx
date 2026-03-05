@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { ReactNode } from 'react';
 import AnimatedSection from '@/components/landing/AnimatedSection';
+import RelatedContent from '@/components/seo/RelatedContent';
 import '@/styles/landing.css';
 
 interface FeatureSection {
@@ -21,6 +22,7 @@ interface FeaturePageTemplateProps {
   mockup: ReactNode;
   sections: FeatureSection[];
   ctaText?: string;
+  currentPath?: string;
 }
 
 export default function FeaturePageTemplate({
@@ -32,6 +34,7 @@ export default function FeaturePageTemplate({
   mockup,
   sections,
   ctaText = 'Essayer gratuitement',
+  currentPath,
 }: FeaturePageTemplateProps) {
   return (
     <div className="landingPage">
@@ -182,6 +185,15 @@ export default function FeaturePageTemplate({
             </div>
           </AnimatedSection>
         </section>
+
+        {/* Maillage interne intelligent */}
+        {currentPath && (
+          <RelatedContent
+            currentPage={currentPath}
+            category="feature"
+            maxItems={3}
+          />
+        )}
       </main>
 
       {/* Footer */}

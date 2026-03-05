@@ -1,6 +1,90 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+/* ========== OPTIMISATIONS PERFORMANCE ========== */
+
+/* Support reduce-motion préférence utilisateur */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Animations optimisées GPU (transform + opacity) */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 0, 0); /* Force GPU layer */
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 20px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes fade-in-scale {
+  from {
+    opacity: 0;
+    transform: scale3d(0.95, 0.95, 1);
+  }
+  to {
+    opacity: 1;
+    transform: scale3d(1, 1, 1);
+  }
+}
+
+/* Classes d'animation optimisées */
+.animate-fade-in {
+  animation: fade-in 0.3s ease-out;
+  will-change: opacity, transform;
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 0.4s ease-out;
+  will-change: opacity, transform;
+}
+
+.animate-fade-in-scale {
+  animation: fade-in-scale 0.3s ease-out;
+  will-change: opacity, transform;
+}
+
+/* Délais d'animation */
+.animation-delay-100 { animation-delay: 100ms; }
+.animation-delay-200 { animation-delay: 200ms; }
+.animation-delay-300 { animation-delay: 300ms; }
+.animation-delay-400 { animation-delay: 400ms; }
+.animation-delay-500 { animation-delay: 500ms; }
+
+/* Optimisations conteneurs */
+.gpu-accelerated {
+  will-change: transform;
+  transform: translate3d(0, 0, 0);
+}
+
+/* Reset will-change après animation */
+.animate-fade-in.animation-complete,
+.animate-fade-in-up.animation-complete,
+.animate-fade-in-scale.animation-complete {
+  will-change: auto;
+}
+
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {

@@ -4,7 +4,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://ultron-murex.vercel.app';
   const now = new Date();
 
-  // Pages principales
+  // Pages principales uniquement dans sitemap.xml
   const mainPages: MetadataRoute.Sitemap = [
     {
       url: baseUrl,
@@ -44,33 +44,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 0.9,
   }));
 
-  // Articles blog
-  const blogSlugs = [
-    'automatiser-prospection-cgp',
-    'qualification-prospects-ia',
-    'augmenter-conversion-cgp',
-    'transcription-rdv-ia',
-    'linkedin-strategie-cgp',
-    'crm-vs-google-sheets',
-  ];
-
-  const blogPages: MetadataRoute.Sitemap = blogSlugs.map((slug) => ({
-    url: `${baseUrl}/blog/${slug}`,
-    lastModified: now,
-    changeFrequency: 'monthly' as const,
-    priority: 0.8,
-  }));
-
-  // Blog index
-  const blogIndex: MetadataRoute.Sitemap = [
-    {
-      url: `${baseUrl}/blog`,
-      lastModified: now,
-      changeFrequency: 'weekly',
-      priority: 0.85,
-    },
-  ];
-
   // Pages légales
   const legalPages: MetadataRoute.Sitemap = [
     {
@@ -87,5 +60,5 @@ export default function sitemap(): MetadataRoute.Sitemap {
     },
   ];
 
-  return [...mainPages, ...featurePages, ...blogIndex, ...blogPages, ...legalPages];
+  return [...mainPages, ...featurePages, ...legalPages];
 }
