@@ -56,7 +56,10 @@
       "Bash(npx next build --help)",
       "Bash(npx next build --webpack)",
       "Bash(timeout 30s npm run build)",
-      "Bash(TURBOPACK=0 npm run build)"
+      "Bash(TURBOPACK=0 npm run build)",
+      "Read(//c/Users/marti/.claude/**)",
+      "Bash(bash)",
+      "WebFetch(domain:ultron-ai.pro)"
     ],
     "deny": [],
     "ask": []
