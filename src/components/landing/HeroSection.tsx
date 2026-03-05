@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 import Link from 'next/link';
-import { Button } from '@/components/ui/button';
+import CtaButton from '@/components/ui/CtaButton';
 import { Sparkles, ArrowRight } from 'lucide-react';
 import { gsap } from 'gsap';
 
@@ -89,19 +89,20 @@ export function HeroSection() {
           <span className="text-xl font-bold text-white">ULTRON</span>
         </div>
         <div className="flex items-center gap-4">
-          <Link href="/login">
-            <Button
-              variant="ghost"
-              className="text-white/80 hover:text-white hover:bg-white/10"
-            >
-              Se connecter
-            </Button>
-          </Link>
-          <Link href="/register">
-            <Button className="bg-white text-indigo-900 hover:bg-white/90">
-              Creer un compte
-            </Button>
-          </Link>
+          <CtaButton
+            href="/login"
+            variant="ghost"
+            className="text-white/80 hover:text-white hover:bg-white/10"
+          >
+            Se connecter
+          </CtaButton>
+          <CtaButton
+            href="/register"
+            variant="secondary"
+            className="bg-white text-indigo-900 hover:bg-white/90"
+          >
+            Creer un compte
+          </CtaButton>
         </div>
       </nav>
 
@@ -140,24 +141,23 @@ export function HeroSection() {
 
           {/* CTA Buttons */}
           <div ref={buttonsRef} className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Link href="/register">
-              <Button
-                size="lg"
-                className="bg-gradient-to-r from-indigo-500 to-violet-500 hover:from-indigo-600 hover:to-violet-600 text-white px-8 py-6 text-lg rounded-xl shadow-lg shadow-indigo-500/25 transition-all hover:shadow-xl hover:shadow-indigo-500/40 group"
-              >
-                Commencer gratuitement
-                <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
-              </Button>
-            </Link>
-            <Link href="/login">
-              <Button
-                variant="outline"
-                size="lg"
-                className="border-white/20 text-white hover:bg-white/10 px-8 py-6 text-lg rounded-xl backdrop-blur-sm"
-              >
-                J'ai deja un compte
-              </Button>
-            </Link>
+            <CtaButton
+              href="/register"
+              variant="primary"
+              size="lg"
+              className="px-8 py-6 text-lg rounded-xl shadow-lg shadow-indigo-500/25 transition-all hover:shadow-xl hover:shadow-indigo-500/40 group"
+              icon={<ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />}
+            >
+              Commencer gratuitement
+            </CtaButton>
+            <CtaButton
+              href="/login"
+              variant="secondary"
+              size="lg"
+              className="border-white/20 text-white hover:bg-white/10 px-8 py-6 text-lg rounded-xl backdrop-blur-sm"
+            >
+              J'ai deja un compte
+            </CtaButton>
           </div>
         </div>
       </div>

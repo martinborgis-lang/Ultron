@@ -1,6 +1,8 @@
 'use client';
 
 import { useState } from 'react';
+import CtaButton from '@/components/ui/CtaButton';
+import '@/styles/landing.css';
 
 const faqData = [
   {
@@ -41,19 +43,19 @@ export default function FAQSection() {
   const [openIndex, setOpenIndex] = useState<number | null>(0); // FAQ 1 ouverte par défaut
 
   return (
-    <section className="py-20 bg-gradient-to-b from-slate-50 to-white">
+    <section className="py-20 bg-transparent">
       <div className="container">
         <div className="text-center mb-16">
-          <div className="inline-flex items-center px-3 py-1 rounded-full bg-blue-100 text-blue-800 text-sm font-medium mb-6">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" className="mr-2">
+          <span className="sectionTag">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
               <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
             </svg>
             Questions fréquentes CGP
-          </div>
-          <h2 className="text-4xl font-bold text-slate-900 mb-6">
+          </span>
+          <h2 className="text-4xl font-bold text-white mb-6 textGradient">
             Tout savoir sur Ultron CRM
           </h2>
-          <p className="text-xl text-slate-600 max-w-3xl mx-auto">
+          <p className="text-xl text-gray-300 max-w-3xl mx-auto">
             Réponses aux questions les plus posées par les cabinets de gestion de patrimoine français
           </p>
         </div>
@@ -63,24 +65,24 @@ export default function FAQSection() {
             {faqData.map((item, index) => (
               <div
                 key={index}
-                className="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden"
+                className="bg-gray-900/50 backdrop-blur-sm rounded-xl border border-white/8 hover:border-white/12 overflow-hidden transition-all duration-300 ease-out"
               >
                 <button
                   onClick={() => setOpenIndex(openIndex === index ? null : index)}
-                  className="w-full px-6 py-5 text-left flex items-center justify-between hover:bg-slate-50 transition-colors"
+                  className="w-full px-6 py-5 text-left flex items-center justify-between hover:bg-white/5 transition-all duration-300"
                 >
-                  <h3 className="text-lg font-semibold text-slate-900 pr-4">
+                  <h3 className="text-lg font-semibold text-white pr-4">
                     {item.question}
                   </h3>
-                  <div className={`text-blue-600 transition-transform duration-200 ${openIndex === index ? 'rotate-180' : ''}`}>
+                  <div className={`text-blue-400 transition-transform duration-300 ease-out ${openIndex === index ? 'rotate-180' : ''}`}>
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <polyline points="6,9 12,15 18,9"></polyline>
                     </svg>
                   </div>
                 </button>
                 {openIndex === index && (
-                  <div className="px-6 pb-5">
-                    <p className="text-slate-700 leading-relaxed">
+                  <div className="px-6 pb-5 animate-in slide-in-from-top-2 duration-300">
+                    <p className="text-gray-300 leading-relaxed">
                       {item.answer}
                     </p>
                   </div>
@@ -91,20 +93,20 @@ export default function FAQSection() {
 
           {/* CTA après FAQ */}
           <div className="mt-12 text-center">
-            <div className="bg-gradient-to-r from-blue-50 to-cyan-50 rounded-xl p-8">
-              <h3 className="text-2xl font-bold text-slate-900 mb-4">
+            <div className="bg-gray-900/50 backdrop-blur-sm border border-blue-600/30 rounded-2xl p-8 hover:border-blue-500/40 transition-all duration-300">
+              <h3 className="text-2xl font-bold text-white mb-4">
                 Prêt à tester le CRM CGP le plus avancé ?
               </h3>
-              <p className="text-slate-600 mb-6">
+              <p className="text-gray-300 mb-6">
                 Essai gratuit 14 jours • Configuration automatique • Support CGP dédié
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <a href="/register" className="bg-blue-600 text-white px-8 py-4 rounded-lg font-semibold hover:bg-blue-700 transition-colors">
+                <CtaButton href="/register" variant="primary">
                   Commencer l&apos;Essai Gratuit
-                </a>
-                <a href="/alternatives-crm-cgp" className="border border-slate-300 text-slate-700 px-8 py-4 rounded-lg font-semibold hover:bg-slate-50 transition-colors">
+                </CtaButton>
+                <CtaButton href="/alternatives-crm-cgp" variant="secondary">
                   Comparer les CRM CGP
-                </a>
+                </CtaButton>
               </div>
             </div>
           </div>

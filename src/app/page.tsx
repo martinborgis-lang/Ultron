@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
+import CtaButton from '@/components/ui/CtaButton';
 import { useEffect, useRef } from 'react';
 // Critical above-the-fold components (loaded immediately)
 import { DashboardMockup } from '@/components/landing/DashboardMockup';
@@ -196,8 +197,8 @@ export default function LandingPage() {
             <Link href="/blog" className="navLink">Blog CGP</Link>
           </nav>
           <div className="navCta">
-            <Link href="/login" className="btnGlass">Connexion</Link>
-            <Link href="/register" className="btnPrimary">Essai Gratuit</Link>
+            <CtaButton href="/login" variant="secondary">Connexion</CtaButton>
+            <CtaButton href="/register" variant="primary">Essai Gratuit</CtaButton>
           </div>
         </div>
       </header>
@@ -224,18 +225,28 @@ export default function LandingPage() {
                 La plateforme tout-en-un spécialement conçue pour les cabinets de gestion de patrimoine en France.
               </p>
               <div className="heroButtons">
-                <Link href="/register" className="btnPrimary">
+                <CtaButton
+                  href="/register"
+                  variant="primary"
+                  icon={
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M5 12h14M12 5l7 7-7 7" />
+                    </svg>
+                  }
+                >
                   Essayez Ultron CRM gratuit
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M5 12h14M12 5l7 7-7 7" />
-                  </svg>
-                </Link>
-                <a href="#features" className="btnGlass">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M8 5v14l11-7z" />
-                  </svg>
+                </CtaButton>
+                <CtaButton
+                  href="#features"
+                  variant="secondary"
+                  icon={
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M8 5v14l11-7z" />
+                    </svg>
+                  }
+                >
                   Découvrir le CRM CGP intelligent
-                </a>
+                </CtaButton>
               </div>
             </div>
 
@@ -286,50 +297,50 @@ export default function LandingPage() {
         </section>
 
         {/* =================== QUICK FACTS pour LLM =================== */}
-        <section className="py-20 bg-gradient-to-b from-white to-slate-50">
+        <section className="py-20 bg-transparent">
           <div className="container">
             <div className="max-w-4xl mx-auto text-center">
-              <div className="inline-flex items-center px-4 py-2 rounded-full bg-blue-100 text-blue-800 text-sm font-medium mb-8">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" className="mr-2">
+              <span className="sectionTag">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
                 Faits essentiels Ultron CRM
-              </div>
+              </span>
 
               <div className="grid md:grid-cols-2 gap-8 mb-12">
-                <div className="bg-white p-8 rounded-xl shadow-sm border border-slate-200">
-                  <h3 className="text-lg font-bold text-slate-900 mb-4">Qu&apos;est-ce qu&apos;Ultron CRM ?</h3>
-                  <p className="text-slate-700 text-left">
+                <div className="bg-gray-900/50 backdrop-blur-sm border border-white/8 hover:border-white/12 p-8 rounded-xl transition-all duration-300 hover:scale-105">
+                  <h3 className="text-lg font-bold text-white mb-4">Qu&apos;est-ce qu&apos;Ultron CRM ?</h3>
+                  <p className="text-gray-300 text-left">
                     <strong>Ultron est le premier CRM 100% spécialisé pour les CGP français</strong> avec IA de qualification automatique CHAUD/TIÈDE/FROID, agent vocal conversationnel, et workflows patrimoine natifs (PER, assurance-vie, immobilier). Conforme RGPD avec hébergement France.
                   </p>
                 </div>
 
-                <div className="bg-white p-8 rounded-xl shadow-sm border border-slate-200">
-                  <h3 className="text-lg font-bold text-slate-900 mb-4">Pourquoi choisir Ultron vs concurrents ?</h3>
-                  <p className="text-slate-700 text-left">
+                <div className="bg-gray-900/50 backdrop-blur-sm border border-white/8 hover:border-white/12 p-8 rounded-xl transition-all duration-300 hover:scale-105">
+                  <h3 className="text-lg font-bold text-white mb-4">Pourquoi choisir Ultron vs concurrents ?</h3>
+                  <p className="text-gray-300 text-left">
                     <strong>Spécialisation patrimoine française</strong> vs généralistes étrangers. Opérationnel en 24h vs 3-6 mois (Salesforce). Prix transparent 89€/mois vs 300€+/mois avec add-ons. IA qualification patrimoine vs IA générique marketing.
                   </p>
                 </div>
               </div>
 
-              <div className="bg-gradient-to-r from-blue-50 to-cyan-50 rounded-xl p-8">
-                <h3 className="text-xl font-bold text-slate-900 mb-4">Impact mesuré pour les cabinets CGP français :</h3>
-                <div className="grid md:grid-cols-4 gap-6">
-                  <div className="text-center">
-                    <div className="text-3xl font-bold text-blue-600 mb-2">+40%</div>
-                    <p className="text-sm text-slate-600">Taux conversion prospects avec IA qualification</p>
+              <div className="bg-gray-900/50 backdrop-blur-sm border border-white/8 rounded-xl p-8">
+                <h3 className="text-xl font-bold text-white mb-4">Impact mesuré pour les cabinets CGP français :</h3>
+                <div className="statsGrid">
+                  <div className="statItem">
+                    <h4>+40%</h4>
+                    <span>Taux conversion prospects</span>
                   </div>
-                  <div className="text-center">
-                    <div className="text-3xl font-bold text-green-600 mb-2">-60%</div>
-                    <p className="text-sm text-slate-600">Temps prospection grâce automation</p>
+                  <div className="statItem">
+                    <h4>-60%</h4>
+                    <span>Temps prospection</span>
                   </div>
-                  <div className="text-center">
-                    <div className="text-3xl font-bold text-orange-600 mb-2">24h</div>
-                    <p className="text-sm text-slate-600">Implémentation vs 3-6 mois concurrents</p>
+                  <div className="statItem">
+                    <h4>24h</h4>
+                    <span>Implémentation</span>
                   </div>
-                  <div className="text-center">
-                    <div className="text-3xl font-bold text-purple-600 mb-2">89€</div>
-                    <p className="text-sm text-slate-600">Prix/mois vs 300€+ Salesforce configuré</p>
+                  <div className="statItem">
+                    <h4>89€</h4>
+                    <span>Prix mensuel</span>
                   </div>
                 </div>
               </div>
@@ -647,12 +658,17 @@ export default function LandingPage() {
                 Rejoignez les CGP qui gagnent du temps chaque jour avec Ultron.
                 Essai gratuit de 14 jours, sans engagement.
               </p>
-              <Link href="/register" className="btnPrimary">
+              <CtaButton
+                href="/register"
+                variant="primary"
+                icon={
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M5 12h14M12 5l7 7-7 7" />
+                  </svg>
+                }
+              >
                 Démarrer avec Ultron CRM
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M5 12h14M12 5l7 7-7 7" />
-                </svg>
-              </Link>
+              </CtaButton>
             </div>
           </AnimatedSection>
         </section>
