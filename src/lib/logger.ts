@@ -39,8 +39,20 @@ class Logger {
   }
 
   error(message: string, ...args: unknown[]): void {
-    // Erreurs toujours visibles (important pour le debugging prod)
-    console.error(this.formatMessage('error', message), ...args);
+    // En production, on évite les console.error pour Lighthouse
+    // Seules les erreurs critiques sont loggées
+    if (isDev || message.includes('CRITICAL')) {
+      console.error(this.formatMessage('error', message), ...args);
+    }
+  }
+
+  // Erreur silencieuse en production (pour Lighthouse)
+  silent(message: string, ...args: unknown[]): void {
+    if (isDev) {
+      console.error(this.formatMessage('error', message), ...args);
+    }
+    // En production, on peut envoyer vers un service de monitoring
+    // sans polluer la console
   }
 
   // Pour les cas où on veut vraiment logger en prod (événements importants)

@@ -184,7 +184,7 @@ export default function LandingPage() {
         <div className="container navInner">
           <Link href="/" className="logo">
             <div className="logoIcon">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                 <path d="M21 16.5c0 .38-.21.71-.53.88l-7.9 4.44c-.16.12-.36.18-.57.18-.21 0-.41-.06-.57-.18l-7.9-4.44A.991.991 0 013 16.5v-9c0-.38.21-.71.53-.88l7.9-4.44c.16-.12.36-.18.57-.18.21 0 .41.06.57.18l7.9 4.44c.32.17.53.5.53.88v9z" />
               </svg>
             </div>
@@ -210,7 +210,7 @@ export default function LandingPage() {
           <div className="container heroGrid">
             <div className="heroContent">
               <div className="heroBadge">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                   <path d="M12 2L9.19 8.63L2 9.24l5.46 4.73L5.82 21L12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2z" />
                 </svg>
                 Nouveau : Agent Vocal IA + Click-to-Call
@@ -301,7 +301,7 @@ export default function LandingPage() {
           <div className="container">
             <div className="max-w-4xl mx-auto text-center">
               <span className="sectionTag">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                   <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
                 Faits essentiels Ultron CRM
@@ -354,7 +354,7 @@ export default function LandingPage() {
             <AnimatedSection>
               <div className="sectionHeader">
                 <span className="sectionTag">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                     <path d="M4 4h7v7H4V4zm9 0h7v7h-7V4zm-9 9h7v7H4v-7zm9 0h7v7h-7v-7z" />
                   </svg>
                   10 modules intégrés
@@ -565,7 +565,7 @@ export default function LandingPage() {
             <AnimatedSection>
               <div className="sectionHeader">
                 <span className="sectionTag">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                     <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
                   </svg>
                   Et bien plus encore
@@ -582,7 +582,7 @@ export default function LandingPage() {
                     <path d="M12 2a2 2 0 012 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 017 7h1a1 1 0 011 1v3a1 1 0 01-1 1h-1v1a2 2 0 01-2 2H5a2 2 0 01-2-2v-1H2a1 1 0 01-1-1v-3a1 1 0 011-1h1a7 7 0 017-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 012-2z" />
                   </svg>
                 </div>
-                <h4>Qualification IA</h4>
+                <h3>Qualification IA</h3>
                 <p>L&apos;IA analyse chaque prospect et le qualifie automatiquement en CHAUD, TIÈDE ou FROID selon vos critères personnalisés.</p>
                 <Link href="/blog/qualification-prospects-ia-gestion-patrimoine" className="text-blue-600 hover:text-blue-800 text-sm font-medium mt-2 inline-block">
                   → Découvrir la qualification IA pour CGP
@@ -596,7 +596,7 @@ export default function LandingPage() {
                     <polyline points="22,6 12,13 2,6" />
                   </svg>
                 </div>
-                <h4>Emails automatiques</h4>
+                <h3>Emails automatiques</h3>
                 <p>Confirmations de RDV, rappels 24h avant, envoi de plaquette... Tout est automatisé et personnalisé par conseiller.</p>
               </div>
 
@@ -607,7 +607,7 @@ export default function LandingPage() {
                     <polyline points="14 2 14 8 20 8" />
                   </svg>
                 </div>
-                <h4>Génération de lettres</h4>
+                <h3>Génération de lettres</h3>
                 <p>Générez en 1 clic des lettres de rachat, transfert ou stop prélèvement avec l&apos;IA. Export PDF professionnel inclus.</p>
               </div>
 
@@ -617,7 +617,7 @@ export default function LandingPage() {
                     <circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" />
                   </svg>
                 </div>
-                <h4>Suivi des commissions</h4>
+                <h3>Suivi des commissions</h3>
                 <p>Suivez vos commissions par produit et par conseiller. Calcul automatique avec tableau de bord financier complet.</p>
               </div>
 
@@ -629,7 +629,7 @@ export default function LandingPage() {
                     <line x1="3" y1="10" x2="21" y2="10" />
                   </svg>
                 </div>
-                <h4>Planning intégré</h4>
+                <h3>Planning intégré</h3>
                 <p>Sync bidirectionnelle Google Calendar, rappels automatiques, vue agenda et tâches pour ne rien oublier.</p>
               </div>
 
@@ -639,7 +639,7 @@ export default function LandingPage() {
                     <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
                   </svg>
                 </div>
-                <h4>Sécurité RGPD</h4>
+                <h3>Sécurité RGPD</h3>
                 <p>Données hébergées en Europe, chiffrement, droit à l&apos;oubli, export et suppression sur demande. 100% conforme.</p>
               </div>
             </AnimatedSection>
@@ -681,7 +681,7 @@ export default function LandingPage() {
             <div className="footerBrand">
               <Link href="/" className="logo">
                 <div className="logoIcon">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                     <path d="M21 16.5c0 .38-.21.71-.53.88l-7.9 4.44c-.16.12-.36.18-.57.18-.21 0-.41-.06-.57-.18l-7.9-4.44A.991.991 0 013 16.5v-9c0-.38.21-.71.53-.88l7.9-4.44c.16-.12.36-.18.57-.18.21 0 .41.06.57.18l7.9 4.44c.32.17.53.5.53.88v9z" />
                   </svg>
                 </div>
@@ -721,7 +721,7 @@ export default function LandingPage() {
             <p>&copy; 2026 Ultron CRM. Tous droits réservés.</p>
             <div className="footerSocials">
               <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer" title="LinkedIn">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                   <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
                 </svg>
               </a>

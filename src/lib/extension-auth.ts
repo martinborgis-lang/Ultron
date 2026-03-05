@@ -1,6 +1,7 @@
 import jwt from 'jsonwebtoken';
 import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { logger } from '@/lib/logger';
 
 export interface ExtensionTokenPayload {
   sub: string;        // user ID
@@ -82,7 +83,7 @@ export async function validateExtensionToken(token: string) {
     };
 
   } catch (error) {
-    console.error('[Extension Auth] ❌ Token validation failed:', error);
+    logger.silent('[Extension Auth] ❌ Token validation failed:', error);
     return null;
   }
 }

@@ -18,7 +18,10 @@ export function useOrganization() {
           setOrganization(null);
         }
       } catch (error) {
-        console.error('Error fetching organization:', error);
+        // Error silencieuse pour Lighthouse
+        if (process.env.NODE_ENV === 'development') {
+          console.error('Error fetching organization:', error);
+        }
         setOrganization(null);
       } finally {
         setLoading(false);

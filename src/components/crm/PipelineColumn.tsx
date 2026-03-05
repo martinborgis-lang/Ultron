@@ -60,14 +60,16 @@ export function PipelineColumn({ stage, prospects, onProspectClick, onCall, colu
       variants={columnVariants}
       className={cn(
         'flex flex-col w-72 flex-shrink-0 bg-muted/30 rounded-lg transition-all duration-200',
-        isOver && 'ring-2 ring-primary ring-offset-2 ring-offset-background scale-[1.02] shadow-lg'
+        isOver && 'ring-2 ring-primary ring-offset-2 ring-offset-background shadow-lg'
       )}
+      style={isOver ? { transform: 'scale(1.02)' } : undefined}
     >
       {/* Header */}
       <motion.div
         className="p-3 border-b border-border"
         style={{ borderTopColor: stage.color, borderTopWidth: '3px', borderTopLeftRadius: '0.5rem', borderTopRightRadius: '0.5rem' }}
-        whileHover={{ backgroundColor: 'rgba(0,0,0,0.02)' }}
+        whileHover={{ scale: 1.01 }}
+        transition={{ duration: 0.2 }}
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">

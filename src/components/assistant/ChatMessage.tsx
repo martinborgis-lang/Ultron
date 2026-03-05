@@ -105,10 +105,11 @@ export function ChatMessage({ message, index }: ChatMessageProps) {
 
             {showQuery && (
               <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                exit={{ opacity: 0, height: 0 }}
+                initial={{ opacity: 0, scaleY: 0 }}
+                animate={{ opacity: 1, scaleY: 1 }}
+                exit={{ opacity: 0, scaleY: 0 }}
                 className="mt-2"
+                style={{ transformOrigin: 'top' }}
               >
                 <pre className="text-xs bg-slate-900 text-slate-100 p-3 rounded-lg overflow-x-auto">
                   <code>{message.query}</code>

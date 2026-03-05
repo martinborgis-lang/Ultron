@@ -46,12 +46,17 @@ export default function AnimatedSection({
     const { from, to } = animationMap[animation];
 
     const ctx = gsap.context(() => {
+      // 🚀 OPTIMIZATION: Pas de delay sur mobile pour Speed Index
+      const isMobile = window.innerWidth < 768;
+      const effectiveDelay = isMobile ? 0 : delay;
+      const effectiveStagger = isMobile ? 0 : (staggerChildren ? staggerDelay : 0);
+
       gsap.fromTo(targets, from, {
         ...to,
-        duration,
-        delay,
-        stagger: staggerChildren ? staggerDelay : 0,
-        ease: 'power3.out',
+        duration: isMobile ? 0.4 : duration, // Plus rapide sur mobile
+        delay: effectiveDelay,
+        stagger: effectiveStagger,
+        ease: 'power2.out', // Easing plus léger
         scrollTrigger: {
           trigger: el,
           start: 'top 82%',

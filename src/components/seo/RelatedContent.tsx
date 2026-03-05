@@ -187,13 +187,13 @@ export default function RelatedContent({
   if (relatedItems.length === 0) return null;
 
   return (
-    <section className="py-16 bg-gray-50/50 border-t border-gray-100">
+    <section className="py-16 bg-transparent border-t border-white/8">
       <div className="container mx-auto px-6">
         <div className="text-center mb-12">
-          <h3 className="text-2xl font-semibold text-gray-900 mb-3">
+          <h3 className="text-2xl font-semibold text-white mb-3">
             Découvrez aussi
           </h3>
-          <p className="text-gray-600 max-w-2xl mx-auto">
+          <p className="text-gray-300 max-w-2xl mx-auto">
             Explorez d'autres fonctionnalités Ultron qui pourraient vous intéresser
           </p>
         </div>
@@ -203,23 +203,23 @@ export default function RelatedContent({
             <Link
               key={item.href}
               href={item.href}
-              className="group bg-white rounded-xl p-6 shadow-sm hover:shadow-md transition-all duration-300 border border-gray-100 hover:border-blue-200"
+              className="group bg-gray-900/50 backdrop-blur-sm rounded-xl p-6 border border-white/8 hover:border-white/20 transition-all duration-300 hover:scale-102"
             >
               {item.badge && (
-                <span className="inline-block px-3 py-1 text-xs font-medium bg-blue-50 text-blue-600 rounded-full mb-3">
+                <span className="inline-block px-3 py-1 text-xs font-medium bg-blue-600/20 text-blue-400 border border-blue-500/30 rounded-full mb-3">
                   {item.badge}
                 </span>
               )}
 
-              <h4 className="font-semibold text-gray-900 mb-2 group-hover:text-blue-600 transition-colors line-clamp-2">
+              <h4 className="font-semibold text-white mb-2 group-hover:text-blue-400 transition-colors line-clamp-2">
                 {item.title}
               </h4>
 
-              <p className="text-sm text-gray-600 line-clamp-3 leading-relaxed">
+              <p className="text-sm text-gray-300 line-clamp-3 leading-relaxed">
                 {item.description}
               </p>
 
-              <div className="flex items-center mt-4 text-sm font-medium text-blue-600 group-hover:text-blue-700">
+              <div className="flex items-center mt-4 text-sm font-medium text-blue-400 group-hover:text-blue-300">
                 En savoir plus
                 <svg
                   width="14"

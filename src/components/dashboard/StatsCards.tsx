@@ -74,15 +74,18 @@ function TrendIndicator({ trend, change }: { trend: 'up' | 'down' | 'stable'; ch
 
 const cardVariants = {
   hidden: { opacity: 0, y: 20 },
-  visible: (i: number) => ({
-    opacity: 1,
-    y: 0,
-    transition: {
-      delay: i * 0.1,
-      duration: 0.4,
-      ease: [0.4, 0, 0.2, 1] as const,
-    },
-  }),
+  visible: (i: number) => {
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+    return {
+      opacity: 1,
+      y: 0,
+      transition: {
+        delay: isMobile ? 0 : i * 0.1, // 🚀 Pas de delay sur mobile
+        duration: isMobile ? 0.3 : 0.4, // Plus rapide sur mobile
+        ease: [0.4, 0, 0.2, 1] as const,
+      },
+    };
+  },
 };
 
 export function StatsCards({ stats, previousStats }: StatsCardsProps) {
@@ -178,9 +181,12 @@ export function StatsCards({ stats, previousStats }: StatsCardsProps) {
                 <div className="flex items-end justify-between">
                   <motion.p
                     className="text-3xl font-bold tracking-tight"
-                    initial={{ scale: 0.5, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    transition={{ delay: index * 0.1 + 0.2, duration: 0.3 }}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{
+                      delay: typeof window !== 'undefined' && window.innerWidth < 768 ? 0 : index * 0.1 + 0.2,
+                      duration: 0.3
+                    }}
                   >
                     {card.value}
                   </motion.p>

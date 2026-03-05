@@ -32,7 +32,20 @@
 .container {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 0 24px;
+  padding: 0 16px;
+}
+
+@media (min-width: 640px) {
+  .container {
+    padding: 0 24px;
+  }
+}
+
+@media (min-width: 1280px) {
+  .container {
+    max-width: 1280px;
+    padding: 0 32px;
+  }
 }
 
 .textGradient {
@@ -648,10 +661,12 @@
    RESPONSIVE
    ============================================ */
 
-@media (max-width: 1024px) {
+/* Breakpoint Tablet (768px - 1024px) */
+@media (min-width: 768px) and (max-width: 1024px) {
   .heroGrid {
     grid-template-columns: 1fr;
-    gap: 50px;
+    gap: 40px;
+    text-align: center;
   }
 
   .heroContent {
@@ -667,54 +682,53 @@
   }
 
   .featuresGrid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
   }
 
   .statsGrid {
     grid-template-columns: repeat(2, 1fr);
-    gap: 30px;
+    gap: 24px;
   }
 
   .footerGrid {
     grid-template-columns: 1fr 1fr;
-    gap: 40px;
+    gap: 32px;
   }
 }
 
-@media (max-width: 768px) {
+/* Breakpoint Desktop (> 1024px) */
+@media (min-width: 1025px) {
+  .heroGrid {
+    grid-template-columns: 1fr 1.3fr;
+    gap: 50px;
+  }
+}
+
+/* Breakpoint Mobile (< 768px) */
+@media (max-width: 767px) {
   .navMenu {
     display: none;
   }
 
+  .heroGrid {
+    grid-template-columns: 1fr;
+    gap: 30px;
+    text-align: center;
+  }
+
+  .heroContent {
+    text-align: center;
+  }
+
   .heroContent h1 {
     font-size: 2rem;
-    line-height: 1.1;
+    line-height: 1.2;
   }
 
   .heroContent p {
     font-size: 0.95rem;
-  }
-
-  .sectionHeader h2 {
-    font-size: 1.75rem;
-  }
-
-  .statItem h4 {
-    font-size: 1.75rem;
-  }
-
-  .footerBottom {
-    flex-direction: column;
-    gap: 16px;
-    text-align: center;
-  }
-
-  .browserContent {
-    height: 280px;
-  }
-
-  .container {
-    padding: 0 20px;
+    margin: 0 auto 32px;
   }
 
   .heroButtons {
@@ -728,12 +742,21 @@
     justify-content: center;
   }
 
+  .sectionHeader h2 {
+    font-size: 1.75rem;
+  }
+
+  .statItem h4 {
+    font-size: 1.75rem;
+  }
+
   .statsGrid {
     grid-template-columns: 1fr 1fr;
-    gap: 20px;
+    gap: 12px;
   }
 
   .featuresGrid {
+    grid-template-columns: 1fr;
     gap: 16px;
   }
 
@@ -743,6 +766,21 @@
 
   .ctaBox {
     padding: 50px 24px;
+  }
+
+  .footerGrid {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+
+  .footerBottom {
+    flex-direction: column;
+    gap: 16px;
+    text-align: center;
+  }
+
+  .browserContent {
+    height: 280px;
   }
 
   .floatBadge {
@@ -755,31 +793,62 @@
     justify-content: center;
     max-width: fit-content;
   }
-
-  .footerGrid {
-    grid-template-columns: 1fr;
-    gap: 30px;
-  }
 }
 
-@media (max-width: 480px) {
+/* Breakpoint Mobile Small (< 480px) */
+@media (max-width: 479px) {
+  .container {
+    padding: 0 12px;
+  }
+
   .heroContent h1 {
     font-size: 1.75rem;
+    line-height: 1.2;
+  }
+
+  .sectionHeader h2 {
+    font-size: 1.5rem;
   }
 
   .statsGrid {
     grid-template-columns: 1fr;
+    gap: 12px;
   }
 
-  .container {
-    padding: 0 16px;
+  .statItem h4 {
+    font-size: 1.5rem;
+  }
+
+  .featuresGrid {
+    gap: 12px;
+  }
+
+  .featureCard {
+    padding: 20px 16px;
   }
 
   .ctaBox {
     padding: 40px 20px;
   }
 
+  .ctaBox h2 {
+    font-size: 1.5rem;
+  }
+
   .hero .browserContent > div {
     transform: scaleX(0.6) scaleY(0.65);
+  }
+
+  .btn {
+    padding: 10px 20px;
+    font-size: 0.85rem;
+  }
+
+  .navCta {
+    gap: 8px;
+  }
+
+  .logo {
+    font-size: 1.1rem;
   }
 }

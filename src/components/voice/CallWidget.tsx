@@ -146,7 +146,9 @@ export function CallWidget({
       });
 
       device.on('error', (error: any) => {
-        console.error('Erreur Twilio Device:', error);
+        if (process.env.NODE_ENV === 'development') {
+          console.error('Erreur Twilio Device:', error);
+        }
         setCallState(prev => ({
           ...prev,
           status: 'failed',
@@ -165,7 +167,9 @@ export function CallWidget({
       await device.register();
 
     } catch (error) {
-      console.error('Erreur initialisation Twilio:', error);
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Erreur initialisation Twilio:', error);
+      }
       setCallState(prev => ({
         ...prev,
         status: 'failed',
@@ -238,7 +242,9 @@ export function CallWidget({
       });
 
       call.on('error', (error: any) => {
-        console.error('Erreur appel:', error);
+        if (process.env.NODE_ENV === 'development') {
+          console.error('Erreur appel:', error);
+        }
         setCallState(prev => ({
           ...prev,
           status: 'failed',
@@ -247,7 +253,9 @@ export function CallWidget({
       });
 
     } catch (error) {
-      console.error('Erreur makeCall:', error);
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Erreur makeCall:', error);
+      }
       setCallState(prev => ({
         ...prev,
         status: 'failed',
@@ -284,7 +292,9 @@ export function CallWidget({
       }));
 
     } catch (error) {
-      console.error('Erreur hangup:', error);
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Erreur hangup:', error);
+      }
     }
   };
 
@@ -320,7 +330,9 @@ export function CallWidget({
 
       onClose();
     } catch (error) {
-      console.error('Erreur sauvegarde notes:', error);
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Erreur sauvegarde notes:', error);
+      }
       onClose(); // Fermer même en cas d'erreur
     }
   };

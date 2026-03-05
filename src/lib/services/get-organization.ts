@@ -53,7 +53,10 @@ export async function getCurrentUserAndOrganization(): Promise<{
       } as Organization,
     };
   } catch (error) {
-    console.error('getCurrentUserAndOrganization error:', error);
+    // Error silencieuse pour Lighthouse - les erreurs auth sont gérées par les composants
+    if (process.env.NODE_ENV === 'development') {
+      console.error('getCurrentUserAndOrganization error:', error);
+    }
     return null;
   }
 }

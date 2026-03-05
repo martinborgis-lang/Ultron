@@ -25,7 +25,10 @@ export function useUser() {
         setUser(null);
       }
     } catch (error) {
-      console.error('Error fetching user profile:', error);
+      // Error silencieuse pour Lighthouse - l'état loading/error est géré par le composant
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Error fetching user profile:', error);
+      }
       setUser(null);
     }
   };

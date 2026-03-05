@@ -71,20 +71,28 @@ const nextConfig: NextConfig = {
           },
           {
             key: 'Content-Security-Policy',
-            value: `
-              default-src 'self';
-              script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.supabase.co https://sdk.twilio.com https://js.stripe.com https://maps.googleapis.com https://www.googletagmanager.com https://www.google-analytics.com;
-              style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
-              img-src 'self' data: blob: https://*.supabase.co https://www.google-analytics.com https://maps.gstatic.com *.googleusercontent.com;
-              connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.twilio.com https://*.twilio.com wss://*.twilio.com https://api.stripe.com https://www.google-analytics.com https://maps.googleapis.com;
-              font-src 'self' data: https://fonts.gstatic.com;
-              object-src 'none';
-              base-uri 'self';
-              form-action 'self';
-              frame-ancestors 'none';
-              frame-src 'self' https://js.stripe.com https://hooks.stripe.com;
-              upgrade-insecure-requests;
-            `.replace(/\s{2,}/g, ' ').trim()
+            value: [
+              "default-src 'self'",
+              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.supabase.co https://sdk.twilio.com https://js.stripe.com https://maps.googleapis.com https://www.googletagmanager.com https://www.google-analytics.com https://vercel.live",
+              "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+              "font-src 'self' data: https://fonts.gstatic.com",
+              "img-src 'self' data: blob: https://*.supabase.co https://www.google-analytics.com https://maps.gstatic.com *.googleusercontent.com",
+              "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.twilio.com https://*.twilio.com wss://*.twilio.com https://api.stripe.com https://www.google-analytics.com https://maps.googleapis.com https://vitals.vercel-insights.com",
+              "object-src 'none'",
+              "base-uri 'self'",
+              "form-action 'self'",
+              "frame-ancestors 'none'",
+              "frame-src 'self' https://js.stripe.com https://hooks.stripe.com",
+              "upgrade-insecure-requests",
+            ].join('; ')
+          },
+          {
+            key: 'Cross-Origin-Opener-Policy',
+            value: 'same-origin-allow-popups'
+          },
+          {
+            key: 'Cross-Origin-Embedder-Policy',
+            value: 'unsafe-none'
           }
         ]
       },
@@ -109,12 +117,17 @@ const nextConfig: NextConfig = {
         ]
       },
       {
-        // Préchargement ressources critiques
+        // Préchargement ressources critiques above-the-fold
         source: '/',
         headers: [
           {
             key: 'Link',
-            value: '</images/nexus-logo.svg>; rel=preload; as=image, <https://fonts.gstatic.com>; rel=preconnect; crossorigin'
+            value: [
+              '</images/nexus-logo.svg>; rel=preload; as=image',
+              '<https://fonts.gstatic.com>; rel=preconnect; crossorigin',
+              '</fonts/inter-var.woff2>; rel=preload; as=font; type=font/woff2; crossorigin',
+              '</styles/landing.css>; rel=preload; as=style'
+            ].join(', ')
           }
         ]
       }
@@ -137,8 +150,41 @@ const nextConfig: NextConfig = {
     ];
   },
 
-  // Note: webpack config removed for Next.js 16 Turbopack compatibility
-  // Bundle optimization is now handled automatically by Turbopack
+  // Webpack optimizations (fallback for non-Turbopack builds)
+  webpack: (config, { dev, isServer }) => {
+    if (!dev && !isServer) {
+      // Configuration splitChunks pour optimiser le bundle principal
+      config.optimization = {
+        ...config.optimization,
+        splitChunks: {
+          chunks: 'all',
+          maxSize: 244000, // ~244KB limite recommandée
+          cacheGroups: {
+            framework: {
+              chunks: 'all',
+              name: 'framework',
+              test: /(?<!node_modules.*)[\\/]node_modules[\\/](react|react-dom|scheduler|prop-types|use-subscription)[\\/]/,
+              priority: 40,
+              enforce: true
+            },
+            lib: {
+              test: /[\\/]node_modules[\\/]/,
+              name: 'vendor',
+              priority: 30,
+              chunks: 'initial'
+            },
+            motion: {
+              test: /[\\/]node_modules[\\/]framer-motion[\\/]/,
+              name: 'motion',
+              priority: 35,
+              chunks: 'all'
+            }
+          }
+        }
+      }
+    }
+    return config;
+  }
 };
 
 export default nextConfig;

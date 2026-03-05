@@ -70,6 +70,8 @@ export default function FAQSection() {
                 <button
                   onClick={() => setOpenIndex(openIndex === index ? null : index)}
                   className="w-full px-6 py-5 text-left flex items-center justify-between hover:bg-white/5 transition-all duration-300"
+                  aria-label={openIndex === index ? `Fermer la question : ${item.question}` : `Ouvrir la question : ${item.question}`}
+                  aria-expanded={openIndex === index}
                 >
                   <h3 className="text-lg font-semibold text-white pr-4">
                     {item.question}

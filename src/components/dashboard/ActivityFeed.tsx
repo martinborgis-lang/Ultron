@@ -114,15 +114,18 @@ function getActionConfig(action: string): ActionConfig {
 
 const itemVariants = {
   hidden: { opacity: 0, x: -20 },
-  visible: (i: number) => ({
-    opacity: 1,
-    x: 0,
-    transition: {
-      delay: i * 0.05,
-      duration: 0.3,
-      ease: [0.4, 0, 0.2, 1] as const,
-    },
-  }),
+  visible: (i: number) => {
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+    return {
+      opacity: 1,
+      x: 0,
+      transition: {
+        delay: isMobile ? 0 : i * 0.05, // 🚀 Pas de delay sur mobile
+        duration: isMobile ? 0.2 : 0.3, // Plus rapide sur mobile
+        ease: [0.4, 0, 0.2, 1] as const,
+      },
+    };
+  },
 };
 
 export function ActivityFeed({ activities }: ActivityFeedProps) {
