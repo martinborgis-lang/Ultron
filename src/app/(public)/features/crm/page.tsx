@@ -1,20 +1,15 @@
-import { Metadata } from 'next';
+'use client';
+
+import { useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import FeaturePageTemplate from '@/components/features/FeaturePageTemplate';
 
 const PipelineMockup = dynamic(() => import('@/components/landing/PipelineMockup').then(m => ({ default: m.PipelineMockup })), { ssr: false });
 
-export const metadata: Metadata = {
-  title: 'Pipeline CRM Intelligent',
-  description: 'Gérez vos prospects dans un pipeline CRM visuel avec Kanban, qualification IA automatique, drag & drop et gestion des commissions. Conçu pour les CGP.',
-  keywords: ['CRM gestion patrimoine', 'pipeline commercial CGP', 'Kanban prospects', 'qualification IA'],
-  openGraph: {
-    title: 'Pipeline CRM Intelligent | Ultron',
-    description: 'Le CRM intelligent conçu pour les conseillers en gestion de patrimoine.',
-  },
-};
-
 export default function CRMFeaturePage() {
+  useEffect(() => {
+    document.title = 'Pipeline CRM Intelligent | Ultron';
+  }, []);
   return (
     <FeaturePageTemplate
       badge="Pipeline CRM"

@@ -339,12 +339,6 @@ export default async function BlogArticlePage({
                     padding: '20px',
                     transition: 'border-color 0.3s',
                   }}
-                  onMouseEnter={(e) => {
-                    (e.currentTarget as HTMLElement).style.borderColor = 'rgba(99,102,241,0.3)';
-                  }}
-                  onMouseLeave={(e) => {
-                    (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.06)';
-                  }}
                 >
                   <h3
                     style={{

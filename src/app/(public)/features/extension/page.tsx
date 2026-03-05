@@ -1,4 +1,6 @@
-import { Metadata } from 'next';
+'use client';
+
+import { useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import FeaturePageTemplate from '@/components/features/FeaturePageTemplate';
 
@@ -10,24 +12,10 @@ const ExtensionMockup = dynamic(
   { ssr: false }
 );
 
-export const metadata: Metadata = {
-  title: 'Extension Chrome Side Panel',
-  description:
-    'Analysez vos prospects en temps réel pendant vos appels Google Meet. Questions suggérées, réponses aux objections et synchronisation CRM automatique.',
-  keywords: [
-    'extension Chrome CGP',
-    'side panel CRM',
-    'analyse temps réel meeting',
-    'Google Meet extension',
-  ],
-  openGraph: {
-    title: 'Extension Chrome Side Panel | Ultron',
-    description: 'Votre copilote IA pendant les appels Google Meet.',
-    type: 'website',
-  },
-};
-
 export default function ExtensionFeaturePage() {
+  useEffect(() => {
+    document.title = 'Extension Chrome Side Panel | Ultron';
+  }, []);
   return (
     <FeaturePageTemplate
       badge="Extension Chrome"

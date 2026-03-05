@@ -1,4 +1,6 @@
-import { Metadata } from 'next';
+'use client';
+
+import { useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import FeaturePageTemplate from '@/components/features/FeaturePageTemplate';
 
@@ -7,24 +9,10 @@ const LinkedInAgentMockup = dynamic(
   { ssr: false }
 );
 
-export const metadata: Metadata = {
-  title: 'Générateur de Posts LinkedIn IA',
-  description:
-    "Créez des posts LinkedIn professionnels en 30 secondes avec l'IA. 8 thèmes spécialisés CGP, personnalisation du ton et de l'identité cabinet.",
-  keywords: [
-    'LinkedIn CGP',
-    'générateur posts LinkedIn',
-    'marketing gestion patrimoine',
-    'contenu IA',
-  ],
-  openGraph: {
-    title: 'Générateur de Posts LinkedIn IA | Ultron',
-    description: 'Créez du contenu LinkedIn professionnel en quelques clics.',
-    type: 'website',
-  },
-};
-
 export default function LinkedInAgentFeaturePage() {
+  useEffect(() => {
+    document.title = 'Générateur de Posts LinkedIn IA | Ultron';
+  }, []);
   return (
     <FeaturePageTemplate
       badge="LinkedIn Agent"

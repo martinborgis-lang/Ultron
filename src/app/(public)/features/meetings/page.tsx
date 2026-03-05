@@ -1,4 +1,6 @@
-import { Metadata } from 'next';
+'use client';
+
+import { useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import FeaturePageTemplate from '@/components/features/FeaturePageTemplate';
 
@@ -10,25 +12,10 @@ const ExtensionMockup = dynamic(
   { ssr: false }
 );
 
-export const metadata: Metadata = {
-  title: 'Transcription & Analyse IA de RDV',
-  description:
-    'Transcrivez automatiquement vos RDV Google Meet. Obtenez des résumés IA, points clés, objections détectées et prochaines actions.',
-  keywords: [
-    'transcription RDV CGP',
-    'analyse meeting IA',
-    'compte-rendu automatique',
-    'Google Meet CGP',
-  ],
-  openGraph: {
-    title: 'Transcription & Analyse IA de RDV | Ultron',
-    description:
-      'Transformez vos RDV en insights actionnables grâce à l\'IA.',
-    type: 'website',
-  },
-};
-
 export default function MeetingsFeaturePage() {
+  useEffect(() => {
+    document.title = 'Transcription & Analyse IA de RDV | Ultron';
+  }, []);
   return (
     <FeaturePageTemplate
       badge="Meetings & Transcription"

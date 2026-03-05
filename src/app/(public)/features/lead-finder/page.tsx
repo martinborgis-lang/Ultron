@@ -1,20 +1,15 @@
-import { Metadata } from 'next';
+'use client';
+
+import { useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import FeaturePageTemplate from '@/components/features/FeaturePageTemplate';
 
 const LeadFinderMockup = dynamic(() => import('@/components/landing/LeadFinderMockup'), { ssr: false });
 
-export const metadata: Metadata = {
-  title: 'Moteur de Recherche Prospects',
-  description: 'Trouvez vos futurs clients parmi les commerçants, professions libérales et dirigeants. Données enrichies depuis Google Maps et Pappers.',
-  keywords: ['recherche prospects CGP', 'lead generation patrimoine', 'scraping Google Maps', 'Pappers API'],
-  openGraph: {
-    title: 'Moteur de Recherche Prospects | Ultron',
-    description: 'Trouvez et importez des prospects qualifiés en quelques clics.',
-  },
-};
-
 export default function LeadFinderFeaturePage() {
+  useEffect(() => {
+    document.title = 'Moteur de Recherche Prospects | Ultron';
+  }, []);
   return (
     <FeaturePageTemplate
       badge="Lead Finder"

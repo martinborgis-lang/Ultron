@@ -1,20 +1,15 @@
-import { Metadata } from 'next';
+'use client';
+
+import { useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import FeaturePageTemplate from '@/components/features/FeaturePageTemplate';
 
 const VoiceAIAgentMockup = dynamic(() => import('@/components/landing/VoiceAIAgentMockup'), { ssr: false });
 
-export const metadata: Metadata = {
-  title: 'Agent Vocal IA & Click-to-Call',
-  description: 'Qualifiez vos prospects automatiquement par téléphone grâce à l\'IA conversationnelle. Appels WebRTC intégrés avec Twilio et agent IA Vapi.ai.',
-  keywords: ['agent vocal IA', 'click to call CRM', 'qualification téléphonique', 'Vapi AI CGP'],
-  openGraph: {
-    title: 'Agent Vocal IA & Click-to-Call | Ultron',
-    description: 'Qualification automatique par téléphone et appels WebRTC intégrés.',
-  },
-};
-
 export default function VoiceFeaturePage() {
+  useEffect(() => {
+    document.title = 'Agent Vocal IA & Click-to-Call | Ultron';
+  }, []);
   return (
     <FeaturePageTemplate
       badge="Agent Vocal & Téléphonie"

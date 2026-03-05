@@ -1,20 +1,16 @@
-import { Metadata } from 'next';
+'use client';
+
+import { useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import FeaturePageTemplate from '@/components/features/FeaturePageTemplate';
 
 const AssistantMockup = dynamic(() => import('@/components/landing/AssistantMockup').then(m => ({ default: m.AssistantMockup })), { ssr: false });
 
-export const metadata: Metadata = {
-  title: 'Assistant IA Conversationnel',
-  description: 'Interrogez votre base de données CRM en langage naturel. L\'IA traduit vos questions en requêtes et vous répond avec des tableaux et graphiques.',
-  keywords: ['assistant IA CGP', 'intelligence artificielle patrimoine', 'analyse données CRM', 'requêtes naturelles'],
-  openGraph: {
-    title: 'Assistant IA Conversationnel | Ultron',
-    description: 'Posez vos questions en français, obtenez des réponses instantanées.',
-  },
-};
-
 export default function AIAssistantFeaturePage() {
+  useEffect(() => {
+    document.title = 'Assistant IA Conversationnel | Ultron';
+  }, []);
+
   return (
     <FeaturePageTemplate
       badge="Intelligence Artificielle"
