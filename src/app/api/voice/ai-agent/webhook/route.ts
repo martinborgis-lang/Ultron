@@ -433,7 +433,7 @@ async function executeCallNow(call: any, prospect: any, voiceConfig: any): Promi
 
 async function scheduleCallWithQStash(call: any, scheduledTime: Date): Promise<any> {
   // FORCER l'utilisation de l'URL de production stable pour QStash
-  const webhookUrl = 'https://ultron-murex.vercel.app/api/voice/ai-agent/execute-call';
+  const webhookUrl = 'https://ultron-ai.pro/api/voice/ai-agent/execute-call';
 
   const payload = {
     call_id: call.id,

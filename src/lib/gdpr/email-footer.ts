@@ -11,7 +11,7 @@
 export function getSimpleEmailFooter(): string {
   return `
 <div style="margin-top: 30px; padding-top: 15px; border-top: 1px solid #e5e7eb; font-size: 11px; color: #9ca3af; text-align: center;">
-  <a href="https://ultron-murex.vercel.app/privacy" style="color: #9ca3af; text-decoration: none;">Politique de confidentialité</a>
+  <a href="https://ultron-ai.pro/privacy" style="color: #9ca3af; text-decoration: none;">Politique de confidentialité</a>
 </div>`;
 }
 
@@ -21,7 +21,7 @@ export function getSimpleEmailFooter(): string {
 export function getSimpleEmailFooterText(): string {
   return `
 ---
-Politique de confidentialité : https://ultron-murex.vercel.app/privacy`;
+Politique de confidentialité : https://ultron-ai.pro/privacy`;
 }
 
 // ============================================================================
@@ -51,7 +51,7 @@ export function generateEmailFooter(params: FooterParams): string {
   <p style="margin-bottom: 15px;">
     <a href="${unsubscribeUrl}" style="color: #666; text-decoration: underline;">Se désinscrire</a>
     &nbsp;•&nbsp;
-    <a href="https://ultron-murex.vercel.app/privacy" style="color: #666; text-decoration: underline;">Politique de confidentialité</a>
+    <a href="https://ultron-ai.pro/privacy" style="color: #666; text-decoration: underline;">Politique de confidentialité</a>
   </p>
   <p style="margin-bottom: 0; color: #999;">
     Martin Borgis – 42 rue Gilbert Cesbron, 75017 Paris
@@ -67,7 +67,7 @@ export function generateEmailFooterText(params: FooterParams): string {
 ---
 Vous recevez cet email suite à votre demande d'information.
 Se désinscrire : ${unsubscribeUrl}
-Politique de confidentialité : https://ultron-murex.vercel.app/privacy
+Politique de confidentialité : https://ultron-ai.pro/privacy
 Martin Borgis – 42 rue Gilbert Cesbron, 75017 Paris`;
 }
 */

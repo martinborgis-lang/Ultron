@@ -23,7 +23,7 @@ const inter = Inter({
   ],
 });
 
-const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://ultron-murex.vercel.app';
+const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://ultron-ai.pro';
 
 export const metadata: Metadata = {
   metadataBase: new URL(baseUrl),
@@ -87,6 +87,15 @@ export const metadata: Metadata = {
     canonical: baseUrl,
   },
   category: 'technology',
+  icons: {
+    icon: [
+      { url: '/favicon.svg', type: 'image/svg+xml' },
+      { url: '/favicon.ico', sizes: 'any' }
+    ],
+    shortcut: '/favicon.ico',
+    apple: '/apple-touch-icon.png',
+  },
+  manifest: '/site.webmanifest',
 };
 
 // JSON-LD Structured Data - Organization, Website et SoftwareApplication enrichis
@@ -243,7 +252,7 @@ export default function RootLayout({
         {/* Preconnect pour les ressources critiques */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link rel="dns-prefetch" href="https://ultron-murex.vercel.app" />
+        <link rel="dns-prefetch" href="https://ultron-ai.pro" />
 
         {/* Métadonnées de vérification pour Search Console - À compléter manuellement */}
         {process.env.NODE_ENV === 'production' && (

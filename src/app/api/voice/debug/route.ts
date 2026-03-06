@@ -164,7 +164,7 @@ export async function POST(request: NextRequest) {
     console.log('🔧 Debug: Tentative exécution manuelle appel:', call_id);
 
     // Simuler l'appel au endpoint execute-call
-    const executeUrl = `${process.env.NEXTAUTH_URL || 'https://ultron-murex.vercel.app'}/api/voice/ai-agent/execute-call`;
+    const executeUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://ultron-ai.pro'}/api/voice/ai-agent/execute-call`;
 
     const payload = {
       call_id,

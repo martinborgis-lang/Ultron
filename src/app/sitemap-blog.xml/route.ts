@@ -4,7 +4,7 @@ import { articles } from '@/lib/blog/articles';
 // Utilisation des articles réels définis dans articles.ts
 
 export async function GET() {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://ultron-murex.vercel.app';
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://ultron-ai.pro';
 
   // Page principale du blog
   const blogIndexUrl = `${baseUrl}/blog`;

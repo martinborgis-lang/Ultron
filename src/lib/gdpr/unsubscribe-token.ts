@@ -41,6 +41,6 @@ export function verifyUnsubscribeToken(token: string): UnsubscribePayload | null
  */
 export function generateUnsubscribeUrl(payload: UnsubscribePayload): string {
   const token = generateUnsubscribeToken(payload);
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://ultron-murex.vercel.app';
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://ultron-ai.pro';
   return `${baseUrl}/unsubscribe?token=${token}`;
 }

@@ -192,13 +192,14 @@ export default function LandingPage() {
           </Link>
           <nav className="navMenu">
             <a href="#features" className="navLink">Fonctionnalités</a>
+            <a href="#sur-mesure" className="navLink">Sur mesure</a>
             <Link href="/features/crm" className="navLink">CRM Pipeline</Link>
             <Link href="/features/ai-assistant" className="navLink">Assistant IA</Link>
             <Link href="/blog" className="navLink">Blog CGP</Link>
           </nav>
           <div className="navCta">
             <CtaButton href="/login" variant="secondary">Connexion</CtaButton>
-            <CtaButton href="/register" variant="primary">Essai Gratuit</CtaButton>
+            <CtaButton href="/contact" variant="primary">Accès Early Adopter</CtaButton>
           </div>
         </div>
       </header>
@@ -226,7 +227,7 @@ export default function LandingPage() {
               </p>
               <div className="heroButtons">
                 <CtaButton
-                  href="/register"
+                  href="/contact"
                   variant="primary"
                   icon={
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
@@ -234,7 +235,7 @@ export default function LandingPage() {
                     </svg>
                   }
                 >
-                  Essayez Ultron CRM gratuit
+                  Rejoindre la liste d'attente
                 </CtaButton>
                 <CtaButton
                   href="#features"
@@ -649,6 +650,190 @@ export default function LandingPage() {
           </div>
         </section>
 
+        {/* =================== CRM SUR MESURE SECTION =================== */}
+        <section id="sur-mesure" className="py-16 sm:py-20 lg:py-24 bg-transparent">
+          <div className="container">
+            <AnimatedSection>
+              <div className="text-center mb-12 sm:mb-16">
+                <span className="sectionTag">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                    <path d="M12 1l3 6 6 .75-4.5 4.25L18 19l-6-3.25L6 19l1.5-6.25L3 7.75 9 7l3-6z" />
+                  </svg>
+                  Configuration personnalisée
+                </span>
+                <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white mb-4 sm:mb-6">
+                  Un CRM pensé pour <span className="textGradient">VOUS</span>, pas pour tout le monde
+                </h2>
+                <p className="text-lg sm:text-xl text-gray-300 max-w-3xl mx-auto">
+                  Chaque cabinet CGP est unique. Ultron s'adapte à vos process, pas l'inverse.
+                </p>
+              </div>
+            </AnimatedSection>
+
+            {/* Problème vs Solution */}
+            <AnimatedSection className="grid grid-cols-1 lg:grid-cols-2 gap-8 sm:gap-12 mb-12 sm:mb-16" staggerChildren staggerDelay={0.2}>
+              {/* Problème - Colonne gauche */}
+              <div className="bg-gray-900/50 backdrop-blur-sm border border-red-500/20 p-6 sm:p-8 rounded-xl">
+                <div className="flex items-center mb-6">
+                  <div className="w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center mr-4">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2" aria-hidden="true">
+                      <circle cx="12" cy="12" r="10" />
+                      <line x1="15" y1="9" x2="9" y2="15" />
+                      <line x1="9" y1="9" x2="15" y2="15" />
+                    </svg>
+                  </div>
+                  <h3 className="text-xl sm:text-2xl font-bold text-white">
+                    Les CRM génériques ne comprennent pas votre métier
+                  </h3>
+                </div>
+                <ul className="space-y-4">
+                  <li className="flex items-start">
+                    <div className="w-2 h-2 rounded-full bg-red-500 mt-2.5 mr-3 flex-shrink-0"></div>
+                    <span className="text-gray-300">Workflows patrimoniaux inexistants</span>
+                  </li>
+                  <li className="flex items-start">
+                    <div className="w-2 h-2 rounded-full bg-red-500 mt-2.5 mr-3 flex-shrink-0"></div>
+                    <span className="text-gray-300">Aucune conformité MiFID II native</span>
+                  </li>
+                  <li className="flex items-start">
+                    <div className="w-2 h-2 rounded-full bg-red-500 mt-2.5 mr-3 flex-shrink-0"></div>
+                    <span className="text-gray-300">IA générique inutile pour la qualification CGP</span>
+                  </li>
+                  <li className="flex items-start">
+                    <div className="w-2 h-2 rounded-full bg-red-500 mt-2.5 mr-3 flex-shrink-0"></div>
+                    <span className="text-gray-300">Des mois de configuration pour un résultat médiocre</span>
+                  </li>
+                </ul>
+              </div>
+
+              {/* Solution - Colonne droite */}
+              <div className="bg-gray-900/50 backdrop-blur-sm border border-blue-500/30 hover:border-blue-500/50 p-6 sm:p-8 rounded-xl transition-all duration-300">
+                <div className="flex items-center mb-6">
+                  <div className="w-12 h-12 rounded-full bg-blue-500/10 border border-blue-500/30 flex items-center justify-center mr-4">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" strokeWidth="2" aria-hidden="true">
+                      <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                      <polyline points="22,4 12,14.01 9,11.01" />
+                    </svg>
+                  </div>
+                  <h3 className="text-xl sm:text-2xl font-bold text-white">
+                    Audit + CRM sur mesure = outil qui vous ressemble
+                  </h3>
+                </div>
+                <div className="space-y-4">
+                  <div className="flex items-start">
+                    <div className="w-8 h-8 rounded-full bg-blue-500/10 flex items-center justify-center mr-4 flex-shrink-0 mt-1">
+                      <span className="text-lg">🔍</span>
+                    </div>
+                    <div>
+                      <div className="font-semibold text-white mb-1">Audit de vos process actuels</div>
+                      <div className="text-sm text-gray-400">(1 session)</div>
+                    </div>
+                  </div>
+                  <div className="flex items-start">
+                    <div className="w-8 h-8 rounded-full bg-blue-500/10 flex items-center justify-center mr-4 flex-shrink-0 mt-1">
+                      <span className="text-lg">🎯</span>
+                    </div>
+                    <div className="text-gray-300">
+                      Identification des automatisations à fort ROI
+                    </div>
+                  </div>
+                  <div className="flex items-start">
+                    <div className="w-8 h-8 rounded-full bg-blue-500/10 flex items-center justify-center mr-4 flex-shrink-0 mt-1">
+                      <span className="text-lg">⚙️</span>
+                    </div>
+                    <div className="text-gray-300">
+                      Configuration sur mesure de votre Ultron
+                    </div>
+                  </div>
+                  <div className="flex items-start">
+                    <div className="w-8 h-8 rounded-full bg-blue-500/10 flex items-center justify-center mr-4 flex-shrink-0 mt-1">
+                      <span className="text-lg">🚀</span>
+                    </div>
+                    <div className="text-gray-300">
+                      Features exclusives selon vos besoins métier
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </AnimatedSection>
+
+            {/* Exemples concrets */}
+            <AnimatedSection>
+              <h3 className="text-2xl sm:text-3xl font-bold text-white text-center mb-8 sm:mb-12">
+                Exemples de configurations sur mesure
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8">
+                <div className="bg-gray-900/50 backdrop-blur-sm border border-white/8 hover:border-white/12 p-6 rounded-xl transition-all duration-300 hover:scale-105">
+                  <div className="text-center mb-4">
+                    <div className="w-12 h-12 rounded-full bg-green-500/10 flex items-center justify-center mx-auto mb-3">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2">
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                        <circle cx="12" cy="7" r="4" />
+                      </svg>
+                    </div>
+                    <h4 className="font-bold text-white mb-2">Cabinet solo</h4>
+                  </div>
+                  <p className="text-gray-300 text-center text-sm">
+                    Agent vocal configuré sur vos scripts de qualification patrimoniaux
+                  </p>
+                </div>
+
+                <div className="bg-gray-900/50 backdrop-blur-sm border border-white/8 hover:border-white/12 p-6 rounded-xl transition-all duration-300 hover:scale-105">
+                  <div className="text-center mb-4">
+                    <div className="w-12 h-12 rounded-full bg-blue-500/10 flex items-center justify-center mx-auto mb-3">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" strokeWidth="2">
+                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                        <circle cx="9" cy="7" r="4" />
+                        <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                        <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                      </svg>
+                    </div>
+                    <h4 className="font-bold text-white mb-2">Cabinet 3-5 CGP</h4>
+                  </div>
+                  <p className="text-gray-300 text-center text-sm">
+                    Pipeline automatisé de la prise de contact à la signature, adapté à votre processus
+                  </p>
+                </div>
+
+                <div className="bg-gray-900/50 backdrop-blur-sm border border-white/8 hover:border-white/12 p-6 rounded-xl transition-all duration-300 hover:scale-105">
+                  <div className="text-center mb-4">
+                    <div className="w-12 h-12 rounded-full bg-purple-500/10 flex items-center justify-center mx-auto mb-3">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" strokeWidth="2">
+                        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                        <polyline points="9,22 9,12 15,12 15,22" />
+                      </svg>
+                    </div>
+                    <h4 className="font-bold text-white mb-2">Multi-sites</h4>
+                  </div>
+                  <p className="text-gray-300 text-center text-sm">
+                    Dashboard consolidé avec reporting réglementaire automatique par entité
+                  </p>
+                </div>
+              </div>
+            </AnimatedSection>
+
+            {/* CTA final */}
+            <AnimatedSection className="text-center mt-12 sm:mt-16">
+              <div className="bg-gray-900/50 backdrop-blur-sm border border-blue-500/20 p-8 sm:p-12 rounded-xl">
+                <CtaButton
+                  href="/contact"
+                  variant="primary"
+                  icon={
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M5 12h14M12 5l7 7-7 7" />
+                    </svg>
+                  }
+                >
+                  Demander mon audit gratuit
+                </CtaButton>
+                <p className="text-gray-400 text-sm mt-4">
+                  30 minutes • Sans engagement • 100% adapté CGP
+                </p>
+              </div>
+            </AnimatedSection>
+          </div>
+        </section>
+
         {/* =================== FAQ SECTION =================== */}
         <FAQSection />
 
@@ -656,13 +841,13 @@ export default function LandingPage() {
         <section className="cta">
           <AnimatedSection className="container">
             <div className="ctaBox">
-              <h2>Prêt à transformer votre cabinet ?</h2>
+              <h2>Rejoignez les premiers cabinets CGP sur Ultron</h2>
               <p>
-                Rejoignez les CGP qui gagnent du temps chaque jour avec Ultron.
-                Essai gratuit de 14 jours, sans engagement.
+                Inscrivez-vous pour être parmi les premiers à accéder à Ultron.
+                Tarif early adopter exclusif garanti.
               </p>
               <CtaButton
-                href="/register"
+                href="/contact"
                 variant="primary"
                 icon={
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -670,7 +855,7 @@ export default function LandingPage() {
                   </svg>
                 }
               >
-                Démarrer avec Ultron CRM
+                Demander un accès early adopter
               </CtaButton>
             </div>
           </AnimatedSection>

@@ -19,7 +19,7 @@ export default function PrivacyPage() {
             La présente politique de confidentialité décrit comment <strong>Martin Borgis</strong>
             (ci-après "nous", "notre" ou "Ultron") collecte, utilise, stocke et protège vos données
             personnelles dans le cadre de l'utilisation de notre plateforme de gestion de la relation
-            client (CRM) accessible à l'adresse <a href="https://ultron-murex.vercel.app" className="text-indigo-600 hover:underline">https://ultron-murex.vercel.app</a>.
+            client (CRM) accessible à l'adresse <a href="https://ultron-ai.pro" className="text-indigo-600 hover:underline">https://ultron-ai.pro</a>.
           </p>
           <p>
             Nous nous engageons à respecter votre vie privée et à protéger vos données personnelles

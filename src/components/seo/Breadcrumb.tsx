@@ -37,7 +37,7 @@ export function Breadcrumb({
   const breadcrumbSchema = generateBreadcrumbList(
     breadcrumbItems.map(item => ({
       name: item.name,
-      url: `${process.env.NEXT_PUBLIC_APP_URL || 'https://ultron-murex.vercel.app'}${item.href}`
+      url: `${process.env.NEXT_PUBLIC_APP_URL || 'https://ultron-ai.pro'}${item.href}`
     }))
   );
 

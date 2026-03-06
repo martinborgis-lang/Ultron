@@ -46,7 +46,7 @@ export const DEFAULT_SECURITY_CONFIG: SecurityConfig = {
       'http://localhost:3000',
       'http://localhost:3001',
       'http://localhost:3002',
-      'https://ultron-murex.vercel.app',
+      'https://ultron-ai.pro',
       'https://www.ultron-ai.pro',
       'https://ultron-ai.pro'
     ],

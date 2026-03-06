@@ -3,15 +3,15 @@ import { logger } from '@/lib/logger';
 import { google } from 'googleapis';
 import { OAuth2Client } from 'google-auth-library';
 
+// @deprecated - Google Sheets mode disabled for OAuth compliance
 // Default tab name in Google Sheet (can be customized per organization in the future)
 export const SHEET_TAB_NAME = 'Prospect';
 
-// Scopes for organization-level OAuth (Sheets + Drive + Gmail + Calendar)
+// Scopes for organization-level OAuth (Gmail + Calendar + Drive file access)
 const ORGANIZATION_SCOPES = [
-  'https://www.googleapis.com/auth/spreadsheets',
   'https://www.googleapis.com/auth/gmail.send',
   'https://www.googleapis.com/auth/userinfo.email',
-  'https://www.googleapis.com/auth/drive.readonly',
+  'https://www.googleapis.com/auth/drive.file',
   'https://www.googleapis.com/auth/calendar',
   'https://www.googleapis.com/auth/calendar.events',
 ];
@@ -35,6 +35,7 @@ export interface GoogleCredentials {
   scope: string;
 }
 
+// @deprecated - Google Sheets mode disabled for OAuth compliance
 export interface Prospect {
   id: string;
   rowNumber: number; // Numéro de ligne dans la Sheet (2 = première ligne de données)
@@ -139,7 +140,10 @@ export async function getValidCredentials(credentials: GoogleCredentials): Promi
   return credentials;
 }
 
+// @deprecated - Google Sheets mode disabled for OAuth compliance
 export function createSheetsClient(credentials: GoogleCredentials) {
+  throw new Error('Google Sheets functionality has been disabled for OAuth compliance');
+  /*
   const oauth2Client = getOAuth2Client();
 
   oauth2Client.setCredentials({
@@ -149,13 +153,17 @@ export function createSheetsClient(credentials: GoogleCredentials) {
   });
 
   return google.sheets({ version: 'v4', auth: oauth2Client });
+  */
 }
 
+// @deprecated - Google Sheets mode disabled for OAuth compliance
 export async function readGoogleSheet(
   credentials: GoogleCredentials,
   sheetId: string,
   range: string = 'A:Y'
 ): Promise<string[][]> {
+  throw new Error('Google Sheets functionality has been disabled for OAuth compliance');
+  /*
   const sheets = createSheetsClient(credentials);
 
   const response = await sheets.spreadsheets.values.get({
@@ -164,13 +172,17 @@ export async function readGoogleSheet(
   });
 
   return response.data.values || [];
+  */
 }
 
+// @deprecated - Google Sheets mode disabled for OAuth compliance
 export async function updateGoogleSheetCells(
   credentials: GoogleCredentials,
   sheetId: string,
   updates: { range: string; value: string }[]
 ): Promise<void> {
+  throw new Error('Google Sheets functionality has been disabled for OAuth compliance');
+  /*
   const sheets = createSheetsClient(credentials);
 
   const data = updates.map((u) => ({
@@ -185,9 +197,11 @@ export async function updateGoogleSheetCells(
       data,
     },
   });
+  */
 }
 
 /**
+ * @deprecated - Google Sheets mode disabled for OAuth compliance
  * Append a row to a Google Sheet
  */
 export async function appendGoogleSheetRow(
@@ -196,6 +210,8 @@ export async function appendGoogleSheetRow(
   values: string[],
   range: string = `${SHEET_TAB_NAME}!A:Z`
 ): Promise<{ updatedRange: string; rowNumber: number }> {
+  throw new Error('Google Sheets functionality has been disabled for OAuth compliance');
+  /*
   const sheets = createSheetsClient(credentials);
 
   const response = await sheets.spreadsheets.values.append({
@@ -215,9 +231,13 @@ export async function appendGoogleSheetRow(
   logger.debug('✅ Row appended to Sheet:', { updatedRange, rowNumber });
 
   return { updatedRange, rowNumber };
+  */
 }
 
+// @deprecated - Google Sheets mode disabled for OAuth compliance
 export function parseProspectsFromSheet(rows: string[][]): Prospect[] {
+  throw new Error('Google Sheets functionality has been disabled for OAuth compliance');
+  /*
   if (rows.length < 2) return [];
 
   const dataRows = rows.slice(1);
@@ -252,9 +272,13 @@ export function parseProspectsFromSheet(rows: string[][]): Prospect[] {
       mailRappel: row[24] || '',
     }))
     .filter((p) => p.nom || p.prenom || p.email);
+  */
 }
 
+// @deprecated - Google Sheets mode disabled for OAuth compliance
 export function calculateStats(prospects: Prospect[]) {
+  throw new Error('Google Sheets functionality has been disabled for OAuth compliance');
+  /*
   const chauds = prospects.filter((p) =>
     p.qualificationIA?.toUpperCase() === 'CHAUD'
   ).length;
@@ -288,6 +312,7 @@ export function calculateStats(prospects: Prospect[]) {
     mailsEnvoyes,
     rdvPris,
   };
+  */
 }
 
 export interface DriveFile {

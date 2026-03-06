@@ -1,0 +1,57 @@
+{
+  "name": "Ultron CRM - Gestion de Patrimoine IA",
+  "short_name": "Ultron",
+  "description": "CRM IA pour conseillers en gestion de patrimoine. Pipeline intelligent, agent vocal, qualification automatique.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0f0f23",
+  "theme_color": "#6366f1",
+  "categories": ["business", "finance", "productivity"],
+  "lang": "fr",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/favicon.ico",
+      "sizes": "16x16 32x32 48x48",
+      "type": "image/x-icon"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/images/dashboard-screenshot.png",
+      "sizes": "1200x630",
+      "type": "image/png",
+      "label": "Dashboard principal Ultron CRM"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Dashboard",
+      "short_name": "Dashboard",
+      "description": "Accès direct au tableau de bord",
+      "url": "/dashboard",
+      "icons": [{ "src": "/favicon.svg", "sizes": "192x192" }]
+    },
+    {
+      "name": "Prospects",
+      "short_name": "Prospects",
+      "description": "Gestion des prospects",
+      "url": "/prospects",
+      "icons": [{ "src": "/favicon.svg", "sizes": "192x192" }]
+    },
+    {
+      "name": "Pipeline",
+      "short_name": "Pipeline",
+      "description": "Pipeline CRM Kanban",
+      "url": "/pipeline",
+      "icons": [{ "src": "/favicon.svg", "sizes": "192x192" }]
+    }
+  ]
+}

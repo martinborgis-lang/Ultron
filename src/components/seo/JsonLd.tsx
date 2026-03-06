@@ -37,7 +37,7 @@ export function JsonLd({ data, id }: JsonLdProps) {
  * Hook pour générer des schemas courants
  */
 export const useSchemaGenerators = () => {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://ultron-murex.vercel.app';
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://ultron-ai.pro';
 
   const generateOrganization = () => ({
     '@type': 'Organization',

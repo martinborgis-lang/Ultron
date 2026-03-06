@@ -19,7 +19,7 @@ export const metadata: Metadata = {
     description:
       'Articles et guides pour les dirigeants de cabinets de gestion de patrimoine.',
     type: 'website',
-    url: 'https://ultron-murex.vercel.app/blog',
+    url: 'https://ultron-ai.pro/blog',
   },
 };
 

@@ -16,7 +16,7 @@ const cgpLocations = [
 
 
 export async function GET() {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://ultron-murex.vercel.app';
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://ultron-ai.pro';
   const now = new Date().toISOString();
 
   // Génération URLs pour chaque ville

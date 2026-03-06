@@ -24,7 +24,7 @@ export async function generateMetadata({
       title: article.title,
       description: article.description,
       type: 'article',
-      url: `https://ultron-murex.vercel.app/blog/${article.slug}`,
+      url: `https://ultron-ai.pro/blog/${article.slug}`,
       publishedTime: article.date,
       authors: [article.author],
     },
@@ -80,9 +80,9 @@ export default async function BlogArticlePage({
     publisher: {
       '@type': 'Organization',
       name: 'Ultron',
-      url: 'https://ultron-murex.vercel.app',
+      url: 'https://ultron-ai.pro',
     },
-    mainEntityOfPage: `https://ultron-murex.vercel.app/blog/${article.slug}`,
+    mainEntityOfPage: `https://ultron-ai.pro/blog/${article.slug}`,
     keywords: article.keywords.join(', '),
   };
 
