@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- Arrière-plan avec coins arrondis style moderne -->
+  <rect width="32" height="32" rx="8" fill="#0f0f23"/>
+
+  <!-- Bordure subtile pour contraste -->
+  <rect x="0.5" y="0.5" width="31" height="31" rx="7.5" fill="none" stroke="url(#borderGrad)" stroke-width="1"/>
+
+  <!-- Hexagone style Ultron comme dans la landing page -->
+  <path d="M22 16.5c0 .38-.21.71-.53.88l-5.9 3.44c-.16.12-.36.18-.57.18-.21 0-.41-.06-.57-.18l-5.9-3.44A.991.991 0 019 16.5v-7c0-.38.21-.71.53-.88l5.9-3.44c.16-.12.36-.18.57-.18.21 0 .41.06.57.18l5.9 3.44c.32.17.53.5.53.88v7z"
+        fill="url(#hexGrad)"/>
+
+  <!-- Point accent IA/tech en haut à droite -->
+  <circle cx="25" cy="7" r="2.5" fill="url(#accentGrad)" opacity="0.9"/>
+
+  <!-- Définitions des gradients -->
+  <defs>
+    <!-- Gradient principal pour l'hexagone -->
+    <linearGradient id="hexGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#6366f1"/>
+      <stop offset="100%" style="stop-color:#8b5cf6"/>
+    </linearGradient>
+
+    <!-- Gradient pour bordure subtile -->
+    <linearGradient id="borderGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#6366f1" stop-opacity="0.3"/>
+      <stop offset="100%" style="stop-color:#8b5cf6" stop-opacity="0.3"/>
+    </linearGradient>
+
+    <!-- Gradient pour point accent IA -->
+    <radialGradient id="accentGrad">
+      <stop offset="0%" style="stop-color:#60a5fa"/>
+      <stop offset="100%" style="stop-color:#6366f1"/>
+    </radialGradient>
+  </defs>
+</svg>
